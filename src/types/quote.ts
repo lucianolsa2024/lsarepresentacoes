@@ -69,6 +69,7 @@ export interface ClientData {
 export interface PaymentConditions {
   method: 'avista' | 'parcelado' | 'entrada_parcelas';
   installments: number;
+  installmentPlan: string; // e.g., "30/60/90" for display
   downPayment: number;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
@@ -109,6 +110,7 @@ export const INITIAL_CLIENT: ClientData = {
 export const INITIAL_PAYMENT: PaymentConditions = {
   method: 'avista',
   installments: 1,
+  installmentPlan: '',
   downPayment: 0,
   discountType: 'percentage',
   discountValue: 0,

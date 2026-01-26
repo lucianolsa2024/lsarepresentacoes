@@ -13,6 +13,17 @@ import {
 } from '@/components/ui/select';
 import { CreditCard, Percent, Calendar } from 'lucide-react';
 
+const INSTALLMENT_OPTIONS = [
+  { value: '15', label: '15 dias', installments: 1 },
+  { value: '30', label: '30 dias', installments: 1 },
+  { value: '30/60', label: '30/60 dias', installments: 2 },
+  { value: '30/60/90', label: '30/60/90 dias', installments: 3 },
+  { value: '30/60/90/120', label: '30/60/90/120 dias', installments: 4 },
+  { value: '30/60/90/120/150', label: '30/60/90/120/150 dias', installments: 5 },
+  { value: '30/60/90/120/150/180', label: '30/60/90/120/150/180 dias', installments: 6 },
+  { value: '30/60/90/120/150/180/210', label: '30/60/90/120/150/180/210 dias', installments: 7 },
+];
+
 interface PaymentFormProps {
   payment: PaymentConditions;
   onChange: (payment: PaymentConditions) => void;
@@ -96,18 +107,25 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         {(payment.method === 'parcelado' || payment.method === 'entrada_parcelas') && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Número de Parcelas</Label>
+              <Label>Prazo de Pagamento</Label>
               <Select
-                value={payment.installments.toString()}
-                onValueChange={(value) => updateField('installments', parseInt(value))}
+                value={payment.installmentPlan}
+                onValueChange={(value) => {
+                  const option = INSTALLMENT_OPTIONS.find(o => o.value === value);
+                  onChange({
+                    ...payment,
+                    installmentPlan: value,
+                    installments: option?.installments || 1,
+                  });
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o prazo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                    <SelectItem key={n} value={n.toString()}>
-                      {n}x
+                  {INSTALLMENT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -224,13 +242,16 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
               <span>Total:</span>
               <span className="text-primary">{formatCurrency(calculateTotal())}</span>
             </div>
-            {payment.method !== 'avista' && (
+            {payment.method !== 'avista' && payment.installmentPlan && (
               <div className="text-sm text-muted-foreground text-right">
                 {payment.method === 'entrada_parcelas' && payment.downPayment > 0 && (
                   <div>Entrada: {formatCurrency(payment.downPayment)}</div>
                 )}
                 <div>
-                  {payment.installments}x de {formatCurrency(getInstallmentValue())}
+                  {payment.installments > 1 
+                    ? `${payment.installments}x de ${formatCurrency(getInstallmentValue())} (${payment.installmentPlan} dias)`
+                    : `Pagamento em ${payment.installmentPlan} dias`
+                  }
                 </div>
               </div>
             )}
