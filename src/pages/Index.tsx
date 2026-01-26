@@ -9,6 +9,7 @@ import {
 } from '@/types/quote';
 import { useProducts } from '@/hooks/useProducts';
 import { useQuotes } from '@/hooks/useQuotes';
+import { useAuth } from '@/hooks/useAuth';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ import { QuoteCart } from '@/components/quote/QuoteCart';
 import { PaymentForm } from '@/components/quote/PaymentForm';
 import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -41,6 +42,12 @@ const formatWhatsAppMessage = (quote: Quote) => {
 const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes, addQuote, deleteQuote, duplicateQuote } = useQuotes();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success('Logout realizado com sucesso!');
+  };
 
   const [activeTab, setActiveTab] = useState('quote');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
@@ -159,12 +166,25 @@ const Index = () => {
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         {/* Header */}
         <div className="bg-card rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-primary mb-2">
-            Sistema de Orçamentos - LSA
-          </h1>
-          <p className="text-muted-foreground">
-            Gestão completa de produtos com modulações e acabamentos
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-primary mb-2">
+                Sistema de Orçamentos - LSA
+              </h1>
+              <p className="text-muted-foreground">
+                Gestão completa de produtos com modulações e acabamentos
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground hidden sm:block">
+                {user?.email}
+              </span>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
