@@ -456,7 +456,19 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               )}
 
               {/* Item Summary */}
-              {config.fabricCode && (
+              {config.fabricCode && (() => {
+                // Check if this is a CAIXA product and extract the tier
+                const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
+                const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
+                const caixaTier = caixaMatch ? caixaMatch[1].toUpperCase().replace(/\s+/g, ' ') : '';
+                
+                // Get clean dimensions without CAIXA info
+                const cleanDimensions = selectedSize?.dimensions || 
+                  [selectedSize?.length, selectedSize?.depth, selectedSize?.height]
+                    .filter(Boolean)
+                    .join(' × ');
+                
+                return (
                 <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
                   <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                     Resumo do Item
@@ -478,18 +490,42 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                     )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tamanho:</span>
-                      <span className="font-medium">
-                        {selectedSize?.dimensions || selectedSize?.description}
-                      </span>
+                      <span className="font-medium">{cleanDimensions}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Faixa de Tecido:</span>
-                      <span className="font-medium text-primary">{config.fabricTier}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tecido:</span>
-                      <span className="font-medium">{config.fabricCode}</span>
-                    </div>
+                    
+                    {/* CAIXA + CORPO section for CAIXA products */}
+                    {isCaixaProduct ? (
+                      <>
+                        <div className="mt-2 pt-2 border-t border-dashed">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                            Tecidos
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Caixa (estrutura):</span>
+                            <span className="font-medium text-accent-foreground">{caixaTier}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Corpo (assento):</span>
+                            <span className="font-medium text-primary">{config.fabricTier}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Código do Tecido:</span>
+                            <span className="font-medium">{config.fabricCode}</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Faixa de Tecido:</span>
+                          <span className="font-medium text-primary">{config.fabricTier}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tecido:</span>
+                          <span className="font-medium">{config.fabricCode}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="pt-2 border-t mt-2">
                     <div className="flex justify-between items-center">
@@ -500,7 +536,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Simple price preview before fabric code selection */}
               {config.fabricTier && !config.fabricCode && (
