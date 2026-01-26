@@ -234,7 +234,7 @@ export function generateQuotePDF(quote: Quote): void {
   doc.setTextColor(100);
   doc.text('Orçamento válido por 7 dias.', 15, y);
   y += 4;
-  doc.text('Prazo de entrega sujeito a alteração.', 15, y);
+  doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
   // Save
   const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
