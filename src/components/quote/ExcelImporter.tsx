@@ -145,16 +145,15 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       profundidade: headers.findIndex(h => String(h).toLowerCase().includes('prof')),
       altura: headers.findIndex(h => String(h).toLowerCase().includes('altura')),
       tecido: headers.findIndex(h => String(h).toLowerCase().includes('tecido')),
-      semTec: headers.findIndex(h => String(h).toUpperCase() === 'SEM TEC'),
+      caixa: headers.findIndex(h => String(h).toUpperCase().includes('CAIXA')),
+      preco: headers.findIndex(h => String(h).toUpperCase().includes('PREÇO') || String(h).toUpperCase().includes('PRECO')),
     };
 
-    // Find price columns dynamically
+    // Find price columns dynamically (for traditional format without CAIXA column)
     const priceColumns: { name: string; index: number }[] = [];
     headers.forEach((h, i) => {
       const headerStr = String(h).toUpperCase().trim();
-      // Match various price column formats
       if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || headerStr.startsWith('FX ') || headerStr === '3D' || headerStr === 'COURO' || headerStr === 'FX 3D' || headerStr === 'FX COURO') {
-        // Normalize the column name for database mapping
         let normalizedName = headerStr;
         if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
         if (headerStr === 'FX 3D') normalizedName = '3D';
@@ -163,8 +162,12 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       }
     });
 
-    // Group rows by product and modulation
-    const productMap = new Map<string, Map<string, ParsedProduct['modulations'][0]['sizes']>>();
+    // Check if this is CAIXA format (single price column + CAIXA tier column)
+    const hasCaixaFormat = colIndexes.caixa !== -1;
+
+    // Group rows by product, modulation, and dimensions
+    // For CAIXA format, consolidate rows with same dimensions into one with multiple tier prices
+    const productMap = new Map<string, Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>>>();
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i] as (string | number)[];
@@ -181,10 +184,11 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       const height = String(row[colIndexes.altura] || '').trim();
       const fabricQty = parseFloat(String(row[colIndexes.tecido] || '0')) || 0;
       
-      // Build dimensions string
+      // Build dimensions string (used as unique key for consolidation)
       const dimensions = [length, depth].filter(Boolean).join(' x ');
+      const dimensionKey = `${dimensions}|${height}`;
       
-      // Build description - take from a description column if exists, or build from dimensions
+      // Build description
       let description = `${productName} ${modulationName}`;
       if (dimensions) {
         description += ` ${dimensions}`;
@@ -193,39 +197,100 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
         description += ` (H: ${height})`;
       }
 
-      // Extract prices
-      const prices: Record<string, number> = {};
-      priceColumns.forEach(({ name, index }) => {
-        const value = parseFloat(String(row[index] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
-        prices[name] = value;
-      });
-
-      // Get or create product map
+      // Get or create nested maps
       if (!productMap.has(productName)) {
         productMap.set(productName, new Map());
       }
       const modMap = productMap.get(productName)!;
       
-      // Get or create modulation array
       if (!modMap.has(modulationName)) {
-        modMap.set(modulationName, []);
+        modMap.set(modulationName, new Map());
       }
-      
-      modMap.get(modulationName)!.push({
-        description,
-        dimensions,
-        length,
-        depth,
-        height,
-        fabricQuantity: fabricQty,
-        prices,
-      });
+      const sizeMap = modMap.get(modulationName)!;
+
+      // Handle CAIXA format: consolidate rows into single size entry with multiple prices
+      if (hasCaixaFormat) {
+        const caixaValue = String(row[colIndexes.caixa] || '').toUpperCase().trim();
+        // Extract tier from CAIXA value (e.g., "FX B", "FX COURO", etc.)
+        const tierMatch = caixaValue.match(/FX\s*([A-Z0-9]+)|COURO|3D|SEM\s*TEC/i);
+        let tierName = '';
+        if (tierMatch) {
+          if (caixaValue.includes('COURO')) {
+            tierName = 'COURO';
+          } else if (caixaValue.includes('3D')) {
+            tierName = '3D';
+          } else if (caixaValue.includes('SEM TEC')) {
+            tierName = 'SEM TEC';
+          } else {
+            tierName = `FX ${tierMatch[1]}`;
+          }
+        }
+
+        // Find the price value (could be in PREÇO column or in a price tier column)
+        let priceValue = 0;
+        if (colIndexes.preco !== -1) {
+          priceValue = parseFloat(String(row[colIndexes.preco] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+        } else {
+          // Try to find price in any price column that has a value
+          for (const { index } of priceColumns) {
+            const val = parseFloat(String(row[index] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+            if (val > 0) {
+              priceValue = val;
+              break;
+            }
+          }
+        }
+
+        // Get or create size entry
+        if (!sizeMap.has(dimensionKey)) {
+          sizeMap.set(dimensionKey, {
+            description,
+            dimensions,
+            length,
+            depth,
+            height,
+            fabricQuantity: fabricQty,
+            prices: {},
+          });
+        }
+        
+        // Add price for this tier
+        const sizeEntry = sizeMap.get(dimensionKey)!;
+        if (tierName && priceValue > 0) {
+          sizeEntry.prices[tierName] = priceValue;
+        }
+        // Update fabric quantity if this row has a higher value
+        if (fabricQty > sizeEntry.fabricQuantity) {
+          sizeEntry.fabricQuantity = fabricQty;
+        }
+
+      } else {
+        // Traditional format: each row has all price columns
+        const prices: Record<string, number> = {};
+        priceColumns.forEach(({ name, index }) => {
+          const value = parseFloat(String(row[index] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+          prices[name] = value;
+        });
+
+        // Each row is a unique size entry
+        const uniqueKey = `${dimensionKey}_${i}`;
+        sizeMap.set(uniqueKey, {
+          description,
+          dimensions,
+          length,
+          depth,
+          height,
+          fabricQuantity: fabricQty,
+          prices,
+        });
+      }
     }
 
     // Convert maps to array
     productMap.forEach((modMap, productName) => {
       const modulations: ParsedProduct['modulations'] = [];
-      modMap.forEach((sizes, modName) => {
+      modMap.forEach((sizeMap, modName) => {
+        const sizes = Array.from(sizeMap.values());
         modulations.push({
           name: modName,
           sizes,
