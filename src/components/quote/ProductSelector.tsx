@@ -428,10 +428,57 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Price Preview */}
-              {config.fabricTier && (
+              {/* Item Summary */}
+              {config.fabricCode && (
+                <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+                  <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                    Resumo do Item
+                  </h5>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Produto:</span>
+                      <span className="font-medium">{selectedProduct.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Modulação:</span>
+                      <span className="font-medium">{selectedModulation?.name}</span>
+                    </div>
+                    {config.base && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Base:</span>
+                        <span className="font-medium">{config.base}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tamanho:</span>
+                      <span className="font-medium">
+                        {selectedSize?.dimensions || selectedSize?.description}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Faixa de Tecido:</span>
+                      <span className="font-medium text-primary">{config.fabricTier}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tecido:</span>
+                      <span className="font-medium">{config.fabricCode}</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Preço unitário:</span>
+                      <span className="text-xl font-bold text-primary">
+                        {formatCurrency(getCurrentPrice())}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Simple price preview before fabric code selection */}
+              {config.fabricTier && !config.fabricCode && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
-                  <span className="text-sm text-muted-foreground">Preço:</span>
+                  <span className="text-sm text-muted-foreground">Preço da faixa {config.fabricTier}:</span>
                   <span className="text-xl font-bold text-primary ml-2">
                     {formatCurrency(getCurrentPrice())}
                   </span>
