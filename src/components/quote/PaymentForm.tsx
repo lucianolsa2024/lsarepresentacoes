@@ -1,0 +1,232 @@
+import { PaymentConditions } from '@/types/quote';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { CreditCard, Percent, Calendar } from 'lucide-react';
+
+interface PaymentFormProps {
+  payment: PaymentConditions;
+  onChange: (payment: PaymentConditions) => void;
+  subtotal: number;
+}
+
+export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
+  const updateField = <K extends keyof PaymentConditions>(
+    field: K,
+    value: PaymentConditions[K]
+  ) => {
+    onChange({ ...payment, [field]: value });
+  };
+
+  const calculateDiscount = () => {
+    if (payment.discountType === 'percentage') {
+      return subtotal * (payment.discountValue / 100);
+    }
+    return payment.discountValue;
+  };
+
+  const calculateTotal = () => {
+    return subtotal - calculateDiscount();
+  };
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const getInstallmentValue = () => {
+    const total = calculateTotal();
+    if (payment.method === 'avista') return total;
+    if (payment.method === 'parcelado') return total / payment.installments;
+    if (payment.method === 'entrada_parcelas') {
+      return (total - payment.downPayment) / payment.installments;
+    }
+    return total;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Condições de Pagamento
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Payment Method */}
+        <div className="space-y-3">
+          <Label>Forma de Pagamento</Label>
+          <RadioGroup
+            value={payment.method}
+            onValueChange={(value) =>
+              updateField('method', value as PaymentConditions['method'])
+            }
+            className="grid grid-cols-1 md:grid-cols-3 gap-3"
+          >
+            <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
+              <RadioGroupItem value="avista" id="avista" />
+              <Label htmlFor="avista" className="cursor-pointer">
+                À Vista
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
+              <RadioGroupItem value="parcelado" id="parcelado" />
+              <Label htmlFor="parcelado" className="cursor-pointer">
+                Parcelado
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
+              <RadioGroupItem value="entrada_parcelas" id="entrada" />
+              <Label htmlFor="entrada" className="cursor-pointer">
+                Entrada + Parcelas
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {/* Installments */}
+        {(payment.method === 'parcelado' || payment.method === 'entrada_parcelas') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Número de Parcelas</Label>
+              <Select
+                value={payment.installments.toString()}
+                onValueChange={(value) => updateField('installments', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n}x
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {payment.method === 'entrada_parcelas' && (
+              <div className="space-y-2">
+                <Label>Valor da Entrada</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={payment.downPayment}
+                  onChange={(e) =>
+                    updateField('downPayment', parseFloat(e.target.value) || 0)
+                  }
+                  placeholder="R$ 0,00"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Discount */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1">
+            <Percent className="h-3 w-3" />
+            Desconto
+          </Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              value={payment.discountType}
+              onValueChange={(value) =>
+                updateField('discountType', value as 'percentage' | 'fixed')
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percentage">Porcentagem (%)</SelectItem>
+                <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              min={0}
+              value={payment.discountValue}
+              onChange={(e) =>
+                updateField('discountValue', parseFloat(e.target.value) || 0)
+              }
+              placeholder={payment.discountType === 'percentage' ? '0%' : 'R$ 0,00'}
+            />
+          </div>
+        </div>
+
+        {/* Delivery */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Prazo de Entrega (dias)
+          </Label>
+          <Input
+            type="number"
+            min={1}
+            value={payment.deliveryDays}
+            onChange={(e) =>
+              updateField('deliveryDays', parseInt(e.target.value) || 30)
+            }
+          />
+        </div>
+
+        {/* Observations */}
+        <div className="space-y-2">
+          <Label>Observações</Label>
+          <Textarea
+            value={payment.observations}
+            onChange={(e) => updateField('observations', e.target.value)}
+            placeholder="Condições especiais, informações adicionais..."
+            rows={3}
+          />
+        </div>
+
+        {/* Summary */}
+        {subtotal > 0 && (
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {payment.discountValue > 0 && (
+              <div className="flex justify-between text-sm text-destructive">
+                <span>
+                  Desconto (
+                  {payment.discountType === 'percentage'
+                    ? `${payment.discountValue}%`
+                    : formatCurrency(payment.discountValue)}
+                  ):
+                </span>
+                <span>- {formatCurrency(calculateDiscount())}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <span>Total:</span>
+              <span className="text-primary">{formatCurrency(calculateTotal())}</span>
+            </div>
+            {payment.method !== 'avista' && (
+              <div className="text-sm text-muted-foreground text-right">
+                {payment.method === 'entrada_parcelas' && payment.downPayment > 0 && (
+                  <div>Entrada: {formatCurrency(payment.downPayment)}</div>
+                )}
+                <div>
+                  {payment.installments}x de {formatCurrency(getInstallmentValue())}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
