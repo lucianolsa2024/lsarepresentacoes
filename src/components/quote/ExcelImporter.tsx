@@ -141,64 +141,100 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
     const products: ParsedProduct[] = [];
     const headers = rows[0] as string[];
     
-    // Find column indexes
+    if (!headers || !Array.isArray(headers)) {
+      throw new Error('Cabeçalho da planilha não encontrado');
+    }
+    
+    // Find column indexes - safely handle missing columns
+    const findIndex = (predicate: (h: string) => boolean): number => {
+      for (let i = 0; i < headers.length; i++) {
+        const h = headers[i];
+        if (h != null && predicate(String(h))) return i;
+      }
+      return -1;
+    };
+    
     const colIndexes = {
-      produto: headers.findIndex(h => String(h).toLowerCase().includes('produto')),
-      modulacao: headers.findIndex(h => String(h).toLowerCase().includes('modul')),
-      comprimento: headers.findIndex(h => String(h).toLowerCase().includes('compri')),
-      profundidade: headers.findIndex(h => String(h).toLowerCase().includes('prof')),
-      altura: headers.findIndex(h => String(h).toLowerCase().includes('altura')),
-      tecido: headers.findIndex(h => String(h).toLowerCase().includes('tecido')),
-      caixa: headers.findIndex(h => String(h).toUpperCase().includes('CAIXA')),
-      preco: headers.findIndex(h => String(h).toUpperCase().includes('PREÇO') || String(h).toUpperCase().includes('PRECO')),
+      codigo: findIndex(h => h.toLowerCase().includes('código') || h.toLowerCase().includes('codigo')),
+      produto: findIndex(h => h.toLowerCase().includes('produto')),
+      modulacao: findIndex(h => h.toLowerCase().includes('modul')),
+      descricao: findIndex(h => h.toLowerCase().includes('descrição') || h.toLowerCase().includes('descricao')),
+      comprimento: findIndex(h => h.toLowerCase().includes('compri')),
+      profundidade: findIndex(h => h.toLowerCase().includes('prof')),
+      altura: findIndex(h => h.toLowerCase().includes('altura')),
+      tecido: findIndex(h => h.toLowerCase().includes('tecido')),
+      caixa: findIndex(h => h.toUpperCase().includes('CAIXA')),
+      preco: findIndex(h => h.toUpperCase().includes('PREÇO') || h.toUpperCase().includes('PRECO')),
     };
 
-    // Find price columns dynamically (for traditional format without CAIXA column)
+    // Validate required columns
+    if (colIndexes.produto === -1) {
+      throw new Error('Coluna "Produto" não encontrada na planilha');
+    }
+    if (colIndexes.modulacao === -1) {
+      throw new Error('Coluna "Modulação" não encontrada na planilha');
+    }
+
+    // Find price columns dynamically
     const priceColumns: { name: string; index: number }[] = [];
     headers.forEach((h, i) => {
+      if (h == null) return;
       const headerStr = String(h).toUpperCase().trim();
-      if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || headerStr.startsWith('FX ') || headerStr === '3D' || headerStr === 'COURO' || headerStr === 'FX 3D' || headerStr === 'FX COURO') {
+      // Match FX B, FX C, ..., FX J, FX 3D, FX COURO, SEM TEC
+      if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || 
+          headerStr.match(/^FX\s*[A-Z]$/) || 
+          headerStr === '3D' || headerStr === 'COURO' || 
+          headerStr === 'FX 3D' || headerStr === 'FX COURO') {
         let normalizedName = headerStr;
         if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
-        if (headerStr === 'FX 3D') normalizedName = '3D';
-        if (headerStr === 'FX COURO') normalizedName = 'COURO';
         priceColumns.push({ name: normalizedName, index: i });
       }
     });
+
+    console.log('Detected columns:', colIndexes);
+    console.log('Price columns:', priceColumns);
 
     // Check if this is CAIXA format (single price column + CAIXA tier column)
     const hasCaixaFormat = colIndexes.caixa !== -1;
 
     // Group rows by product, modulation, and dimensions
-    // For CAIXA format, consolidate rows with same dimensions into one with multiple tier prices
     const productMap = new Map<string, Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>>>();
     
     for (let i = 1; i < rows.length; i++) {
-      const row = rows[i] as (string | number)[];
-      if (!row || row.length === 0) continue;
+      const row = rows[i];
+      if (!row || !Array.isArray(row) || row.length === 0) continue;
 
-      const productName = String(row[colIndexes.produto] || '').trim().toUpperCase();
-      const modulationName = String(row[colIndexes.modulacao] || '').trim().toUpperCase();
+      const rowData = row as (string | number | null | undefined)[];
+      const productName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
+      const modulationName = String(rowData[colIndexes.modulacao] ?? '').trim().toUpperCase();
       
       if (!productName || !modulationName) continue;
 
-      // Build description from row data
-      const length = String(row[colIndexes.comprimento] || '').trim();
-      const depth = String(row[colIndexes.profundidade] || '').trim();
-      const height = String(row[colIndexes.altura] || '').trim();
-      const fabricQty = parseFloat(String(row[colIndexes.tecido] || '0')) || 0;
+      // Get description - prefer explicit description column, else build from product + modulation
+      let description = '';
+      if (colIndexes.descricao !== -1 && rowData[colIndexes.descricao]) {
+        description = String(rowData[colIndexes.descricao]).trim();
+      }
+      
+      // Build dimensions from row data
+      const length = colIndexes.comprimento !== -1 ? String(rowData[colIndexes.comprimento] ?? '').trim() : '';
+      const depth = colIndexes.profundidade !== -1 ? String(rowData[colIndexes.profundidade] ?? '').trim() : '';
+      const height = colIndexes.altura !== -1 ? String(rowData[colIndexes.altura] ?? '').trim() : '';
+      const fabricQty = colIndexes.tecido !== -1 ? (parseFloat(String(rowData[colIndexes.tecido] ?? '0')) || 0) : 0;
       
       // Build dimensions string (used as unique key for consolidation)
       const dimensions = [length, depth].filter(Boolean).join(' x ');
-      const dimensionKey = `${dimensions}|${height}`;
+      const dimensionKey = description || `${dimensions}|${height}`;
       
-      // Build description
-      let description = `${productName} ${modulationName}`;
-      if (dimensions) {
-        description += ` ${dimensions}`;
-      }
-      if (height) {
-        description += ` (H: ${height})`;
+      // Use description if available, else build from parts
+      if (!description) {
+        description = `${productName} ${modulationName}`;
+        if (dimensions) {
+          description += ` ${dimensions}`;
+        }
+        if (height) {
+          description += ` (H: ${height})`;
+        }
       }
 
       // Get or create nested maps
@@ -214,15 +250,14 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
 
       // Handle CAIXA format: consolidate rows into single size entry with multiple prices
       if (hasCaixaFormat) {
-        const caixaValue = String(row[colIndexes.caixa] || '').toUpperCase().trim();
-        // Extract tier from CAIXA value (e.g., "FX B", "FX COURO", etc.)
+        const caixaValue = String(rowData[colIndexes.caixa] ?? '').toUpperCase().trim();
         const tierMatch = caixaValue.match(/FX\s*([A-Z0-9]+)|COURO|3D|SEM\s*TEC/i);
         let tierName = '';
         if (tierMatch) {
           if (caixaValue.includes('COURO')) {
-            tierName = 'COURO';
+            tierName = 'FX COURO';
           } else if (caixaValue.includes('3D')) {
-            tierName = '3D';
+            tierName = 'FX 3D';
           } else if (caixaValue.includes('SEM TEC')) {
             tierName = 'SEM TEC';
           } else {
@@ -230,14 +265,12 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           }
         }
 
-        // Find the price value (could be in PREÇO column or in a price tier column)
         let priceValue = 0;
         if (colIndexes.preco !== -1) {
-          priceValue = parseFloat(String(row[colIndexes.preco] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+          priceValue = parseFloat(String(rowData[colIndexes.preco] ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
         } else {
-          // Try to find price in any price column that has a value
           for (const { index } of priceColumns) {
-            const val = parseFloat(String(row[index] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+            const val = parseFloat(String(rowData[index] ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
             if (val > 0) {
               priceValue = val;
               break;
@@ -245,7 +278,6 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           }
         }
 
-        // Get or create size entry
         if (!sizeMap.has(dimensionKey)) {
           sizeMap.set(dimensionKey, {
             description,
@@ -258,27 +290,25 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           });
         }
         
-        // Add price for this tier
         const sizeEntry = sizeMap.get(dimensionKey)!;
         if (tierName && priceValue > 0) {
           sizeEntry.prices[tierName] = priceValue;
         }
-        // Update fabric quantity if this row has a higher value
         if (fabricQty > sizeEntry.fabricQuantity) {
           sizeEntry.fabricQuantity = fabricQty;
         }
 
       } else {
-        // Traditional format: each row has all price columns
+        // Traditional format: each row has all price columns (like this new file)
         const prices: Record<string, number> = {};
         priceColumns.forEach(({ name, index }) => {
-          const value = parseFloat(String(row[index] || '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+          const rawValue = rowData[index];
+          const value = parseFloat(String(rawValue ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
           prices[name] = value;
         });
 
-        // Each row is a unique size entry
-        const uniqueKey = `${dimensionKey}_${i}`;
-        sizeMap.set(uniqueKey, {
+        // Use description as unique key since each row is a unique size
+        sizeMap.set(dimensionKey, {
           description,
           dimensions,
           length,
