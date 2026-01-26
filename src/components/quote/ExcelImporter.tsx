@@ -388,7 +388,40 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
 
     const progressStep = 50 / products.length;
 
+    // Common base patterns to extract
+    const basePatterns = [
+      /\b(MTX)\b/i,
+      /\b(FOSCA)\b/i,
+      /\b(METALIZADO)\b/i,
+      /\b(FOSCA\/METALIZADO)\b/i,
+      /\b(METAL)\b/i,
+      /\b(MADEIRA)\b/i,
+      /\b(INOX)\b/i,
+      /\b(CROMADO)\b/i,
+      /\bBASE\s+(MTX|FOSCA|METALIZADO|METAL|MADEIRA|INOX|CROMADO)\b/i,
+    ];
+
     for (const product of products) {
+      // Collect all bases found across all sizes
+      const foundBases = new Set<string>();
+      
+      // First pass: extract bases from all descriptions
+      for (const mod of product.modulations) {
+        for (const size of mod.sizes) {
+          for (const pattern of basePatterns) {
+            const match = size.description.match(pattern);
+            if (match) {
+              let baseName = match[1] || match[0];
+              baseName = baseName.toUpperCase().replace('BASE ', '').trim();
+              foundBases.add(baseName);
+            }
+          }
+        }
+      }
+
+      const hasBase = foundBases.size > 0;
+      const availableBases = Array.from(foundBases);
+
       // Check if product already exists
       const { data: existingProduct } = await supabase
         .from('products')
@@ -399,6 +432,15 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       let productId: string;
 
       if (existingProduct) {
+        // Update existing product with base info
+        await supabase
+          .from('products')
+          .update({
+            has_base: hasBase,
+            available_bases: availableBases,
+          })
+          .eq('id', existingProduct.id);
+          
         // Delete existing modulations (cascade will delete sizes)
         await supabase
           .from('product_modulations')
@@ -406,7 +448,7 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           .eq('product_id', existingProduct.id);
         productId = existingProduct.id;
       } else {
-        // Insert new product
+        // Insert new product with base info
         const { data: newProduct, error: productError } = await supabase
           .from('products')
           .insert({
@@ -414,6 +456,8 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
             category: 'Sofás',
             code: '',
             description: '',
+            has_base: hasBase,
+            available_bases: availableBases,
           })
           .select('id')
           .single();
@@ -457,8 +501,8 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           price_fx_h: size.prices['FX H'] || 0,
           price_fx_i: size.prices['FX I'] || 0,
           price_fx_j: size.prices['FX J'] || 0,
-          price_fx_3d: size.prices['3D'] || 0,
-          price_fx_couro: size.prices['COURO'] || 0,
+          price_fx_3d: size.prices['3D'] || size.prices['FX 3D'] || 0,
+          price_fx_couro: size.prices['COURO'] || size.prices['FX COURO'] || 0,
         }));
 
         const { error: sizesError } = await supabase
