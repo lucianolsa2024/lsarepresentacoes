@@ -1,89 +1,105 @@
 
 
-# Sistema de Orçamentos para Feira - Estofados
+# Plano: Correção de Preço e Personalização do PDF SoHome
 
-Sistema interno para criação e gestão de orçamentos durante feiras comerciais, com foco em praticidade e rapidez no atendimento.
+## Resumo
 
----
-
-## 1. Catálogo de Produtos Aprimorado
-
-Gerenciamento completo de produtos com informações detalhadas:
-
-- **Dados do produto**: Nome, descrição, categoria (Sofás, Poltronas, Puffs, etc.)
-- **Modulações com preços**: Diferentes tamanhos/configurações com preço específico
-- **Opções de base/acabamento**: Madeira natural, escura, pés palito, etc.
-- **Produtos pré-cadastrados**: Sofá Retrátil, Sofá de Canto, Poltrona (do seu código)
-- **Tela de gestão**: Adicionar, editar e remover produtos
+Este plano corrige o preço do produto OASI e personaliza o PDF do orçamento com o logo da LSA/SoHome e identidade visual da empresa.
 
 ---
 
-## 2. Cadastro Completo do Cliente
+## O que será feito
 
-Formulário com todos os dados necessários para orçamento profissional:
+### 1. Correção do Preço OASI
 
-- **Dados pessoais**: Nome completo
-- **Dados empresariais**: Empresa, CNPJ ou CPF
-- **Contato**: Telefone, Email
-- **Endereço**: Rua, número, complemento, bairro, cidade, estado, CEP
+O preço do produto **OASI 1B 2AS 1,90m na faixa FX C** será atualizado de `4691` para `4733` conforme a tabela correta.
 
----
-
-## 3. Criação de Orçamentos
-
-Fluxo intuitivo para montar orçamentos durante o atendimento:
-
-- **Seleção de produtos**: Lista visual com clique para configurar
-- **Configuração guiada**: Modulação → Base (se aplicável) → Tecido
-- **Carrinho do orçamento**: Lista de itens com quantidades editáveis
-- **Cálculo automático**: Subtotais e total em tempo real
-- **Resumo visual**: Card com valor total destacado
+**Arquivo:** `src/data/products.ts` (linha 141)
 
 ---
 
-## 4. Condições de Pagamento
+### 2. Personalização do PDF
 
-Opções flexíveis para negociação:
+O PDF será reformulado para seguir o padrão "Orçamento SoHome" com:
 
-- **Formas de pagamento**: À vista, parcelado (2x a 12x), entrada + parcelas
-- **Descontos**: Porcentagem ou valor fixo aplicável ao total
-- **Observações**: Campo livre para condições especiais
-- **Prazo de entrega**: Estimativa para produção
+**Cabeçalho personalizado:**
+- Logo LSA no topo (centralizado ou à esquerda)
+- Título alterado de "ORÇAMENTO DE ESTOFADOS" para "ORÇAMENTO SOHOME"
+- Subtítulo opcional com dados da empresa
+
+**Estrutura do documento:**
+```text
+┌─────────────────────────────────────────┐
+│           [LOGO LSA]                    │
+│        ORÇAMENTO SOHOME                 │
+│   Data: 26/01/2026  |  Nº A1B2C3D4     │
+├─────────────────────────────────────────┤
+│  DADOS DO CLIENTE                       │
+│  Nome: João Silva                       │
+│  Empresa: XYZ Decorações               │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  ITENS DO ORÇAMENTO                     │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  TOTAL: R$ 4.733,00                    │
+├─────────────────────────────────────────┤
+│  CONDIÇÕES DE PAGAMENTO                 │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  Validade: 15 dias                     │
+│  (rodapé com informações legais)        │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## 5. Geração de PDF Profissional
+## Arquivos a serem modificados
 
-Documento formatado para impressão ou envio digital:
-
-- **Cabeçalho**: Identificação da empresa/feira
-- **Dados do cliente**: Todas as informações coletadas
-- **Itens detalhados**: Produto, configurações, quantidade, valores
-- **Condições**: Pagamento, descontos, prazo de entrega
-- **Rodapé**: Validade do orçamento, termos e condições
-- **Download automático**: Arquivo nomeado com cliente e data
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/data/products.ts` | Corrigir preço OASI FX C: 4691 -> 4733 |
+| `src/assets/logo-lsa.png` | Novo arquivo (cópia do logo enviado) |
+| `src/utils/pdfGenerator.ts` | Adicionar logo, alterar título, melhorar layout |
 
 ---
 
-## 6. Histórico de Orçamentos
+## Detalhes Técnicos
 
-Consulta de orçamentos anteriores salvos localmente:
+### Integração do Logo no PDF
 
-- **Lista de orçamentos**: Ordenados por data, com nome do cliente e valor
-- **Busca rápida**: Por nome do cliente ou data
-- **Visualização**: Ver detalhes completos do orçamento
-- **Ações**: Duplicar para novo orçamento, baixar PDF novamente, excluir
-- **Persistência**: Dados salvos no navegador (localStorage)
+O jsPDF suporta imagens via `doc.addImage()`. O logo será:
+1. Copiado para `src/assets/logo-lsa.png`
+2. Importado como módulo ES6 no gerador de PDF
+3. Convertido para base64 para uso no jsPDF
+4. Posicionado no topo do documento, centralizado
+
+```typescript
+// Exemplo de implementação
+import logoBase64 from '@/assets/logo-lsa.png';
+
+// No gerador:
+doc.addImage(logoBase64, 'PNG', x, y, width, height);
+```
+
+### Correção do Preço
+
+Linha 141 em `src/data/products.ts`:
+```typescript
+// Antes:
+{ name: '1B 2AS 1,90m', ..., prices: createPrices(4451, 4691, 5028, ...) }
+
+// Depois (FX C corrigido):
+{ name: '1B 2AS 1,90m', ..., prices: createPrices(4451, 4733, 5028, ...) }
+```
 
 ---
 
-## 7. Interface e Navegação
+## Resultado Esperado
 
-Design moderno e minimalista otimizado para uso em feiras:
-
-- **Abas principais**: Novo Orçamento | Histórico | Produtos
-- **Layout responsivo**: Funciona em tablet e desktop
-- **Cores**: Tons de azul/índigo (mantendo seu design atual)
-- **Feedback visual**: Confirmações e alertas claros
-- **Atalhos**: Botões de ação rápida para fluxo ágil
+Após a implementação:
+- O produto OASI 1B 2AS 1,90m mostrará R$ 4.733,00 na faixa FX C
+- O PDF gerado terá o logo LSA no cabeçalho
+- O título será "ORÇAMENTO SOHOME"
+- O layout será mais profissional e identitário
 
