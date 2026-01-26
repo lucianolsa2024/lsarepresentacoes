@@ -232,19 +232,9 @@ export function generateQuotePDF(quote: Quote): void {
 
   doc.setFontSize(8);
   doc.setTextColor(100);
-  doc.text('Validade deste orçamento: 15 dias a partir da data de emissão.', 15, y);
+  doc.text('Orçamento válido por 7 dias.', 15, y);
   y += 4;
-  doc.text(
-    'Os valores podem sofrer alteração sem aviso prévio após o vencimento.',
-    15,
-    y
-  );
-  y += 4;
-  doc.text(
-    'Prazo de entrega a partir da confirmação do pedido e escolha de tecido.',
-    15,
-    y
-  );
+  doc.text('Prazo de entrega sujeito a alteração.', 15, y);
 
   // Save
   const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
