@@ -6,6 +6,19 @@ const createPrices = (b: number, c: number, d: number, e: number, f: number, g: 
 });
 
 export const DEFAULT_PRODUCTS: Product[] = [
+  // ACABAMENTO
+  {
+    id: 'acabamento',
+    code: '10000',
+    name: 'ACABAMENTO',
+    description: 'Acabamento avulso',
+    category: 'Outros',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: 'Acabamento', description: 'ACABAMENTO', dimensions: '', prices: createPrices(190, 226, 267, 314, 385, 476, 600, 827, 1034) },
+    ],
+  },
   // AFAGO
   {
     id: 'afago',
@@ -60,6 +73,23 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: 'CH 1B 1,15m', description: 'ALENTO CH 1B 1,15 m x 1,60 m', dimensions: '1,15 m x 1,60 m', prices: createPrices(3807, 4007, 4286, 4400, 4564, 4758, 5024, 5336, 6902) },
     ],
   },
+  // ALMOFADA AVULSA
+  {
+    id: 'almofada-avulsa',
+    code: '40007',
+    name: 'ALMOFADA AVULSA',
+    description: 'Almofadas avulsas em diversos tipos',
+    category: 'Outros',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: 'Braço Espuma', description: 'ALMOFADA AVULSA ALMOFADA BRACO ESPUMA', dimensions: '', prices: createPrices(1048, 1252, 1380, 1596, 1897, 2260, 2755, 3330, 4404) },
+      { name: 'Braço Fibra', description: 'ALMOFADA AVULSA ALMOFADA BRACO FIBRA', dimensions: '', prices: createPrices(1026, 1230, 1367, 1583, 1884, 2246, 2742, 3321, 4391) },
+      { name: 'Decorativa Espuma', description: 'ALMOFADA AVULSA ALMOFADA DECORATIVA ESPUMA', dimensions: '', prices: createPrices(336, 438, 527, 633, 788, 969, 1216, 1508, 2043) },
+      { name: 'Decorativa Fibra', description: 'ALMOFADA AVULSA ALMOFADA DECORATIVA FIBRA', dimensions: '', prices: createPrices(314, 416, 513, 619, 770, 951, 1198, 1490, 2030) },
+      { name: 'Encosto Espuma', description: 'ALMOFADA AVULSA ALMOFADA ENCOSTO ESPUMA', dimensions: '', prices: createPrices(336, 438, 527, 633, 788, 969, 1216, 1508, 2043) },
+    ],
+  },
   // BOLD
   {
     id: 'bold',
@@ -103,6 +133,138 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: '2B 2AS 1,80m', description: 'BONOBO 2B 2AS 1,80 m x 1,05 m (2ENC)', dimensions: '1,80 m x 1,05 m', prices: createPrices(4460, 4758, 5254, 5852, 6578, 7392, 8310, 9339, 13356) },
     ],
   },
+  // CLIFF
+  {
+    id: 'cliff',
+    code: '20661',
+    name: 'CLIFF',
+    description: 'Sofá contemporâneo com linhas limpas',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '1B 1AS 1,00m', description: 'CLIFF 1B 1AS 1,00 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,00 m x 1,05 m', prices: createPrices(2224, 2380, 2602, 2699, 2837, 3005, 3232, 3497, 5025) },
+      { name: '1B 1AS 1,10m', description: 'CLIFF 1B 1AS 1,10 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,10 m x 1,05 m', prices: createPrices(2412, 2586, 2829, 2937, 3090, 3275, 3526, 3819, 5507) },
+      { name: '1B 1AS 1,20m', description: 'CLIFF 1B 1AS 1,20 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,20 m x 1,05 m', prices: createPrices(2592, 2778, 3038, 3155, 3318, 3517, 3786, 4100, 5909) },
+      { name: '1B 1AS 1,30m', description: 'CLIFF 1B 1AS 1,30 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,30 m x 1,05 m', prices: createPrices(2768, 2968, 3248, 3373, 3549, 3762, 4050, 4388, 6330) },
+      { name: '1B 1AS 1,40m', description: 'CLIFF 1B 1AS 1,40 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,40 m x 1,05 m', prices: createPrices(2928, 3139, 3435, 3568, 3753, 3978, 4283, 4639, 6691) },
+      { name: '1B 1AS 1,50m', description: 'CLIFF 1B 1AS 1,50 m x 1,05 m x 0,61 m (1ENC/1DEC)', dimensions: '1,50 m x 1,05 m', prices: createPrices(3127, 3353, 3669, 3811, 4009, 4249, 4575, 4956, 7150) },
+    ],
+  },
+  // COBAIN
+  {
+    id: 'cobain',
+    code: '21065',
+    name: 'COBAIN',
+    description: 'Sofá versátil com diversos tamanhos de braço',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '2B 1AS 1,40m', description: 'COBAIN 2B 1AS 1,40 m x 1,10 m (2ENC/2DEC)', dimensions: '1,40 m x 1,10 m', prices: createPrices(4526, 4764, 5170, 5660, 6255, 6911, 7637, 8439, 11922) },
+      { name: '2B 1AS 1,60m', description: 'COBAIN 2B 1AS 1,60 m x 1,10 m (2ENC/2DEC)', dimensions: '1,60 m x 1,10 m', prices: createPrices(5111, 5371, 5809, 6342, 6985, 7694, 8477, 9337, 13189) },
+      { name: '2B 1AS 1,80m', description: 'COBAIN 2B 1AS 1,80 m x 1,10 m (2ENC/2DEC)', dimensions: '1,80 m x 1,10 m', prices: createPrices(5708, 5991, 6457, 7025, 7711, 8465, 9293, 10202, 14053) },
+      { name: 'POL 0,90m', description: 'COBAIN POL 0,90 m x 1,10 m (1ENC/1DEC)', dimensions: '0,90 m x 1,10 m', prices: createPrices(3545, 3713, 3998, 4344, 4764, 5225, 5730, 6284, 8771) },
+    ],
+  },
+  // CODE
+  {
+    id: 'code',
+    code: '20667',
+    name: 'CODE',
+    description: 'Design minimalista com conforto',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '1B 1AS 1,20m', description: 'CODE 1B 1AS 1,20 m x 1,00 m x 0,70 m (1ENC)', dimensions: '1,20 m x 1,00 m', prices: createPrices(2754, 2955, 3235, 3335, 3476, 3646, 3876, 4147, 5699) },
+      { name: '1B 1AS 1,30m', description: 'CODE 1B 1AS 1,30 m x 1,00 m x 0,70 m (1ENC)', dimensions: '1,30 m x 1,00 m', prices: createPrices(2935, 3147, 3443, 3549, 3696, 3876, 4119, 4405, 6043) },
+      { name: '1B 1AS 1,40m', description: 'CODE 1B 1AS 1,40 m x 1,00 m x 0,70 m (1ENC)', dimensions: '1,40 m x 1,00 m', prices: createPrices(3131, 3354, 3666, 3777, 3934, 4124, 4379, 4680, 6409) },
+      { name: '1B 1AS 1,50m', description: 'CODE 1B 1AS 1,50 m x 1,00 m x 0,70 m (1ENC)', dimensions: '1,50 m x 1,00 m', prices: createPrices(3315, 3551, 3880, 3997, 4163, 4363, 4632, 4950, 6772) },
+      { name: 'CH 1B 1,20m', description: 'CODE CH 1B 1,20 m x 1,50 m x 0,70 m (1ENC)', dimensions: '1,20 m x 1,50 m', prices: createPrices(3153, 3326, 3569, 3655, 3776, 3924, 4123, 4356, 5697) },
+      { name: 'PUFF 1,00m', description: 'CODE PUFF 1,00 m x 0,70 m x 0,44 m', dimensions: '1,00 m x 0,70 m', prices: createPrices(1243, 1318, 1424, 1462, 1514, 1578, 1665, 1767, 2352) },
+    ],
+  },
+  // CORSO
+  {
+    id: 'corso',
+    code: '20448',
+    name: 'CORSO',
+    description: 'Sofá clássico atemporal',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '1B 1AS 1,08m', description: 'CORSO 1B 1AS 1,08 m x 1,05 m (1ENC)', dimensions: '1,08 m x 1,05 m', prices: createPrices(2204, 2360, 2580, 2687, 2833, 3013, 3256, 3542, 5057) },
+    ],
+  },
+  // ELLIE
+  {
+    id: 'ellie',
+    code: '21165',
+    name: 'ELLIE',
+    description: 'Sofá com design elegante e base personalizável',
+    category: 'Sofás',
+    hasBase: true,
+    availableBases: ['FOSCA/METALIZADO', 'MTX'],
+    modulations: [
+      { name: '1B 1AS 1,00m', description: 'ELLIE 1B 1AS 1,00 m x 1,05 m x 0,68 m', dimensions: '1,00 m x 1,05 m', prices: createPrices(3115, 3175, 3258, 3375, 3532, 3720, 3974, 4273, 6050) },
+      { name: '1B 1AS 1,10m', description: 'ELLIE 1B 1AS 1,10 m x 1,05 m x 0,68 m', dimensions: '1,10 m x 1,05 m', prices: createPrices(3344, 3410, 3500, 3624, 3792, 3993, 4265, 4585, 6509) },
+      { name: 'CH 1B 1,20m', description: 'ELLIE CH 1B 1,20 m x 1,55 m x 0,68 m', dimensions: '1,20 m x 1,55 m', prices: createPrices(3837, 3905, 3999, 4131, 4315, 4538, 4847, 5208, 7253) },
+    ],
+  },
+  // JOPLIN
+  {
+    id: 'joplin',
+    code: '20130',
+    name: 'JOPLIN',
+    description: 'Sofá retrô com personalidade',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '2B 2AS 1,40m', description: 'JOPLIN 2B 2AS 1,40 m x 0,90 m (2ENC)', dimensions: '1,40 m x 0,90 m', prices: createPrices(2245, 2378, 2596, 2856, 3173, 3525, 3913, 4341, 6133) },
+      { name: '2B 2AS 1,60m', description: 'JOPLIN 2B 2AS 1,60 m x 0,90 m (2ENC)', dimensions: '1,60 m x 0,90 m', prices: createPrices(2476, 2621, 2859, 3145, 3490, 3880, 4312, 4786, 6764) },
+      { name: '2B 2AS 1,80m', description: 'JOPLIN 2B 2AS 1,80 m x 0,90 m (2ENC)', dimensions: '1,80 m x 0,90 m', prices: createPrices(2639, 2803, 3065, 3380, 3762, 4195, 4676, 5210, 7413) },
+      { name: 'POL 1,00m', description: 'JOPLIN POL 1,00 m x 0,90 m', dimensions: '1,00 m x 0,90 m', prices: createPrices(1469, 1550, 1688, 1853, 2053, 2276, 2523, 2795, 4314) },
+      { name: 'PUFF 0,70m', description: 'JOPLIN PUFF 0,70 m x 0,60 m', dimensions: '0,70 m x 0,60 m', prices: createPrices(745, 779, 849, 931, 1032, 1145, 1268, 1405, 1838) },
+    ],
+  },
+  // JULIAN
+  {
+    id: 'julian',
+    code: '20623',
+    name: 'JULIAN',
+    description: 'Modular flexível com encostos',
+    category: 'Modulares',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: 'ASS 1,00m', description: 'JULIAN ASS 1,00 m x 1,00 m x 0,42 m', dimensions: '1,00 m x 1,00 m', prices: createPrices(1483, 1578, 1711, 1779, 1874, 1989, 2144, 2327, 3372) },
+      { name: 'ASS 1,20m', description: 'JULIAN ASS 1,20 m x 1,00 m x 0,42 m', dimensions: '1,20 m x 1,00 m', prices: createPrices(1656, 1758, 1902, 1973, 2073, 2195, 2363, 2555, 3669) },
+      { name: 'ASS 1,40m', description: 'JULIAN ASS 1,40 m x 1,00 m x 0,42 m', dimensions: '1,40 m x 1,00 m', prices: createPrices(1844, 1952, 2103, 2179, 2286, 2415, 2591, 2796, 3977) },
+      { name: 'ENC 1B 0,60m', description: 'JULIAN ENC 1B 0,60 m x 0,80 m x 0,30 m (1DEC)', dimensions: '0,60 m x 0,80 m', prices: createPrices(860, 919, 1000, 1043, 1099, 1171, 1267, 1377, 2017) },
+    ],
+  },
+  // KIEDIS
+  {
+    id: 'kiedis',
+    code: '20168',
+    name: 'KIEDIS',
+    description: 'Sofá com design marcante',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '1B 1AS 0,80m', description: 'KIEDIS 1B 1AS 0,80 m x 0,95 m (1ENC)', dimensions: '0,80 m x 0,95 m', prices: createPrices(1760, 1862, 2020, 2216, 2452, 2714, 3003, 3320, 4478) },
+      { name: '1B 1AS 0,90m', description: 'KIEDIS 1B 1AS 0,90 m x 0,95 m (1ENC)', dimensions: '0,90 m x 0,95 m', prices: createPrices(1889, 1992, 2166, 2371, 2624, 2900, 3209, 3550, 4778) },
+      { name: '1B 1AS 1,00m', description: 'KIEDIS 1B 1AS 1,00 m x 0,95 m (1ENC)', dimensions: '1,00 m x 0,95 m', prices: createPrices(2014, 2124, 2307, 2528, 2794, 3090, 3416, 3778, 5075) },
+      { name: '2B 2AS 1,60m', description: 'KIEDIS 2B 2AS 1,60 m x 0,95 m (2ENC)', dimensions: '1,60 m x 0,95 m', prices: createPrices(3008, 3179, 3466, 3814, 4233, 4700, 5218, 5793, 7846) },
+      { name: '2B 2AS 1,80m', description: 'KIEDIS 2B 2AS 1,80 m x 0,95 m (2ENC)', dimensions: '1,80 m x 0,95 m', prices: createPrices(3294, 3479, 3789, 4165, 4619, 5123, 5679, 6297, 8516) },
+      { name: '2B 2AS 2,00m', description: 'KIEDIS 2B 2AS 2,00 m x 0,95 m (2ENC)', dimensions: '2,00 m x 0,95 m', prices: createPrices(3531, 3732, 4065, 4468, 4954, 5493, 6095, 6759, 9143) },
+      { name: 'POL 1,00m', description: 'KIEDIS POL 1,00 m x 0,95 m', dimensions: '1,00 m x 0,95 m', prices: createPrices(2170, 2286, 2480, 2717, 3005, 3319, 3670, 4057, 5442) },
+    ],
+  },
   // NIMBUS
   {
     id: 'nimbus',
@@ -116,6 +278,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: '1B 1AS 1,00m', description: 'NIMBUS 1B 1AS 1,00 m x 1,17 m (2DEC)', dimensions: '1,00 m x 1,17 m', prices: createPrices(3002, 3189, 3450, 3557, 3707, 3889, 4136, 4425, 6009) },
       { name: '1B 1AS 1,10m', description: 'NIMBUS 1B 1AS 1,10 m x 1,17 m (2DEC)', dimensions: '1,10 m x 1,17 m', prices: createPrices(3312, 3509, 3785, 3897, 4057, 4249, 4510, 4816, 6490) },
       { name: '1B 1AS 1,20m', description: 'NIMBUS 1B 1AS 1,20 m x 1,17 m (2DEC)', dimensions: '1,20 m x 1,17 m', prices: createPrices(3477, 3685, 3974, 4092, 4259, 4462, 4734, 5055, 6809) },
+      { name: '1B 1AS 1,30m', description: 'NIMBUS 1B 1AS 1,30 m x 1,17 m (3DEC)', dimensions: '1,30 m x 1,17 m', prices: createPrices(3806, 4042, 4369, 4505, 4693, 4924, 5235, 5599, 7595) },
       { name: '2B 2AS 2,00m', description: 'NIMBUS 2B 2AS 2,00 m x 1,17 m (4DEC)', dimensions: '2,00 m x 1,17 m', prices: createPrices(5589, 5917, 6376, 6566, 6830, 7150, 7584, 8094, 10882) },
       { name: '2B 2AS 2,20m', description: 'NIMBUS 2B 2AS 2,20 m x 1,17 m (4DEC)', dimensions: '2,20 m x 1,17 m', prices: createPrices(5975, 6322, 6806, 7004, 7282, 7620, 8076, 8613, 11546) },
       { name: '2B 2AS 2,40m', description: 'NIMBUS 2B 2AS 2,40 m x 1,17 m (4DEC)', dimensions: '2,40 m x 1,17 m', prices: createPrices(6295, 6656, 7162, 7368, 7659, 8012, 8491, 9053, 12120) },
@@ -138,7 +301,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: '1B 1AS 1,00m', description: 'OASI 1B 1AS 1,00 m x 0,85 m x 0,63 m', dimensions: '1,00 m x 0,85 m', prices: createPrices(3054, 3192, 3385, 3465, 3575, 3711, 3893, 4107, 5337) },
       { name: '1B 1AS 1,10m', description: 'OASI 1B 1AS 1,10 m x 0,85 m x 0,63 m', dimensions: '1,10 m x 0,85 m', prices: createPrices(3238, 3384, 3588, 3672, 3790, 3933, 4126, 4353, 5655) },
       { name: '1B 2AS 1,70m', description: 'OASI 1B 2AS 1,70 m x 0,85 m x 0,63 m', dimensions: '1,70 m x 0,85 m', prices: createPrices(4214, 4438, 4751, 4880, 5060, 5280, 5576, 5925, 7924) },
-      { name: '1B 2AS 1,90m', description: 'OASI 1B 2AS 1,90 m x 0,85 m x 0,63 m', dimensions: '1,90 m x 0,85 m', prices: createPrices(4451, 4733, 5028, 5166, 5359, 5594, 5913, 6286, 8430) },
+      { name: '1B 2AS 1,90m', description: 'OASI 1B 2AS 1,90 m x 0,85 m x 0,63 m', dimensions: '1,90 m x 0,85 m', prices: createPrices(4451, 4691, 5028, 5166, 5359, 5594, 5913, 6286, 8430) },
       { name: '2B 2AS 2,00m', description: 'OASI 2B 2AS 2,00 m x 0,85 m x 0,63 m', dimensions: '2,00 m x 0,85 m', prices: createPrices(4816, 5072, 5430, 5577, 5784, 6034, 6373, 6771, 9055) },
       { name: '2B 2AS 2,20m', description: 'OASI 2B 2AS 2,20 m x 0,85 m x 0,63 m', dimensions: '2,20 m x 0,85 m', prices: createPrices(5072, 5345, 5726, 5883, 6103, 6369, 6730, 7153, 9585) },
     ],
@@ -163,6 +326,33 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: 'SB BI 1,40m', description: 'MODUM SB BI 1,40 m x 1,10 m x 0,62 m (1ENC/1DEC)', dimensions: '1,40 m x 1,10 m', prices: createPrices(2378, 2532, 2747, 2846, 2985, 3153, 3382, 3649, 5186) },
     ],
   },
+  // NEW HARRY
+  {
+    id: 'new-harry',
+    code: '22299',
+    name: 'NEW HARRY',
+    description: 'Poltrona clássica com opção giratória',
+    category: 'Poltronas',
+    hasBase: true,
+    availableBases: ['PE', 'BASE GIRATORIA'],
+    modulations: [
+      { name: 'POL 0,89m PE', description: 'NEW HARRY POL 0,89 m x 0,83 m PE', dimensions: '0,89 m x 0,83 m', prices: createPrices(1845, 1966, 2135, 2186, 2257, 2345, 2463, 2602, 3296) },
+      { name: 'POL 0,89m Giratória', description: 'NEW HARRY POL 0,89 m x 0,83 m BASE GIRATORIA', dimensions: '0,89 m x 0,83 m', prices: createPrices(2055, 2163, 2317, 2366, 2434, 2516, 2628, 2760, 3455) },
+    ],
+  },
+  // NICKS
+  {
+    id: 'nicks',
+    code: '22100',
+    name: 'NICKS',
+    description: 'Poltrona compacta elegante',
+    category: 'Poltronas',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: 'POL 0,55m', description: 'NICKS POL 0,55 m x 0,65 m', dimensions: '0,55 m x 0,65 m', prices: createPrices(1446, 1489, 1556, 1644, 1752, 1868, 1991, 2123, 2545) },
+    ],
+  },
   // NUVIA PUFF
   {
     id: 'nuvia',
@@ -178,6 +368,22 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: 'PUFF 1,00m', description: 'NUVIA PUFF 1,00 m x 1,00 m x 0,40 m PE', dimensions: '1,00 m x 1,00 m', prices: createPrices(1228, 1313, 1432, 1485, 1558, 1649, 1770, 1913, 2732) },
     ],
   },
+  // SENSE
+  {
+    id: 'sense',
+    code: '22405',
+    name: 'SENSE',
+    description: 'Sofá retrátil motorizado de alto padrão',
+    category: 'Sofás',
+    hasBase: false,
+    availableBases: [],
+    modulations: [
+      { name: '1B 1AS 0,95m', description: 'SENSE 1B 1AS ASS 0,80 m 0,95 m x 1,12 m', dimensions: '0,95 m x 1,12 m', prices: createPrices(9566, 9658, 9788, 9931, 10132, 10377, 10708, 11096, 13759) },
+      { name: '1B 1AS 1,05m', description: 'SENSE 1B 1AS ASS 0,80 m 1,05 m x 1,12 m', dimensions: '1,05 m x 1,12 m', prices: createPrices(9675, 9771, 9907, 10056, 10265, 10519, 10863, 11267, 13992) },
+      { name: 'SB 1AS 0,80m', description: 'SENSE SB 1AS ASS 0,80 m 0,80 m x 1,12 m', dimensions: '0,80 m x 1,12 m', prices: createPrices(8717, 8796, 8906, 9026, 9196, 9402, 9680, 10007, 11958) },
+      { name: 'SB 1AS 0,90m', description: 'SENSE SB 1AS ASS 0,90 m 0,90 m x 1,12 m', dimensions: '0,90 m x 1,12 m', prices: createPrices(8862, 8942, 9055, 9179, 9354, 9567, 9854, 10191, 12284) },
+    ],
+  },
 ];
 
 export const PRODUCT_CATEGORIES = ['Sofás', 'Poltronas', 'Puffs', 'Modulares', 'Outros'] as const;
@@ -185,6 +391,8 @@ export const PRODUCT_CATEGORIES = ['Sofás', 'Poltronas', 'Puffs', 'Modulares', 
 export const BASE_OPTIONS = [
   'FOSCA/METALIZADO',
   'MTX',
+  'PE',
+  'BASE GIRATORIA',
   'Madeira natural',
   'Madeira escura',
   'Pés palito',
