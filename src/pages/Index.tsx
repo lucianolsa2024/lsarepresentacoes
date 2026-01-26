@@ -56,6 +56,10 @@ const Index = () => {
     setItems(items.map((item) => (item.id === id ? { ...item, quantity } : item)));
   };
 
+  const handleUpdateObservations = (id: string, observations: string) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, observations } : item)));
+  };
+
   const handleRemoveItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id));
     toast.success('Item removido');
@@ -207,6 +211,7 @@ const Index = () => {
                     <QuoteCart
                       items={items}
                       onUpdateQuantity={handleUpdateQuantity}
+                      onUpdateObservations={handleUpdateObservations}
                       onRemoveItem={handleRemoveItem}
                     />
                     <PaymentForm

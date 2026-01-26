@@ -45,6 +45,7 @@ export interface QuoteItem {
   fabricDescription: string;
   price: number;
   quantity: number;
+  observations: string;
 }
 
 export interface ClientData {

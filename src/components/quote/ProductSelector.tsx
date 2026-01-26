@@ -18,6 +18,22 @@ interface ProductSelectorProps {
   onAddItem: (item: QuoteItem) => void;
 }
 
+// Mapping of fabric tiers to their prefix patterns
+const FABRIC_TIER_PREFIXES: Record<FabricTier, string[]> = {
+  'SEM TEC': ['SEM', 'OUTRO'],
+  'FX B': ['B2', 'B'],
+  'FX C': ['C3', 'C'],
+  'FX D': ['D4', 'D'],
+  'FX E': ['E5', 'E'],
+  'FX F': ['F6', 'F'],
+  'FX G': ['G7', 'G'],
+  'FX H': ['H8', 'H'],
+  'FX I': ['I9', 'I'],
+  'FX J': ['J10', 'J'],
+  'FX 3D': ['3D'],
+  'FX COURO': ['COURO', 'LEATHER'],
+};
+
 export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,13 +41,13 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     modulationId: '',
     sizeId: '',
     base: '',
-    fabricTier: 'FX E' as FabricTier,
+    fabricTier: '' as FabricTier | '',
     fabricDescription: '',
   });
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
-    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricDescription: '' });
   };
 
   // Get selected modulation
@@ -69,14 +85,23 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return Array.from(bases);
   }, [selectedModulation]);
 
+  // Get available fabric tiers (only those with price > 0)
+  const availableFabricTiers = useMemo(() => {
+    if (!selectedSize) return [];
+    return FABRIC_TIERS.filter(tier => {
+      const price = selectedSize.prices[tier] || 0;
+      return price > 0;
+    });
+  }, [selectedSize]);
+
   const handleConfirm = () => {
-    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricDescription) return;
+    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricTier || !config.fabricDescription) return;
 
     const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
     const size = modulation?.sizes.find(s => s.id === config.sizeId);
     if (!modulation || !size) return;
 
-    const price = size.prices[config.fabricTier] || 0;
+    const price = size.prices[config.fabricTier as FabricTier] || 0;
 
     const item: QuoteItem = {
       id: crypto.randomUUID(),
@@ -87,15 +112,16 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeId: config.sizeId,
       sizeDescription: size.description,
       base: size.base || config.base,
-      fabricTier: config.fabricTier,
+      fabricTier: config.fabricTier as FabricTier,
       fabricDescription: config.fabricDescription,
       price,
       quantity: 1,
+      observations: '',
     };
 
     onAddItem(item);
     setSelectedProduct(null);
-    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricDescription: '' });
   };
 
   const formatCurrency = (value: number) => {
@@ -104,8 +130,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
   // Get current price based on selected size and tier
   const getCurrentPrice = () => {
-    if (!selectedSize) return 0;
-    return selectedSize.prices[config.fabricTier] || 0;
+    if (!selectedSize || !config.fabricTier) return 0;
+    return selectedSize.prices[config.fabricTier as FabricTier] || 0;
   };
 
   // Filter products by search term
@@ -131,11 +157,36 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
   // Reset size when modulation or base changes
   const handleModulationChange = (value: string) => {
-    setConfig({ ...config, modulationId: value, sizeId: '', base: '' });
+    setConfig({ ...config, modulationId: value, sizeId: '', base: '', fabricTier: '', fabricDescription: '' });
   };
 
   const handleBaseChange = (value: string) => {
-    setConfig({ ...config, base: value, sizeId: '' });
+    setConfig({ ...config, base: value, sizeId: '', fabricTier: '', fabricDescription: '' });
+  };
+
+  const handleSizeChange = (value: string) => {
+    setConfig({ ...config, sizeId: value, fabricTier: '', fabricDescription: '' });
+  };
+
+  const handleFabricTierChange = (value: string) => {
+    setConfig({ ...config, fabricTier: value as FabricTier, fabricDescription: '' });
+  };
+
+  // Calculate step numbers based on available options
+  const getStepNumber = (step: 'base' | 'size' | 'fabricTier' | 'fabricDescription') => {
+    const hasBase = availableBases.length > 0;
+    switch (step) {
+      case 'base':
+        return 2;
+      case 'size':
+        return hasBase ? 3 : 2;
+      case 'fabricTier':
+        return hasBase ? 4 : 3;
+      case 'fabricDescription':
+        return hasBase ? 5 : 4;
+      default:
+        return 0;
+    }
   };
 
   return (
@@ -234,7 +285,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               {/* Step 2: Base (if available) */}
               {selectedModulation && availableBases.length > 0 && (
                 <div className="space-y-2">
-                  <Label>2. Acabamento da Base *</Label>
+                  <Label>{getStepNumber('base')}. Acabamento da Base *</Label>
                   <Select
                     value={config.base}
                     onValueChange={handleBaseChange}
@@ -256,10 +307,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               {/* Step 3: Size/Dimensions */}
               {selectedModulation && (availableBases.length === 0 || config.base) && (
                 <div className="space-y-2">
-                  <Label>{availableBases.length > 0 ? '3' : '2'}. Tamanho *</Label>
+                  <Label>{getStepNumber('size')}. Tamanho *</Label>
                   <Select
                     value={config.sizeId}
-                    onValueChange={(value) => setConfig({ ...config, sizeId: value })}
+                    onValueChange={handleSizeChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tamanho..." />
@@ -275,25 +326,19 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 4: Fabric Tier */}
+              {/* Step 4: Fabric Tier (Two-step selection - First: Tier) */}
               {config.sizeId && (
                 <div className="space-y-2">
-                  <Label>{availableBases.length > 0 ? '4' : '3'}. Faixa de Tecido *</Label>
+                  <Label>{getStepNumber('fabricTier')}. Faixa de Tecido *</Label>
                   <Select
                     value={config.fabricTier}
-                    onValueChange={(value) =>
-                      setConfig({ ...config, fabricTier: value as FabricTier })
-                    }
+                    onValueChange={handleFabricTierChange}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione a faixa..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {FABRIC_TIERS.filter(tier => {
-                        // Only show tiers that have prices > 0
-                        const price = selectedSize?.prices[tier] || 0;
-                        return price > 0;
-                      }).map((tier) => {
+                      {availableFabricTiers.map((tier) => {
                         const price = selectedSize?.prices[tier] || 0;
                         return (
                           <SelectItem key={tier} value={tier}>
@@ -306,14 +351,25 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 5: Fabric Description */}
-              {config.sizeId && (
+              {/* Step 5: Fabric Description (Second step of fabric selection) */}
+              {config.fabricTier && (
                 <div className="space-y-2">
                   <Label>
-                    {availableBases.length > 0 ? '5' : '4'}. Descrição do Tecido *
+                    {getStepNumber('fabricDescription')}. Nome do Tecido *
                   </Label>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {config.fabricTier === 'FX B' && 'Tecidos que começam com B2...'}
+                    {config.fabricTier === 'FX C' && 'Tecidos que começam com C3...'}
+                    {config.fabricTier === 'FX D' && 'Tecidos que começam com D4...'}
+                    {config.fabricTier === 'FX E' && 'Tecidos que começam com E5...'}
+                    {config.fabricTier === 'FX F' && 'Tecidos que começam com F6...'}
+                    {config.fabricTier === 'FX G' && 'Tecidos que começam com G7...'}
+                    {config.fabricTier === 'FX H' && 'Tecidos que começam com H8...'}
+                    {config.fabricTier === 'FX I' && 'Tecidos que começam com I9...'}
+                    {config.fabricTier === 'FX J' && 'Tecidos que começam com J10...'}
+                  </div>
                   <Input
-                    placeholder="Ex: Suede cinza, Veludo azul marinho..."
+                    placeholder="Digite o nome/código do tecido..."
                     value={config.fabricDescription}
                     onChange={(e) =>
                       setConfig({ ...config, fabricDescription: e.target.value })
@@ -323,7 +379,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               )}
 
               {/* Price Preview */}
-              {config.sizeId && (
+              {config.fabricTier && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
                   <span className="text-sm text-muted-foreground">Preço:</span>
                   <span className="text-xl font-bold text-primary ml-2">
@@ -334,7 +390,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulationId || !config.sizeId || !config.fabricDescription}
+                disabled={!config.modulationId || !config.sizeId || !config.fabricTier || !config.fabricDescription}
                 className="w-full"
               >
                 Confirmar Item

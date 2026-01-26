@@ -2,15 +2,17 @@ import { QuoteItem } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Trash2 } from 'lucide-react';
 
 interface QuoteCartProps {
   items: QuoteItem[];
   onUpdateQuantity: (id: string, quantity: number) => void;
+  onUpdateObservations: (id: string, observations: string) => void;
   onRemoveItem: (id: string) => void;
 }
 
-export function QuoteCart({ items, onUpdateQuantity, onRemoveItem }: QuoteCartProps) {
+export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRemoveItem }: QuoteCartProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -69,7 +71,18 @@ export function QuoteCart({ items, onUpdateQuantity, onRemoveItem }: QuoteCartPr
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                {/* Observations field */}
+                <div className="mb-3">
+                  <Textarea
+                    placeholder="Observações do item (opcional)..."
+                    value={item.observations || ''}
+                    onChange={(e) => onUpdateObservations(item.id, e.target.value)}
+                    className="text-sm min-h-[60px] resize-none"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">Qtd:</span>
                     <Input
