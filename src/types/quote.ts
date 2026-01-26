@@ -54,6 +54,7 @@ export interface ClientData {
   document: string;
   phone: string;
   email: string;
+  isNewClient: boolean;
   address: {
     street: string;
     number: string;
@@ -92,6 +93,7 @@ export const INITIAL_CLIENT: ClientData = {
   document: '',
   phone: '',
   email: '',
+  isNewClient: false,
   address: {
     street: '',
     number: '',

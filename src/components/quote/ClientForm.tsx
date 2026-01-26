@@ -2,7 +2,8 @@ import { ClientData } from '@/types/quote';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Building, Phone, Mail, MapPin } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { User, Building, Phone, Mail, MapPin, UserPlus } from 'lucide-react';
 
 interface ClientFormProps {
   client: ClientData;
@@ -10,7 +11,7 @@ interface ClientFormProps {
 }
 
 export function ClientForm({ client, onChange }: ClientFormProps) {
-  const updateField = (field: keyof ClientData, value: string) => {
+  const updateField = (field: keyof ClientData, value: string | boolean) => {
     onChange({ ...client, [field]: value });
   };
 
@@ -24,33 +25,49 @@ export function ClientForm({ client, onChange }: ClientFormProps) {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Dados do Cliente
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Dados do Cliente
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="isNewClient"
+              checked={client.isNewClient}
+              onCheckedChange={(checked) => updateField('isNewClient', checked === true)}
+            />
+            <Label 
+              htmlFor="isNewClient" 
+              className="flex items-center gap-1 text-sm font-medium cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4 text-primary" />
+              Cliente Novo
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Personal Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome Completo *</Label>
-            <Input
-              id="name"
-              placeholder="Nome do cliente"
-              value={client.name}
-              onChange={(e) => updateField('name', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="company" className="flex items-center gap-1">
               <Building className="h-3 w-3" />
-              Empresa
+              Empresa *
             </Label>
             <Input
               id="company"
               placeholder="Nome da empresa"
               value={client.company}
               onChange={(e) => updateField('company', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do Contato</Label>
+            <Input
+              id="name"
+              placeholder="Nome do cliente"
+              value={client.name}
+              onChange={(e) => updateField('name', e.target.value)}
             />
           </div>
         </div>
