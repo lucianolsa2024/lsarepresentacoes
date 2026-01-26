@@ -1,13 +1,20 @@
+// Fabric price tiers
+export const FABRIC_TIERS = ['FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J'] as const;
+export type FabricTier = typeof FABRIC_TIERS[number];
+
 export interface ProductModulation {
   name: string;
-  price: number;
+  description: string;
+  dimensions: string;
+  prices: Record<FabricTier, number>;
 }
 
 export interface Product {
   id: string;
+  code: string;
   name: string;
   description: string;
-  category: 'Sofás' | 'Poltronas' | 'Puffs' | 'Outros';
+  category: string;
   modulations: ProductModulation[];
   hasBase: boolean;
   availableBases: string[];
@@ -19,7 +26,8 @@ export interface QuoteItem {
   productName: string;
   modulation: string;
   base: string;
-  fabric: string;
+  fabricTier: FabricTier;
+  fabricDescription: string;
   price: number;
   quantity: number;
 }
@@ -27,7 +35,7 @@ export interface QuoteItem {
 export interface ClientData {
   name: string;
   company: string;
-  document: string; // CPF or CNPJ
+  document: string;
   phone: string;
   email: string;
   address: {

@@ -56,7 +56,7 @@ export function QuoteCart({ items, onUpdateQuantity, onRemoveItem }: QuoteCartPr
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      Tecido: {item.fabric}
+                      Tecido: {item.fabricDescription} ({item.fabricTier})
                     </p>
                   </div>
                   <Button

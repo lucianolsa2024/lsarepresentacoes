@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Product, ProductModulation } from '@/types/quote';
+import { Product, ProductModulation, FabricTier, FABRIC_TIERS } from '@/types/quote';
 import { PRODUCT_CATEGORIES, BASE_OPTIONS } from '@/data/products';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,28 @@ interface ProductManagerProps {
 
 interface NewModulation {
   name: string;
-  price: string;
+  description: string;
+  dimensions: string;
+  priceB: string;
+  priceE: string;
 }
+
+// Helper to create default prices from base prices
+const createDefaultPrices = (priceB: number, priceE: number): Record<FabricTier, number> => {
+  // Linear interpolation between B and E, then continue the pattern
+  const step = (priceE - priceB) / 3;
+  return {
+    'FX B': priceB,
+    'FX C': Math.round(priceB + step),
+    'FX D': Math.round(priceB + step * 2),
+    'FX E': priceE,
+    'FX F': Math.round(priceE + step),
+    'FX G': Math.round(priceE + step * 2),
+    'FX H': Math.round(priceE + step * 3),
+    'FX I': Math.round(priceE + step * 4),
+    'FX J': Math.round(priceE + step * 6),
+  };
+};
 
 export function ProductManager({
   products,
@@ -47,24 +67,26 @@ export function ProductManager({
 
   const [formData, setFormData] = useState({
     name: '',
+    code: '',
     description: '',
-    category: 'Sofás' as Product['category'],
+    category: 'Sofás' as string,
     hasBase: false,
     availableBases: [] as string[],
   });
   const [modulations, setModulations] = useState<NewModulation[]>([
-    { name: '', price: '' },
+    { name: '', description: '', dimensions: '', priceB: '', priceE: '' },
   ]);
 
   const resetForm = () => {
     setFormData({
       name: '',
+      code: '',
       description: '',
       category: 'Sofás',
       hasBase: false,
       availableBases: [],
     });
-    setModulations([{ name: '', price: '' }]);
+    setModulations([{ name: '', description: '', dimensions: '', priceB: '', priceE: '' }]);
     setEditingProduct(null);
   };
 
@@ -77,6 +99,7 @@ export function ProductManager({
     setEditingProduct(product);
     setFormData({
       name: product.name,
+      code: product.code,
       description: product.description,
       category: product.category,
       hasBase: product.hasBase,
@@ -85,7 +108,10 @@ export function ProductManager({
     setModulations(
       product.modulations.map((m) => ({
         name: m.name,
-        price: m.price.toString(),
+        description: m.description,
+        dimensions: m.dimensions,
+        priceB: m.prices['FX B'].toString(),
+        priceE: m.prices['FX E'].toString(),
       }))
     );
     setIsDialogOpen(true);
@@ -97,19 +123,22 @@ export function ProductManager({
       return;
     }
 
-    const validModulations = modulations.filter((m) => m.name && m.price);
+    const validModulations = modulations.filter((m) => m.name && m.priceB && m.priceE);
     if (validModulations.length === 0) {
-      toast.error('Adicione pelo menos uma modulação com preço');
+      toast.error('Adicione pelo menos uma modulação com preços');
       return;
     }
 
     const productModulations: ProductModulation[] = validModulations.map((m) => ({
       name: m.name,
-      price: parseFloat(m.price),
+      description: m.description || m.name,
+      dimensions: m.dimensions,
+      prices: createDefaultPrices(parseFloat(m.priceB), parseFloat(m.priceE)),
     }));
 
     const product: Product = {
       id: editingProduct?.id || crypto.randomUUID(),
+      code: formData.code || '',
       name: formData.name,
       description: formData.description,
       category: formData.category,
@@ -138,12 +167,12 @@ export function ProductManager({
   };
 
   const addModulation = () => {
-    setModulations([...modulations, { name: '', price: '' }]);
+    setModulations([...modulations, { name: '', description: '', dimensions: '', priceB: '', priceE: '' }]);
   };
 
   const updateModulation = (
     index: number,
-    field: 'name' | 'price',
+    field: keyof NewModulation,
     value: string
   ) => {
     const updated = [...modulations];
@@ -216,14 +245,24 @@ export function ProductManager({
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Código</Label>
+                  <Input
+                    value={formData.code}
+                    onChange={(e) =>
+                      setFormData({ ...formData, code: e.target.value })
+                    }
+                    placeholder="Ex: 20488"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Categoria</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        category: value as Product['category'],
-                      })
+                      setFormData({ ...formData, category: value })
                     }
                   >
                     <SelectTrigger>
@@ -238,18 +277,16 @@ export function ProductManager({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Descrição do produto..."
-                  rows={2}
-                />
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Input
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Descrição do produto..."
+                  />
+                </div>
               </div>
 
               {/* Modulations */}
@@ -261,35 +298,55 @@ export function ProductManager({
                     Adicionar
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Informe o preço da FX B e FX E. Os demais serão calculados automaticamente.
+                </p>
                 {modulations.map((mod, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Ex: 2,50m ou 3 lugares"
-                      value={mod.name}
-                      onChange={(e) =>
-                        updateModulation(index, 'name', e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Preço"
-                      value={mod.price}
-                      onChange={(e) =>
-                        updateModulation(index, 'price', e.target.value)
-                      }
-                      className="w-32"
-                    />
-                    {modulations.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeModulation(index)}
-                        className="text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
+                  <div key={index} className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nome (ex: 2,50m)"
+                        value={mod.name}
+                        onChange={(e) => updateModulation(index, 'name', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Dimensões"
+                        value={mod.dimensions}
+                        onChange={(e) => updateModulation(index, 'dimensions', e.target.value)}
+                        className="flex-1"
+                      />
+                      {modulations.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeModulation(index)}
+                          className="text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label className="text-xs">Preço FX B</Label>
+                        <Input
+                          type="number"
+                          placeholder="R$"
+                          value={mod.priceB}
+                          onChange={(e) => updateModulation(index, 'priceB', e.target.value)}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Preço FX E</Label>
+                        <Input
+                          type="number"
+                          placeholder="R$"
+                          value={mod.priceE}
+                          onChange={(e) => updateModulation(index, 'priceE', e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -312,10 +369,7 @@ export function ProductManager({
                 {formData.hasBase && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pl-6">
                     {BASE_OPTIONS.map((base) => (
-                      <div
-                        key={base}
-                        className="flex items-center space-x-2"
-                      >
+                      <div key={base} className="flex items-center space-x-2">
                         <Checkbox
                           id={base}
                           checked={formData.availableBases.includes(base)}
@@ -358,7 +412,12 @@ export function ProductManager({
                 <Card key={product.id}>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{product.name}</CardTitle>
+                      <div>
+                        <CardTitle className="text-lg">{product.name}</CardTitle>
+                        {product.code && (
+                          <p className="text-xs text-muted-foreground">Cód: {product.code}</p>
+                        )}
+                      </div>
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -380,22 +439,16 @@ export function ProductManager({
                   </CardHeader>
                   <CardContent className="text-sm space-y-2">
                     {product.description && (
-                      <p className="text-muted-foreground">
-                        {product.description}
-                      </p>
+                      <p className="text-muted-foreground">{product.description}</p>
                     )}
                     <div>
-                      <span className="font-medium">Modulações:</span>
-                      <ul className="ml-4 mt-1 space-y-0.5">
-                        {product.modulations.map((mod) => (
-                          <li key={mod.name}>
-                            {mod.name}: {formatCurrency(mod.price)}
-                          </li>
-                        ))}
-                      </ul>
+                      <span className="font-medium">Modulações:</span> {product.modulations.length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Preços: {formatCurrency(product.modulations[0]?.prices['FX B'] || 0)} - {formatCurrency(product.modulations[product.modulations.length - 1]?.prices['FX J'] || 0)}
                     </div>
                     {product.hasBase && (
-                      <div>
+                      <div className="text-xs">
                         <span className="font-medium">Bases:</span>{' '}
                         <span className="text-muted-foreground">
                           {product.availableBases.join(', ')}

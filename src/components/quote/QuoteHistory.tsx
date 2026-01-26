@@ -252,7 +252,7 @@ export function QuoteHistory({
                           </p>
                           <p className="text-muted-foreground">
                             {item.modulation}
-                            {item.base && ` | ${item.base}`} | {item.fabric}
+                            {item.base && ` | ${item.base}`} | {item.fabricDescription} ({item.fabricTier})
                           </p>
                         </div>
                         <div className="text-right">

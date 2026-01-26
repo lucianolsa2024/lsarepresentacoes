@@ -113,7 +113,7 @@ export function generateQuotePDF(quote: Quote): void {
       item.productName,
       `Mod: ${item.modulation}`,
       item.base ? `Base: ${item.base}` : '',
-      `Tecido: ${item.fabric}`,
+      `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
     ]
       .filter(Boolean)
       .join(' | ');
