@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit2, X, Package } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Package, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { ExcelImporter } from './ExcelImporter';
 
@@ -72,6 +72,7 @@ export function ProductManager({
 }: ProductManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -243,8 +244,24 @@ export function ProductManager({
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  // Group products by category
-  const groupedProducts = products.reduce((acc, product) => {
+  // Filter products by search query
+  const filteredProducts = products.filter((product) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.code.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query) ||
+      product.description.toLowerCase().includes(query) ||
+      product.modulations.some((mod) => 
+        mod.name.toLowerCase().includes(query) ||
+        mod.sizes.some((size) => size.description.toLowerCase().includes(query))
+      )
+    );
+  });
+
+  // Group filtered products by category
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
     if (!acc[product.category]) {
       acc[product.category] = [];
     }
@@ -274,17 +291,41 @@ export function ProductManager({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Catálogo de Produtos</h2>
-        <div className="flex gap-2">
-          <ExcelImporter onImportComplete={onRefresh || (() => {})} />
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openNewDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Produto
-              </Button>
-            </DialogTrigger>
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Catálogo de Produtos</h2>
+          <div className="flex gap-2">
+            <ExcelImporter onImportComplete={onRefresh || (() => {})} />
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openNewDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Produto
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
+        </div>
+        
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar produtos por nome, código, categoria ou modulação..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        {/* Results count */}
+        <div className="text-sm text-muted-foreground">
+          {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+          {searchQuery && ` para "${searchQuery}"`}
+        </div>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -483,11 +524,9 @@ export function ProductManager({
             </div>
           </DialogContent>
         </Dialog>
-        </div>
-      </div>
 
       {/* Product List */}
-      {products.length === 0 ? (
+      {filteredProducts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
