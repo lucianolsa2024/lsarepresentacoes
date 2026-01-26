@@ -39,7 +39,7 @@ const formatWhatsAppMessage = (quote: Quote) => {
 };
 
 const Index = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes, addQuote, deleteQuote, duplicateQuote } = useQuotes();
 
   const [activeTab, setActiveTab] = useState('quote');
@@ -273,6 +273,7 @@ const Index = () => {
                   onAdd={addProduct}
                   onUpdate={updateProduct}
                   onDelete={deleteProduct}
+                  onRefresh={refetchProducts}
                 />
               </TabsContent>
             </div>

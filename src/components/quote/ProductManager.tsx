@@ -22,12 +22,14 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit2, X, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { ExcelImporter } from './ExcelImporter';
 
 interface ProductManagerProps {
   products: Product[];
   onAdd: (product: Product) => void;
   onUpdate: (id: string, product: Product) => void;
   onDelete: (id: string) => void;
+  onRefresh?: () => void;
 }
 
 interface NewModulation {
@@ -66,6 +68,7 @@ export function ProductManager({
   onAdd,
   onUpdate,
   onDelete,
+  onRefresh,
 }: ProductManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -273,13 +276,15 @@ export function ProductManager({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Catálogo de Produtos</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Produto
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <ExcelImporter onImportComplete={onRefresh || (() => {})} />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNewDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Produto
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -478,6 +483,7 @@ export function ProductManager({
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Product List */}
