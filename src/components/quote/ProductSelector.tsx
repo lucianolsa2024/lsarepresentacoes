@@ -232,14 +232,9 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       <button
                         key={product.id}
                         onClick={() => handleSelectProduct(product)}
-                        className="w-full text-left bg-muted/50 p-4 rounded-lg hover:bg-muted transition flex justify-between items-center group"
+                        className="w-full text-left bg-muted/50 p-3 rounded-lg hover:bg-muted transition flex justify-between items-center group"
                       >
-                        <div>
-                          <span className="font-semibold">{product.name}</span>
-                          <p className="text-sm text-muted-foreground">
-                            {product.description}
-                          </p>
-                        </div>
+                        <span className="font-semibold">{product.name}</span>
                         <ChevronRight className="text-primary group-hover:translate-x-1 transition" />
                       </button>
                     ))}
