@@ -62,10 +62,22 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       return sizes;
     }
     
-    // For non-CAIXA products, deduplicate by dimensions/description
+    // For non-CAIXA products, deduplicate by dimensions + base variation (PE, GIRATORIA, etc.)
     const uniqueSizes = new Map<string, typeof sizes[0]>();
     sizes.forEach(size => {
-      const key = size.dimensions || size.description;
+      // Extract base variation from description (PE, BASE GIRATORIA, etc.)
+      const descUpper = size.description.toUpperCase();
+      let baseVariation = '';
+      if (descUpper.includes('BASE GIRATORIA') || descUpper.includes('GIRATÓRIA') || descUpper.includes('GIRATORIA')) {
+        baseVariation = 'GIRATORIA';
+      } else if (descUpper.includes(' PE') || descUpper.endsWith(' PE') || descUpper.includes('PÉ')) {
+        baseVariation = 'PE';
+      }
+      
+      // Create unique key combining dimensions and base variation
+      const dimsKey = size.dimensions || size.description;
+      const key = baseVariation ? `${dimsKey}|${baseVariation}` : dimsKey;
+      
       if (!uniqueSizes.has(key)) {
         uniqueSizes.set(key, size);
       }
@@ -360,7 +372,17 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                             size.height && `A: ${size.height}`,
                           ].filter(Boolean).join(' × ');
                           
-                          displayText = dims || size.dimensions || size.description;
+                          // Extract base variation to display (PE, BASE GIRATORIA)
+                          const descUpper = size.description.toUpperCase();
+                          let baseVariation = '';
+                          if (descUpper.includes('BASE GIRATORIA') || descUpper.includes('GIRATÓRIA') || descUpper.includes('GIRATORIA')) {
+                            baseVariation = 'BASE GIRATÓRIA';
+                          } else if ((descUpper.includes(' PE') || descUpper.endsWith(' PE') || descUpper.includes('PÉ')) && !descUpper.includes('CAIXA')) {
+                            baseVariation = 'PÉ';
+                          }
+                          
+                          const baseDims = dims || size.dimensions || size.description;
+                          displayText = baseVariation ? `${baseDims} - ${baseVariation}` : baseDims;
                         }
                         
                         return (
