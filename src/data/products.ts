@@ -138,7 +138,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
       { name: '1B 1AS 1,00m', description: 'OASI 1B 1AS 1,00 m x 0,85 m x 0,63 m', dimensions: '1,00 m x 0,85 m', prices: createPrices(3054, 3192, 3385, 3465, 3575, 3711, 3893, 4107, 5337) },
       { name: '1B 1AS 1,10m', description: 'OASI 1B 1AS 1,10 m x 0,85 m x 0,63 m', dimensions: '1,10 m x 0,85 m', prices: createPrices(3238, 3384, 3588, 3672, 3790, 3933, 4126, 4353, 5655) },
       { name: '1B 2AS 1,70m', description: 'OASI 1B 2AS 1,70 m x 0,85 m x 0,63 m', dimensions: '1,70 m x 0,85 m', prices: createPrices(4214, 4438, 4751, 4880, 5060, 5280, 5576, 5925, 7924) },
-      { name: '1B 2AS 1,90m', description: 'OASI 1B 2AS 1,90 m x 0,85 m x 0,63 m', dimensions: '1,90 m x 0,85 m', prices: createPrices(4451, 4691, 5028, 5166, 5359, 5594, 5913, 6286, 8430) },
+      { name: '1B 2AS 1,90m', description: 'OASI 1B 2AS 1,90 m x 0,85 m x 0,63 m', dimensions: '1,90 m x 0,85 m', prices: createPrices(4451, 4733, 5028, 5166, 5359, 5594, 5913, 6286, 8430) },
       { name: '2B 2AS 2,00m', description: 'OASI 2B 2AS 2,00 m x 0,85 m x 0,63 m', dimensions: '2,00 m x 0,85 m', prices: createPrices(4816, 5072, 5430, 5577, 5784, 6034, 6373, 6771, 9055) },
       { name: '2B 2AS 2,20m', description: 'OASI 2B 2AS 2,20 m x 0,85 m x 0,63 m', dimensions: '2,20 m x 0,85 m', prices: createPrices(5072, 5345, 5726, 5883, 6103, 6369, 6730, 7153, 9585) },
     ],
