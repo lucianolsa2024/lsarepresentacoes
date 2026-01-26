@@ -78,16 +78,55 @@ export function useProducts() {
       
       if (modulationsError) throw modulationsError;
       
-      // Fetch sizes
-      const { data: sizesData, error: sizesError } = await supabase
-        .from('modulation_sizes')
-        .select('*');
+      // Fetch sizes in batches to handle more than 1000 records
+      type SizeRow = {
+        id: string;
+        modulation_id: string;
+        description: string;
+        dimensions: string | null;
+        length: string | null;
+        depth: string | null;
+        height: string | null;
+        fabric_quantity: number | null;
+        price_sem_tec: number | null;
+        price_fx_b: number | null;
+        price_fx_c: number | null;
+        price_fx_d: number | null;
+        price_fx_e: number | null;
+        price_fx_f: number | null;
+        price_fx_g: number | null;
+        price_fx_h: number | null;
+        price_fx_i: number | null;
+        price_fx_j: number | null;
+        price_fx_3d: number | null;
+        price_fx_couro: number | null;
+        created_at: string | null;
+      };
+      let allSizesData: SizeRow[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
       
-      if (sizesError) throw sizesError;
+      while (hasMore) {
+        const { data: sizeBatch, error: sizesError } = await supabase
+          .from('modulation_sizes')
+          .select('*')
+          .range(offset, offset + batchSize - 1);
+        
+        if (sizesError) throw sizesError;
+        
+        if (sizeBatch && sizeBatch.length > 0) {
+          allSizesData = [...(allSizesData || []), ...sizeBatch];
+          offset += batchSize;
+          hasMore = sizeBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
       
       // Group sizes by modulation_id
-      const sizesByModulation: Record<string, typeof sizesData> = {};
-      sizesData?.forEach(size => {
+      const sizesByModulation: Record<string, typeof allSizesData> = {};
+      allSizesData?.forEach(size => {
         if (!sizesByModulation[size.modulation_id]) {
           sizesByModulation[size.modulation_id] = [];
         }
