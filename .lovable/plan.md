@@ -1,34 +1,71 @@
-# Plano: Migrar Catálogo de Produtos para Supabase
 
-## Status: ✅ CONCLUÍDO
+# Plano: Ajustar Importação de Produtos com CAIXA
 
-## Resumo
-Catálogo de produtos migrado para Lovable Cloud com sucesso.
+## O Que Será Feito
 
-## Etapas Concluídas
+Modificar o importador Excel para que produtos com "CAIXA: FX X" na descrição sejam tratados como tamanhos individuais, mantendo a descrição completa e todos os preços de faixa de tecido.
 
-### ✅ 1. Ativar Lovable Cloud
-- Lovable Cloud habilitado no projeto
+## Mudança Técnica
 
-### ✅ 2. Criar Estrutura do Banco de Dados
-- Tabela `products` criada
-- Tabela `product_modulations` criada
-- Índices de performance adicionados
-- Políticas RLS configuradas (acesso público para MVP interno)
+**Arquivo:** `src/components/quote/ExcelImporter.tsx`
 
-### ✅ 3. Importar Dados da Planilha
-- 26 produtos importados
-- ~200 modulações importadas com todos os preços (FX B até FX J)
+Simplificar a lógica de parsing para:
 
-### ✅ 4. Atualizar o Código
-- Hook `useProducts` atualizado para usar banco de dados
-- Integração com Supabase client configurada
+1. **Remover a lógica de consolidação CAIXA** (linhas 292-341)
+2. **Tratar todas as linhas de forma igual** - cada linha é um tamanho único
+3. **Usar a descrição completa** (incluindo "CAIXA: FX X") como identificador
+4. **Importar todos os preços** das colunas FX B até FX COURO normalmente
 
-### ✅ 5. Interface de Gerenciamento
-- Aba "Produtos" funcional com persistência no banco
-- CRUD completo (adicionar, editar, remover)
+### Exemplo do Resultado
 
-## Próximos Passos (Opcional)
-- Importar mais modulações da planilha completa (5.000+ registros)
-- Adicionar funcionalidade de importação de planilha na interface
-- Migrar histórico de orçamentos para o banco
+Para o produto SONA com CAIXA:
+
+| Antes (errado) | Depois (correto) |
+|----------------|------------------|
+| 1 tamanho com preços misturados | Múltiplos tamanhos separados |
+
+**Tamanhos importados:**
+- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX B` → Preços: FX B=3845, FX C=3898, FX D=3972...
+- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX C` → Preços: FX B=3862, FX C=3914, FX D=3989...
+- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX D` → Preços: FX B=3879, FX C=3932...
+
+### Código Simplificado
+
+```typescript
+// Usar descrição RAW como chave (incluindo CAIXA: FX X)
+const dimensionKey = rawDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
+
+// Processar TODAS as linhas da mesma forma
+const prices: Record<string, number> = {};
+priceColumns.forEach(({ name, index }) => {
+  const rawValue = rowData[index];
+  const value = parseFloat(String(rawValue ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+  prices[name] = value;
+});
+
+sizeMap.set(dimensionKey, {
+  description: rawDescription || description,
+  dimensions,
+  length,
+  depth,
+  height,
+  fabricQuantity: fabricQty,
+  prices,
+});
+```
+
+## Fluxo do Usuário
+
+1. Ao selecionar o produto SONA
+2. Escolhe a modulação (ex: 1B 1AS)
+3. Na lista de tamanhos, verá opções como:
+   - "1,15m x 1,10m CAIXA: FX B"
+   - "1,15m x 1,10m CAIXA: FX C"
+   - etc.
+4. Após selecionar o tamanho (com CAIXA específica), escolhe a faixa de tecido normalmente
+
+## Resumo das Alterações
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/quote/ExcelImporter.tsx` | Remover lógica especial CAIXA e tratar todas as linhas igualmente |
