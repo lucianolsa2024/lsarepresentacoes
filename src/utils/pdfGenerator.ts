@@ -18,7 +18,17 @@ export function generateQuotePDF(quote: Quote): void {
   const logoHeight = 15;
   const logoX = (pageWidth - logoWidth) / 2;
   doc.addImage(logoLsa, 'PNG', logoX, y, logoWidth, logoHeight);
-  y += logoHeight + 8;
+  y += logoHeight + 5;
+
+  // Company Info
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80);
+  doc.text('(11) 98207-1185  |  lucianoabreu@lsarepresentacoes.com.br', pageWidth / 2, y, { align: 'center' });
+  y += 4;
+  doc.text('Rua Mont\'alverne, 345 - CEP 04265-060', pageWidth / 2, y, { align: 'center' });
+  doc.setTextColor(0);
+  y += 8;
 
   // Header
   doc.setFontSize(18);
