@@ -1,10 +1,11 @@
 import jsPDF from 'jspdf';
 import { Quote } from '@/types/quote';
+import logoLsa from '@/assets/logo-lsa.png';
 
 export function generateQuotePDF(quote: Quote): void {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 20;
+  let y = 15;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -12,33 +13,37 @@ export function generateQuotePDF(quote: Quote): void {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('pt-BR');
 
+  // Logo
+  const logoWidth = 40;
+  const logoHeight = 15;
+  const logoX = (pageWidth - logoWidth) / 2;
+  doc.addImage(logoLsa, 'PNG', logoX, y, logoWidth, logoHeight);
+  y += logoHeight + 8;
+
   // Header
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('ORÇAMENTO DE ESTOFADOS', pageWidth / 2, y, { align: 'center' });
+  doc.text('ORÇAMENTO SOHOME', pageWidth / 2, y, { align: 'center' });
   y += 8;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Data: ${formatDate(quote.createdAt)}`, pageWidth / 2, y, {
+  doc.text(`Data: ${formatDate(quote.createdAt)}  |  Nº ${quote.id.slice(0, 8).toUpperCase()}`, pageWidth / 2, y, {
     align: 'center',
   });
-  y += 5;
-  doc.text(`Nº ${quote.id.slice(0, 8).toUpperCase()}`, pageWidth / 2, y, {
-    align: 'center',
-  });
-  y += 15;
+  y += 12;
 
   // Divider
-  doc.setDrawColor(200);
+  doc.setDrawColor(180);
+  doc.setLineWidth(0.5);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
   // Client Data
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('DADOS DO CLIENTE', 15, y);
-  y += 8;
+  y += 7;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -76,27 +81,28 @@ export function generateQuotePDF(quote: Quote): void {
     }
   }
 
-  y += 10;
+  y += 8;
+  doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
   // Items
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('ITENS DO ORÇAMENTO', 15, y);
-  y += 10;
+  y += 8;
 
   // Table header
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Item', 15, y);
-  doc.text('Descrição', 35, y);
-  doc.text('Qtd', 130, y);
+  doc.setFillColor(245, 245, 245);
+  doc.rect(15, y - 4, pageWidth - 30, 7, 'F');
+  doc.text('Item', 17, y);
+  doc.text('Descrição', 32, y);
+  doc.text('Qtd', 132, y);
   doc.text('Unit.', 150, y);
   doc.text('Total', 175, y);
-  y += 3;
-  doc.line(15, y, pageWidth - 15, y);
-  y += 5;
+  y += 6;
 
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
@@ -106,7 +112,7 @@ export function generateQuotePDF(quote: Quote): void {
       y = 20;
     }
 
-    doc.text(`${index + 1}`, 15, y);
+    doc.text(`${index + 1}`, 17, y);
 
     // Product details
     const details = [
@@ -118,10 +124,10 @@ export function generateQuotePDF(quote: Quote): void {
       .filter(Boolean)
       .join(' | ');
 
-    const splitDetails = doc.splitTextToSize(details, 90);
-    doc.text(splitDetails, 35, y);
+    const splitDetails = doc.splitTextToSize(details, 95);
+    doc.text(splitDetails, 32, y);
 
-    doc.text(item.quantity.toString(), 130, y);
+    doc.text(item.quantity.toString(), 132, y);
     doc.text(formatCurrency(item.price), 150, y);
     doc.text(formatCurrency(item.price * item.quantity), 175, y);
 
@@ -129,6 +135,7 @@ export function generateQuotePDF(quote: Quote): void {
   });
 
   y += 5;
+  doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
@@ -150,12 +157,16 @@ export function generateQuotePDF(quote: Quote): void {
   doc.setFont('helvetica', 'bold');
   doc.text('TOTAL:', 130, y);
   doc.text(formatCurrency(quote.total), 175, y);
-  y += 15;
+  y += 12;
 
   // Payment Conditions
-  doc.setFontSize(12);
+  doc.setDrawColor(180);
+  doc.line(15, y, pageWidth - 15, y);
+  y += 10;
+
+  doc.setFontSize(11);
   doc.text('CONDIÇÕES DE PAGAMENTO', 15, y);
-  y += 8;
+  y += 7;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -202,23 +213,23 @@ export function generateQuotePDF(quote: Quote): void {
     y += obsLines.length * 5;
   }
 
-  y += 15;
+  y += 12;
 
   // Footer
-  doc.setDrawColor(200);
+  doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
-  y += 10;
+  y += 8;
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(100);
   doc.text('Validade deste orçamento: 15 dias a partir da data de emissão.', 15, y);
-  y += 5;
+  y += 4;
   doc.text(
     'Os valores podem sofrer alteração sem aviso prévio após o vencimento.',
     15,
     y
   );
-  y += 5;
+  y += 4;
   doc.text(
     'Prazo de entrega a partir da confirmação do pedido e escolha de tecido.',
     15,
@@ -228,5 +239,5 @@ export function generateQuotePDF(quote: Quote): void {
   // Save
   const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
   const date = formatDate(quote.createdAt).replace(/\//g, '-');
-  doc.save(`orcamento_${clientName}_${date}.pdf`);
+  doc.save(`orcamento_sohome_${clientName}_${date}.pdf`);
 }
