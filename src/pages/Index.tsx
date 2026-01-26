@@ -82,8 +82,8 @@ const Index = () => {
   };
 
   const handleGenerateQuote = (clearAfterSave: boolean = false) => {
-    if (!client.name) {
-      toast.error('Preencha o nome do cliente');
+    if (!client.company) {
+      toast.error('Preencha o nome da empresa');
       return;
     }
 
@@ -122,8 +122,8 @@ const Index = () => {
   };
 
   const handleSendWhatsApp = () => {
-    if (!client.name) {
-      toast.error('Preencha o nome do cliente');
+    if (!client.company) {
+      toast.error('Preencha o nome da empresa');
       return;
     }
 
@@ -234,7 +234,7 @@ const Index = () => {
                         <Button
                           onClick={() => handleGenerateQuote(false)}
                           className="flex-1"
-                          disabled={!client.name || items.length === 0}
+                          disabled={!client.company || items.length === 0}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Gerar Orçamento
@@ -245,7 +245,7 @@ const Index = () => {
                           onClick={() => handleGenerateQuote(true)}
                           variant="secondary"
                           className="flex-1"
-                          disabled={!client.name || items.length === 0}
+                          disabled={!client.company || items.length === 0}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Gerar e Limpar
@@ -253,7 +253,7 @@ const Index = () => {
                         <Button
                           onClick={handleSendWhatsApp}
                           className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
-                          disabled={!client.name || items.length === 0}
+                          disabled={!client.company || items.length === 0}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           WhatsApp
