@@ -18,8 +18,25 @@ import { QuoteCart } from '@/components/quote/QuoteCart';
 import { PaymentForm } from '@/components/quote/PaymentForm';
 import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
-import { FileText, History, Package, Download, RotateCcw } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+const formatWhatsAppMessage = (quote: Quote) => {
+  const items = quote.items
+    .map((item) => `• ${item.productName} ${item.modulation} (${item.fabricTier}) - Qtd: ${item.quantity}`)
+    .join('\n');
+  
+  const total = quote.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  
+  return encodeURIComponent(
+    `*Orçamento SoHome*\n\n` +
+    `Cliente: ${quote.client.name}\n` +
+    `${quote.client.company ? `Empresa: ${quote.client.company}\n` : ''}` +
+    `\n*Itens:*\n${items}\n\n` +
+    `*Total: ${total}*\n\n` +
+    `Orçamento válido por 7 dias.`
+  );
+};
 
 const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
@@ -98,6 +115,37 @@ const Index = () => {
     setItems([]);
     setPayment(INITIAL_PAYMENT);
     toast.success('Orçamento limpo');
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!client.name) {
+      toast.error('Preencha o nome do cliente');
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error('Adicione pelo menos um item ao orçamento');
+      return;
+    }
+
+    const quote: Quote = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      client,
+      items,
+      payment,
+      subtotal: calculateSubtotal(),
+      discount: calculateDiscount(),
+      total: calculateTotal(),
+    };
+
+    const phoneNumber = client.phone.replace(/\D/g, '');
+    const message = formatWhatsAppMessage(quote);
+    const whatsappUrl = phoneNumber 
+      ? `https://wa.me/55${phoneNumber}?text=${message}`
+      : `https://wa.me/?text=${message}`;
+    
+    window.open(whatsappUrl, '_blank');
   };
 
   const subtotal = calculateSubtotal();
@@ -187,15 +235,25 @@ const Index = () => {
                           Gerar Orçamento
                         </Button>
                       </div>
-                      <Button
-                        onClick={() => handleGenerateQuote(true)}
-                        variant="secondary"
-                        className="w-full"
-                        disabled={!client.name || items.length === 0}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Gerar e Limpar Dados
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => handleGenerateQuote(true)}
+                          variant="secondary"
+                          className="flex-1"
+                          disabled={!client.name || items.length === 0}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Gerar e Limpar
+                        </Button>
+                        <Button
+                          onClick={handleSendWhatsApp}
+                          className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
+                          disabled={!client.name || items.length === 0}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          WhatsApp
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
