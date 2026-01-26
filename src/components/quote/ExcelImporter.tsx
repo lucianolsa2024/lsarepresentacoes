@@ -152,8 +152,14 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
     const priceColumns: { name: string; index: number }[] = [];
     headers.forEach((h, i) => {
       const headerStr = String(h).toUpperCase().trim();
-      if (headerStr === 'SEM TEC' || headerStr.startsWith('FX ') || headerStr === '3D' || headerStr === 'COURO') {
-        priceColumns.push({ name: headerStr, index: i });
+      // Match various price column formats
+      if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || headerStr.startsWith('FX ') || headerStr === '3D' || headerStr === 'COURO' || headerStr === 'FX 3D' || headerStr === 'FX COURO') {
+        // Normalize the column name for database mapping
+        let normalizedName = headerStr;
+        if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
+        if (headerStr === 'FX 3D') normalizedName = '3D';
+        if (headerStr === 'FX COURO') normalizedName = 'COURO';
+        priceColumns.push({ name: normalizedName, index: i });
       }
     });
 
