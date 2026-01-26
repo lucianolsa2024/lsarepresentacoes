@@ -19,7 +19,8 @@ import { QuoteCart } from '@/components/quote/QuoteCart';
 import { PaymentForm } from '@/components/quote/PaymentForm';
 import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut } from 'lucide-react';
+import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -49,7 +50,7 @@ const Index = () => {
     toast.success('Logout realizado com sucesso!');
   };
 
-  const [activeTab, setActiveTab] = useState('quote');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [payment, setPayment] = useState<PaymentConditions>(INITIAL_PAYMENT);
@@ -190,7 +191,14 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-muted rounded-none">
+              <TabsTrigger
+                value="dashboard"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Dashboard
+              </TabsTrigger>
               <TabsTrigger
                 value="quote"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -215,6 +223,10 @@ const Index = () => {
             </TabsList>
 
             <div className="p-6">
+              <TabsContent value="dashboard" className="mt-0">
+                <QuoteDashboard quotes={quotes} />
+              </TabsContent>
+
               <TabsContent value="quote" className="mt-0">
                 <div className="grid lg:grid-cols-2 gap-6">
                   {/* Left Column */}
