@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -33,22 +32,6 @@ interface ParsedProduct {
     }[];
   }[];
 }
-
-// Column mapping from Excel to database
-const PRICE_COLUMN_MAP: Record<string, string> = {
-  'SEM TEC': 'price_sem_tec',
-  'FX B': 'price_fx_b',
-  'FX C': 'price_fx_c',
-  'FX D': 'price_fx_d',
-  'FX E': 'price_fx_e',
-  'FX F': 'price_fx_f',
-  'FX G': 'price_fx_g',
-  'FX H': 'price_fx_h',
-  'FX I': 'price_fx_i',
-  'FX J': 'price_fx_j',
-  '3D': 'price_fx_3d',
-  'COURO': 'price_fx_couro',
-};
 
 export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -89,16 +72,37 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
 
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(data);
       
       setProgress(20);
       
       // Get the first sheet
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const worksheet = workbook.worksheets[0];
       
-      // Convert to JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+      if (!worksheet) {
+        throw new Error('Planilha vazia ou sem dados');
+      }
+
+      // Convert to array of arrays (similar to xlsx format)
+      const jsonData: unknown[][] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        const rowData: unknown[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          // Handle different cell value types
+          let value = cell.value;
+          if (value && typeof value === 'object' && 'result' in value) {
+            // Formula result
+            value = value.result;
+          }
+          if (value && typeof value === 'object' && 'text' in value) {
+            // Rich text
+            value = value.text;
+          }
+          rowData[colNumber - 1] = value;
+        });
+        jsonData[rowNumber - 1] = rowData;
+      });
       
       if (jsonData.length < 2) {
         throw new Error('Planilha vazia ou sem dados');
