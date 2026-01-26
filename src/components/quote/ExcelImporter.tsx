@@ -84,25 +84,48 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
         throw new Error('Planilha vazia ou sem dados');
       }
 
+      // Get the total columns count
+      const columnCount = worksheet.columnCount;
+      console.log('Worksheet info:', { 
+        rowCount: worksheet.rowCount, 
+        columnCount,
+        actualRowCount: worksheet.actualRowCount 
+      });
+
       // Convert to array of arrays (similar to xlsx format)
       const jsonData: unknown[][] = [];
-      worksheet.eachRow((row, rowNumber) => {
-        const rowData: unknown[] = [];
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          // Handle different cell value types
-          let value = cell.value;
-          if (value && typeof value === 'object' && 'result' in value) {
-            // Formula result
-            value = value.result;
+      
+      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        const rowData: unknown[] = new Array(columnCount).fill(null);
+        
+        // Use row.values which is 1-indexed (first element is undefined)
+        const values = row.values as (unknown[] | undefined);
+        if (values) {
+          for (let i = 1; i < values.length; i++) {
+            let value = values[i];
+            // Handle different cell value types
+            if (value && typeof value === 'object') {
+              if ('result' in value) {
+                // Formula result
+                value = (value as { result: unknown }).result;
+              } else if ('text' in value) {
+                // Rich text
+                value = (value as { text: string }).text;
+              } else if ('richText' in value) {
+                // Rich text array
+                const richText = value as { richText: Array<{ text: string }> };
+                value = richText.richText.map(rt => rt.text).join('');
+              }
+            }
+            rowData[i - 1] = value;
           }
-          if (value && typeof value === 'object' && 'text' in value) {
-            // Rich text
-            value = value.text;
-          }
-          rowData[colNumber - 1] = value;
-        });
-        jsonData[rowNumber - 1] = rowData;
+        }
+        
+        jsonData.push(rowData);
       });
+      
+      console.log('Parsed rows:', jsonData.length);
+      console.log('First row (headers):', jsonData[0]);
       
       if (jsonData.length < 2) {
         throw new Error('Planilha vazia ou sem dados');
