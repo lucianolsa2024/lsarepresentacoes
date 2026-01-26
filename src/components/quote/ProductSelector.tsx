@@ -43,7 +43,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedProduct.modulations.find((m) => m.id === config.modulationId);
   }, [selectedProduct, config.modulationId]);
 
-  // Get available sizes for selected modulation (deduplicated by dimensions)
+  // Get available sizes for selected modulation
+  // For CAIXA products, each row is unique (description includes CAIXA tier)
   const availableSizes = useMemo(() => {
     if (!selectedModulation) return [];
     
@@ -53,7 +54,15 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizes = sizes.filter(s => s.base === config.base);
     }
     
-    // Deduplicate sizes by dimensions/description - keep the first one with each unique dimension
+    // Check if this is a CAIXA product (description contains "CAIXA:")
+    const hasCaixa = sizes.some(s => s.description.toUpperCase().includes('CAIXA:'));
+    
+    if (hasCaixa) {
+      // For CAIXA products, each row is unique - don't deduplicate
+      return sizes;
+    }
+    
+    // For non-CAIXA products, deduplicate by dimensions/description
     const uniqueSizes = new Map<string, typeof sizes[0]>();
     sizes.forEach(size => {
       const key = size.dimensions || size.description;
@@ -322,14 +331,37 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {availableSizes.map((size) => {
-                        // Build a cleaner description with dimensions
-                        const dims = [
-                          size.length && `L: ${size.length}`,
-                          size.depth && `P: ${size.depth}`,
-                          size.height && `A: ${size.height}`,
-                        ].filter(Boolean).join(' × ');
+                        // Check if this is a CAIXA product
+                        const isCaixa = size.description.toUpperCase().includes('CAIXA:');
                         
-                        const displayText = dims || size.dimensions || size.description;
+                        let displayText: string;
+                        
+                        if (isCaixa) {
+                          // For CAIXA products, extract the CAIXA tier from description
+                          // Example: "SONA POL 1,05 m x 0,90 m x 0,71 m CAIXA: FX B"
+                          const caixaMatch = size.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
+                          const caixaTier = caixaMatch ? caixaMatch[1].toUpperCase() : '';
+                          
+                          // Build dimensions string
+                          const dims = [
+                            size.length && `${size.length}`,
+                            size.depth && `${size.depth}`,
+                            size.height && `${size.height}`,
+                          ].filter(Boolean).join(' × ');
+                          
+                          displayText = dims 
+                            ? `${dims} - CAIXA: ${caixaTier}`
+                            : `${size.dimensions || ''} - CAIXA: ${caixaTier}`;
+                        } else {
+                          // For regular products, show dimensions
+                          const dims = [
+                            size.length && `L: ${size.length}`,
+                            size.depth && `P: ${size.depth}`,
+                            size.height && `A: ${size.height}`,
+                          ].filter(Boolean).join(' × ');
+                          
+                          displayText = dims || size.dimensions || size.description;
+                        }
                         
                         return (
                           <SelectItem key={size.id} value={size.id}>
