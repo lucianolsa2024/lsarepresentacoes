@@ -186,7 +186,11 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       profundidade: findIndex(h => h.toLowerCase().includes('prof')),
       altura: findIndex(h => h.toLowerCase().includes('altura')),
       tecido: findIndex(h => h.toLowerCase().includes('tecido')),
-      caixa: findIndex(h => h.toUpperCase().includes('CAIXA')),
+      // CAIXA column only counts if it's a dedicated column header (exact match), not if "CAIXA" appears in description column
+      caixa: findIndex(h => {
+        const upper = h.toUpperCase().trim();
+        return upper === 'CAIXA' || upper === 'FX CAIXA' || upper === 'FAIXA CAIXA';
+      }),
       preco: findIndex(h => h.toUpperCase().includes('PREÇO') || h.toUpperCase().includes('PRECO')),
     };
 
@@ -204,11 +208,15 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       if (h == null) return;
       const headerStr = String(h).toUpperCase().trim();
       // Match FX B, FX C, ..., FX J, FX 3D, FX COURO, SEM TEC
+      // More flexible pattern matching
       if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || 
-          headerStr.match(/^FX\s*[A-Z]$/) || 
+          headerStr.match(/^FX\s*[A-Z]$/) || // FX B, FX C, etc.
+          headerStr.match(/^FX\s+[A-Z]$/) || // FX B with extra space
           headerStr === '3D' || headerStr === 'COURO' || 
           headerStr === 'FX 3D' || headerStr === 'FX COURO') {
         let normalizedName = headerStr;
+        // Normalize spacing
+        normalizedName = normalizedName.replace(/FX\s+/, 'FX ');
         if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
         priceColumns.push({ name: normalizedName, index: i });
       }
@@ -217,8 +225,9 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
     console.log('Detected columns:', colIndexes);
     console.log('Price columns:', priceColumns);
 
-    // Check if this is CAIXA format (single price column + CAIXA tier column)
-    const hasCaixaFormat = colIndexes.caixa !== -1;
+    // CAIXA format is ONLY when there's a dedicated CAIXA column AND a single PREÇO column (no multiple FX columns)
+    // If we have multiple price columns (FX B, FX C, etc), use traditional format even if description contains "CAIXA"
+    const hasCaixaFormat = colIndexes.caixa !== -1 && priceColumns.length === 0;
 
     // Group rows by product, modulation, and dimensions
     const productMap = new Map<string, Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>>>();
