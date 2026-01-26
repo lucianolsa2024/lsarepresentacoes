@@ -244,10 +244,6 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
         rawDescription = String(rowData[colIndexes.descricao]).trim();
       }
       
-      // Check if this row has CAIXA format (CAIXA: FX X in description)
-      const caixaMatch = rawDescription.match(/CAIXA:\s*(FX\s*[A-Z]|SEM\s*TEC|COURO|3D)/i);
-      const isCaixaRow = caixaMatch !== null;
-      
       // Build dimensions from row data
       const length = colIndexes.comprimento !== -1 ? String(rowData[colIndexes.comprimento] ?? '').trim() : '';
       const depth = colIndexes.profundidade !== -1 ? String(rowData[colIndexes.profundidade] ?? '').trim() : '';
@@ -257,17 +253,12 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       // Build dimensions string
       const dimensions = [length, depth].filter(Boolean).join(' x ');
       
-      // For CAIXA rows, clean the description (remove CAIXA: FX X part) for grouping
-      let cleanDescription = rawDescription;
-      if (isCaixaRow) {
-        cleanDescription = rawDescription.replace(/\s*CAIXA:\s*(FX\s*[A-Z]|SEM\s*TEC|COURO|3D)/gi, '').trim();
-      }
+      // Use raw description as dimension key (including CAIXA: FX X if present)
+      // This ensures each CAIXA variation is treated as a unique size
+      const dimensionKey = rawDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
       
-      // Build dimension key for consolidation (use clean description for CAIXA rows)
-      const dimensionKey = cleanDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
-      
-      // Final description to store
-      let description = cleanDescription;
+      // Final description to store (keep complete description including CAIXA info)
+      let description = rawDescription;
       if (!description) {
         description = `${productName} ${modulationName}`;
         if (dimensions) {
@@ -289,77 +280,24 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       }
       const sizeMap = modMap.get(modulationName)!;
 
-      // Handle CAIXA format: consolidate rows with same dimensions into single entry with multiple prices
-      if (isCaixaRow && caixaMatch) {
-        // Extract tier from description
-        const tierValue = caixaMatch[1].toUpperCase().trim();
-        let tierName = '';
-        if (tierValue.includes('COURO')) {
-          tierName = 'FX COURO';
-        } else if (tierValue.includes('3D')) {
-          tierName = 'FX 3D';
-        } else if (tierValue.includes('SEM TEC')) {
-          tierName = 'SEM TEC';
-        } else {
-          // Normalize FX B, FX C, etc.
-          tierName = tierValue.replace(/FX\s+/, 'FX ');
-        }
+      // Process all rows the same way - each row is a unique size entry
+      // All prices from FX B to FX COURO are imported
+      const prices: Record<string, number> = {};
+      priceColumns.forEach(({ name, index }) => {
+        const rawValue = rowData[index];
+        const value = parseFloat(String(rawValue ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+        prices[name] = value;
+      });
 
-        // Get price - for CAIXA rows, take the first non-zero price from price columns
-        let priceValue = 0;
-        for (const { index } of priceColumns) {
-          const val = parseFloat(String(rowData[index] ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
-          if (val > 0) {
-            priceValue = val;
-            break;
-          }
-        }
-        
-        // Also check if there's a dedicated PREÇO column
-        if (priceValue === 0 && colIndexes.preco !== -1) {
-          priceValue = parseFloat(String(rowData[colIndexes.preco] ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
-        }
-
-        if (!sizeMap.has(dimensionKey)) {
-          sizeMap.set(dimensionKey, {
-            description,
-            dimensions,
-            length,
-            depth,
-            height,
-            fabricQuantity: fabricQty,
-            prices: {},
-          });
-        }
-        
-        const sizeEntry = sizeMap.get(dimensionKey)!;
-        if (tierName && priceValue > 0) {
-          sizeEntry.prices[tierName] = priceValue;
-        }
-        if (fabricQty > sizeEntry.fabricQuantity) {
-          sizeEntry.fabricQuantity = fabricQty;
-        }
-
-      } else {
-        // Traditional format: each row has all price columns
-        const prices: Record<string, number> = {};
-        priceColumns.forEach(({ name, index }) => {
-          const rawValue = rowData[index];
-          const value = parseFloat(String(rawValue ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
-          prices[name] = value;
-        });
-
-        // Use dimensionKey for grouping
-        sizeMap.set(dimensionKey, {
-          description,
-          dimensions,
-          length,
-          depth,
-          height,
-          fabricQuantity: fabricQty,
-          prices,
-        });
-      }
+      sizeMap.set(dimensionKey, {
+        description,
+        dimensions,
+        length,
+        depth,
+        height,
+        fabricQuantity: fabricQty,
+        prices,
+      });
     }
 
     // Convert maps to array
