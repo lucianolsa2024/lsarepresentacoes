@@ -14,15 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
-      product_modulations: {
+      modulation_sizes: {
         Row: {
           created_at: string | null
-          description: string | null
+          depth: string | null
+          description: string
           dimensions: string | null
+          fabric_quantity: number | null
+          height: string | null
           id: string
-          name: string
+          length: string | null
+          modulation_id: string
+          price_fx_3d: number | null
           price_fx_b: number | null
           price_fx_c: number | null
+          price_fx_couro: number | null
           price_fx_d: number | null
           price_fx_e: number | null
           price_fx_f: number | null
@@ -30,40 +36,84 @@ export type Database = {
           price_fx_h: number | null
           price_fx_i: number | null
           price_fx_j: number | null
+          price_sem_tec: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          depth?: string | null
+          description: string
+          dimensions?: string | null
+          fabric_quantity?: number | null
+          height?: string | null
+          id?: string
+          length?: string | null
+          modulation_id: string
+          price_fx_3d?: number | null
+          price_fx_b?: number | null
+          price_fx_c?: number | null
+          price_fx_couro?: number | null
+          price_fx_d?: number | null
+          price_fx_e?: number | null
+          price_fx_f?: number | null
+          price_fx_g?: number | null
+          price_fx_h?: number | null
+          price_fx_i?: number | null
+          price_fx_j?: number | null
+          price_sem_tec?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          depth?: string | null
+          description?: string
+          dimensions?: string | null
+          fabric_quantity?: number | null
+          height?: string | null
+          id?: string
+          length?: string | null
+          modulation_id?: string
+          price_fx_3d?: number | null
+          price_fx_b?: number | null
+          price_fx_c?: number | null
+          price_fx_couro?: number | null
+          price_fx_d?: number | null
+          price_fx_e?: number | null
+          price_fx_f?: number | null
+          price_fx_g?: number | null
+          price_fx_h?: number | null
+          price_fx_i?: number | null
+          price_fx_j?: number | null
+          price_sem_tec?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modulation_sizes_modulation_id_fkey"
+            columns: ["modulation_id"]
+            isOneToOne: false
+            referencedRelation: "product_modulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_modulations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
           product_id: string
         }
         Insert: {
           created_at?: string | null
           description?: string | null
-          dimensions?: string | null
           id?: string
           name: string
-          price_fx_b?: number | null
-          price_fx_c?: number | null
-          price_fx_d?: number | null
-          price_fx_e?: number | null
-          price_fx_f?: number | null
-          price_fx_g?: number | null
-          price_fx_h?: number | null
-          price_fx_i?: number | null
-          price_fx_j?: number | null
           product_id: string
         }
         Update: {
           created_at?: string | null
           description?: string | null
-          dimensions?: string | null
           id?: string
           name?: string
-          price_fx_b?: number | null
-          price_fx_c?: number | null
-          price_fx_d?: number | null
-          price_fx_e?: number | null
-          price_fx_f?: number | null
-          price_fx_g?: number | null
-          price_fx_h?: number | null
-          price_fx_i?: number | null
-          price_fx_j?: number | null
           product_id?: string
         }
         Relationships: [
