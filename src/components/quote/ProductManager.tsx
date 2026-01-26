@@ -23,6 +23,7 @@ import {
 import { Plus, Trash2, Edit2, X, Package, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { ExcelImporter } from './ExcelImporter';
+import { BulkImporter } from './BulkImporter';
 
 interface ProductManagerProps {
   products: Product[];
@@ -295,6 +296,7 @@ export function ProductManager({
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Catálogo de Produtos</h2>
           <div className="flex gap-2">
+            <BulkImporter onImportComplete={onRefresh || (() => {})} />
             <ExcelImporter onImportComplete={onRefresh || (() => {})} />
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
