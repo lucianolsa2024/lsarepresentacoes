@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Product, QuoteItem, FabricTier, FABRIC_TIERS } from '@/types/quote';
+import { Product, QuoteItem, FabricTier, FABRIC_TIERS, ModulationSize } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [config, setConfig] = useState({
-    modulation: '',
+    modulationId: '',
+    sizeId: '',
     base: '',
     fabricTier: 'FX E' as FabricTier,
     fabricDescription: '',
@@ -30,23 +31,62 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
-    setConfig({ modulation: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
   };
 
-  const handleConfirm = () => {
-    if (!selectedProduct || !config.modulation || !config.fabricDescription) return;
+  // Get selected modulation
+  const selectedModulation = useMemo(() => {
+    if (!selectedProduct || !config.modulationId) return null;
+    return selectedProduct.modulations.find((m) => m.id === config.modulationId);
+  }, [selectedProduct, config.modulationId]);
 
-    const modulationData = selectedProduct.modulations.find(
-      (m) => m.name === config.modulation
-    );
-    const price = modulationData?.prices[config.fabricTier] || 0;
+  // Get available sizes for selected modulation
+  const availableSizes = useMemo(() => {
+    if (!selectedModulation) return [];
+    
+    // If base is selected, filter sizes by base
+    if (config.base) {
+      return selectedModulation.sizes.filter(s => s.base === config.base);
+    }
+    
+    // If no base selected, show all sizes
+    return selectedModulation.sizes;
+  }, [selectedModulation, config.base]);
+
+  // Get selected size
+  const selectedSize = useMemo(() => {
+    if (!selectedModulation || !config.sizeId) return null;
+    return selectedModulation.sizes.find((s) => s.id === config.sizeId);
+  }, [selectedModulation, config.sizeId]);
+
+  // Get unique bases for selected modulation
+  const availableBases = useMemo(() => {
+    if (!selectedModulation) return [];
+    const bases = new Set<string>();
+    selectedModulation.sizes.forEach(s => {
+      if (s.base) bases.add(s.base);
+    });
+    return Array.from(bases);
+  }, [selectedModulation]);
+
+  const handleConfirm = () => {
+    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricDescription) return;
+
+    const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
+    const size = modulation?.sizes.find(s => s.id === config.sizeId);
+    if (!modulation || !size) return;
+
+    const price = size.prices[config.fabricTier] || 0;
 
     const item: QuoteItem = {
       id: crypto.randomUUID(),
       productId: selectedProduct.id,
       productName: selectedProduct.name,
-      modulation: config.modulation,
-      base: config.base,
+      modulation: modulation.name,
+      modulationId: config.modulationId,
+      sizeId: config.sizeId,
+      sizeDescription: size.description,
+      base: size.base || config.base,
       fabricTier: config.fabricTier,
       fabricDescription: config.fabricDescription,
       price,
@@ -55,18 +95,17 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
     onAddItem(item);
     setSelectedProduct(null);
-    setConfig({ modulation: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
   };
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Get current price based on selected modulation and tier
+  // Get current price based on selected size and tier
   const getCurrentPrice = () => {
-    if (!selectedProduct || !config.modulation) return 0;
-    const mod = selectedProduct.modulations.find((m) => m.name === config.modulation);
-    return mod?.prices[config.fabricTier] || 0;
+    if (!selectedSize) return 0;
+    return selectedSize.prices[config.fabricTier] || 0;
   };
 
   // Filter products by search term
@@ -89,6 +128,15 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     acc[product.category].push(product);
     return acc;
   }, {} as Record<string, Product[]>);
+
+  // Reset size when modulation or base changes
+  const handleModulationChange = (value: string) => {
+    setConfig({ ...config, modulationId: value, sizeId: '', base: '' });
+  };
+
+  const handleBaseChange = (value: string) => {
+    setConfig({ ...config, base: value, sizeId: '' });
+  };
 
   return (
     <Card>
@@ -163,41 +211,39 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
             </div>
 
             <div className="space-y-4">
-              {/* Modulation */}
+              {/* Step 1: Modulation */}
               <div className="space-y-2">
                 <Label>1. Modulação *</Label>
                 <Select
-                  value={config.modulation}
-                  onValueChange={(value) =>
-                    setConfig({ ...config, modulation: value })
-                  }
+                  value={config.modulationId}
+                  onValueChange={handleModulationChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a modulação..." />
                   </SelectTrigger>
                   <SelectContent>
                     {selectedProduct.modulations.map((mod) => (
-                      <SelectItem key={mod.name} value={mod.name}>
-                        {mod.name} ({mod.dimensions})
+                      <SelectItem key={mod.id} value={mod.id}>
+                        {mod.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Base */}
-              {selectedProduct.hasBase && (
+              {/* Step 2: Base (if available) */}
+              {selectedModulation && availableBases.length > 0 && (
                 <div className="space-y-2">
-                  <Label>2. Acabamento da Base</Label>
+                  <Label>2. Acabamento da Base *</Label>
                   <Select
                     value={config.base}
-                    onValueChange={(value) => setConfig({ ...config, base: value })}
+                    onValueChange={handleBaseChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o acabamento..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedProduct.availableBases.map((base) => (
+                      {availableBases.map((base) => (
                         <SelectItem key={base} value={base}>
                           {base}
                         </SelectItem>
@@ -207,50 +253,77 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Fabric Tier */}
-              <div className="space-y-2">
-                <Label>{selectedProduct.hasBase ? '3' : '2'}. Faixa de Tecido *</Label>
-                <Select
-                  value={config.fabricTier}
-                  onValueChange={(value) =>
-                    setConfig({ ...config, fabricTier: value as FabricTier })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FABRIC_TIERS.map((tier) => {
-                      const mod = selectedProduct.modulations.find(
-                        (m) => m.name === config.modulation
-                      );
-                      const price = mod?.prices[tier] || 0;
-                      return (
-                        <SelectItem key={tier} value={tier}>
-                          {tier} {config.modulation && `- ${formatCurrency(price)}`}
+              {/* Step 3: Size/Dimensions */}
+              {selectedModulation && (availableBases.length === 0 || config.base) && (
+                <div className="space-y-2">
+                  <Label>{availableBases.length > 0 ? '3' : '2'}. Tamanho *</Label>
+                  <Select
+                    value={config.sizeId}
+                    onValueChange={(value) => setConfig({ ...config, sizeId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tamanho..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSizes.map((size) => (
+                        <SelectItem key={size.id} value={size.id}>
+                          {size.dimensions || size.description}
                         </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-              {/* Fabric Description */}
-              <div className="space-y-2">
-                <Label>
-                  {selectedProduct.hasBase ? '4' : '3'}. Descrição do Tecido *
-                </Label>
-                <Input
-                  placeholder="Ex: Suede cinza, Veludo azul marinho..."
-                  value={config.fabricDescription}
-                  onChange={(e) =>
-                    setConfig({ ...config, fabricDescription: e.target.value })
-                  }
-                />
-              </div>
+              {/* Step 4: Fabric Tier */}
+              {config.sizeId && (
+                <div className="space-y-2">
+                  <Label>{availableBases.length > 0 ? '4' : '3'}. Faixa de Tecido *</Label>
+                  <Select
+                    value={config.fabricTier}
+                    onValueChange={(value) =>
+                      setConfig({ ...config, fabricTier: value as FabricTier })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FABRIC_TIERS.filter(tier => {
+                        // Only show tiers that have prices > 0
+                        const price = selectedSize?.prices[tier] || 0;
+                        return price > 0;
+                      }).map((tier) => {
+                        const price = selectedSize?.prices[tier] || 0;
+                        return (
+                          <SelectItem key={tier} value={tier}>
+                            {tier} - {formatCurrency(price)}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Step 5: Fabric Description */}
+              {config.sizeId && (
+                <div className="space-y-2">
+                  <Label>
+                    {availableBases.length > 0 ? '5' : '4'}. Descrição do Tecido *
+                  </Label>
+                  <Input
+                    placeholder="Ex: Suede cinza, Veludo azul marinho..."
+                    value={config.fabricDescription}
+                    onChange={(e) =>
+                      setConfig({ ...config, fabricDescription: e.target.value })
+                    }
+                  />
+                </div>
+              )}
 
               {/* Price Preview */}
-              {config.modulation && (
+              {config.sizeId && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
                   <span className="text-sm text-muted-foreground">Preço:</span>
                   <span className="text-xl font-bold text-primary ml-2">
@@ -261,7 +334,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulation || !config.fabricDescription}
+                disabled={!config.modulationId || !config.sizeId || !config.fabricDescription}
                 className="w-full"
               >
                 Confirmar Item

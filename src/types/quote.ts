@@ -1,12 +1,24 @@
 // Fabric price tiers
-export const FABRIC_TIERS = ['FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J'] as const;
+export const FABRIC_TIERS = ['SEM TEC', 'FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J', 'FX 3D', 'FX COURO'] as const;
 export type FabricTier = typeof FABRIC_TIERS[number];
 
-export interface ProductModulation {
-  name: string;
+export interface ModulationSize {
+  id: string;
   description: string;
   dimensions: string;
+  length: string;
+  depth: string;
+  height: string;
+  base: string; // Extracted from description (e.g., "FOSCA/METALIZADO", "MTX")
+  fabricQuantity: number;
   prices: Record<FabricTier, number>;
+}
+
+export interface ProductModulation {
+  id: string;
+  name: string;
+  description: string;
+  sizes: ModulationSize[];
 }
 
 export interface Product {
@@ -25,6 +37,9 @@ export interface QuoteItem {
   productId: string;
   productName: string;
   modulation: string;
+  modulationId: string;
+  sizeId: string;
+  sizeDescription: string;
   base: string;
   fabricTier: FabricTier;
   fabricDescription: string;
