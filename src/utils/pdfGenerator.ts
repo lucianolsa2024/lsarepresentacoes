@@ -117,7 +117,7 @@ export function generateQuotePDF(quote: Quote): void {
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
     // Check if we need a new page
-    if (y > 250) {
+    if (y > 240) {
       doc.addPage();
       y = 20;
     }
@@ -141,7 +141,21 @@ export function generateQuotePDF(quote: Quote): void {
     doc.text(formatCurrency(item.price), 150, y);
     doc.text(formatCurrency(item.price * item.quantity), 175, y);
 
-    y += splitDetails.length * 5 + 3;
+    y += splitDetails.length * 5 + 2;
+    
+    // Item observations
+    if (item.observations && item.observations.trim()) {
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      const obsText = `Obs: ${item.observations}`;
+      const splitObs = doc.splitTextToSize(obsText, 160);
+      doc.text(splitObs, 32, y);
+      y += splitObs.length * 4 + 2;
+      doc.setFontSize(9);
+      doc.setTextColor(0);
+    }
+    
+    y += 1;
   });
 
   y += 5;
@@ -211,7 +225,7 @@ export function generateQuotePDF(quote: Quote): void {
     y += 5;
   }
 
-  doc.text(`Prazo de entrega: ${quote.payment.deliveryDays} dias úteis`, 15, y);
+  doc.text(`Prazo de embarque: ${quote.payment.deliveryDays} dias corridos`, 15, y);
   y += 5;
 
   if (quote.payment.observations) {

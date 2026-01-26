@@ -160,7 +160,7 @@ const Index = () => {
         {/* Header */}
         <div className="bg-card rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-3xl font-bold text-primary mb-2">
-            Sistema de Orçamentos - Estofados
+            Sistema de Orçamentos - LSA
           </h1>
           <p className="text-muted-foreground">
             Gestão completa de produtos com modulações e acabamentos
