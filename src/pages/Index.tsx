@@ -60,7 +60,7 @@ const Index = () => {
     return calculateSubtotal() - calculateDiscount();
   };
 
-  const handleGenerateQuote = () => {
+  const handleGenerateQuote = (clearAfterSave: boolean = false) => {
     if (!client.name) {
       toast.error('Preencha o nome do cliente');
       return;
@@ -85,6 +85,12 @@ const Index = () => {
     addQuote(quote);
     generateQuotePDF(quote);
     toast.success('Orçamento gerado e salvo com sucesso!');
+
+    if (clearAfterSave) {
+      setClient(INITIAL_CLIENT);
+      setItems([]);
+      setPayment(INITIAL_PAYMENT);
+    }
   };
 
   const handleReset = () => {
@@ -162,22 +168,33 @@ const Index = () => {
                     />
 
                     {/* Actions */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={handleReset}
+                          className="flex-1"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Limpar
+                        </Button>
+                        <Button
+                          onClick={() => handleGenerateQuote(false)}
+                          className="flex-1"
+                          disabled={!client.name || items.length === 0}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Gerar Orçamento
+                        </Button>
+                      </div>
                       <Button
-                        variant="outline"
-                        onClick={handleReset}
-                        className="flex-1"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Limpar
-                      </Button>
-                      <Button
-                        onClick={handleGenerateQuote}
-                        className="flex-1"
+                        onClick={() => handleGenerateQuote(true)}
+                        variant="secondary"
+                        className="w-full"
                         disabled={!client.name || items.length === 0}
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Gerar Orçamento
+                        Gerar e Limpar Dados
                       </Button>
                     </div>
                   </div>
