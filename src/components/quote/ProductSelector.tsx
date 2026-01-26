@@ -43,15 +43,26 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedProduct.modulations.find((m) => m.id === config.modulationId);
   }, [selectedProduct, config.modulationId]);
 
-  // Get available sizes for selected modulation
+  // Get available sizes for selected modulation (deduplicated by dimensions)
   const availableSizes = useMemo(() => {
     if (!selectedModulation) return [];
     
+    let sizes = selectedModulation.sizes;
+    
     if (config.base) {
-      return selectedModulation.sizes.filter(s => s.base === config.base);
+      sizes = sizes.filter(s => s.base === config.base);
     }
     
-    return selectedModulation.sizes;
+    // Deduplicate sizes by dimensions/description - keep the first one with each unique dimension
+    const uniqueSizes = new Map<string, typeof sizes[0]>();
+    sizes.forEach(size => {
+      const key = size.dimensions || size.description;
+      if (!uniqueSizes.has(key)) {
+        uniqueSizes.set(key, size);
+      }
+    });
+    
+    return Array.from(uniqueSizes.values());
   }, [selectedModulation, config.base]);
 
   // Get selected size
@@ -315,11 +326,22 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       <SelectValue placeholder="Selecione o tamanho..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableSizes.map((size) => (
-                        <SelectItem key={size.id} value={size.id}>
-                          {size.dimensions || size.description}
-                        </SelectItem>
-                      ))}
+                      {availableSizes.map((size) => {
+                        // Build a cleaner description with dimensions
+                        const dims = [
+                          size.length && `L: ${size.length}`,
+                          size.depth && `P: ${size.depth}`,
+                          size.height && `A: ${size.height}`,
+                        ].filter(Boolean).join(' × ');
+                        
+                        const displayText = dims || size.dimensions || size.description;
+                        
+                        return (
+                          <SelectItem key={size.id} value={size.id}>
+                            {displayText}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
