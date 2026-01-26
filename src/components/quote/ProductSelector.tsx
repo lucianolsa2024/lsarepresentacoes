@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Product, QuoteItem } from '@/types/quote';
+import { Product, QuoteItem, FabricTier, FABRIC_TIERS } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,21 +23,22 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   const [config, setConfig] = useState({
     modulation: '',
     base: '',
-    fabric: '',
+    fabricTier: 'FX E' as FabricTier,
+    fabricDescription: '',
   });
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
-    setConfig({ modulation: '', base: '', fabric: '' });
+    setConfig({ modulation: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
   };
 
   const handleConfirm = () => {
-    if (!selectedProduct || !config.modulation || !config.fabric) return;
+    if (!selectedProduct || !config.modulation || !config.fabricDescription) return;
 
     const modulationData = selectedProduct.modulations.find(
       (m) => m.name === config.modulation
     );
-    const price = modulationData?.price || 0;
+    const price = modulationData?.prices[config.fabricTier] || 0;
 
     const item: QuoteItem = {
       id: crypto.randomUUID(),
@@ -45,18 +46,26 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       productName: selectedProduct.name,
       modulation: config.modulation,
       base: config.base,
-      fabric: config.fabric,
+      fabricTier: config.fabricTier,
+      fabricDescription: config.fabricDescription,
       price,
       quantity: 1,
     };
 
     onAddItem(item);
     setSelectedProduct(null);
-    setConfig({ modulation: '', base: '', fabric: '' });
+    setConfig({ modulation: '', base: '', fabricTier: 'FX E', fabricDescription: '' });
   };
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Get current price based on selected modulation and tier
+  const getCurrentPrice = () => {
+    if (!selectedProduct || !config.modulation) return 0;
+    const mod = selectedProduct.modulations.find((m) => m.name === config.modulation);
+    return mod?.prices[config.fabricTier] || 0;
   };
 
   // Group products by category
@@ -78,7 +87,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       </CardHeader>
       <CardContent>
         {!selectedProduct ? (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
             {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
               <div key={category}>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">
@@ -123,6 +132,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
             </div>
 
             <div className="space-y-4">
+              {/* Modulation */}
               <div className="space-y-2">
                 <Label>1. Modulação *</Label>
                 <Select
@@ -137,13 +147,14 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                   <SelectContent>
                     {selectedProduct.modulations.map((mod) => (
                       <SelectItem key={mod.name} value={mod.name}>
-                        {mod.name} - {formatCurrency(mod.price)}
+                        {mod.name} ({mod.dimensions})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Base */}
               {selectedProduct.hasBase && (
                 <div className="space-y-2">
                   <Label>2. Acabamento da Base</Label>
@@ -165,20 +176,61 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
+              {/* Fabric Tier */}
+              <div className="space-y-2">
+                <Label>{selectedProduct.hasBase ? '3' : '2'}. Faixa de Tecido *</Label>
+                <Select
+                  value={config.fabricTier}
+                  onValueChange={(value) =>
+                    setConfig({ ...config, fabricTier: value as FabricTier })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FABRIC_TIERS.map((tier) => {
+                      const mod = selectedProduct.modulations.find(
+                        (m) => m.name === config.modulation
+                      );
+                      const price = mod?.prices[tier] || 0;
+                      return (
+                        <SelectItem key={tier} value={tier}>
+                          {tier} {config.modulation && `- ${formatCurrency(price)}`}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Fabric Description */}
               <div className="space-y-2">
                 <Label>
-                  {selectedProduct.hasBase ? '3' : '2'}. Tecido / Revestimento *
+                  {selectedProduct.hasBase ? '4' : '3'}. Descrição do Tecido *
                 </Label>
                 <Input
                   placeholder="Ex: Suede cinza, Veludo azul marinho..."
-                  value={config.fabric}
-                  onChange={(e) => setConfig({ ...config, fabric: e.target.value })}
+                  value={config.fabricDescription}
+                  onChange={(e) =>
+                    setConfig({ ...config, fabricDescription: e.target.value })
+                  }
                 />
               </div>
 
+              {/* Price Preview */}
+              {config.modulation && (
+                <div className="bg-primary/10 p-3 rounded-lg text-center">
+                  <span className="text-sm text-muted-foreground">Preço:</span>
+                  <span className="text-xl font-bold text-primary ml-2">
+                    {formatCurrency(getCurrentPrice())}
+                  </span>
+                </div>
+              )}
+
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulation || !config.fabric}
+                disabled={!config.modulation || !config.fabricDescription}
                 className="w-full"
               >
                 Confirmar Item
