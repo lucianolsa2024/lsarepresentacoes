@@ -165,19 +165,29 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         </div>
 
         {/* Delivery */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            Prazo de Entrega (dias)
-          </Label>
-          <Input
-            type="number"
-            min={1}
-            value={payment.deliveryDays}
-            onChange={(e) =>
-              updateField('deliveryDays', parseInt(e.target.value) || 30)
-            }
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Prazo de Embarque (dias corridos)
+            </Label>
+            <Input
+              type="number"
+              min={1}
+              value={payment.deliveryDays}
+              onChange={(e) =>
+                updateField('deliveryDays', parseInt(e.target.value) || 30)
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Transportadora</Label>
+            <Input
+              value={payment.carrier}
+              onChange={(e) => updateField('carrier', e.target.value)}
+              placeholder="Nome da transportadora"
+            />
+          </div>
         </div>
 
         {/* Observations */}

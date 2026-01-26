@@ -73,6 +73,7 @@ export interface PaymentConditions {
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   deliveryDays: number;
+  carrier: string;
   observations: string;
 }
 
@@ -112,5 +113,6 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   discountType: 'percentage',
   discountValue: 0,
   deliveryDays: 30,
+  carrier: '',
   observations: '',
 };

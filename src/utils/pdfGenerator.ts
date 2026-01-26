@@ -117,17 +117,18 @@ export function generateQuotePDF(quote: Quote): void {
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
     // Check if we need a new page
-    if (y > 240) {
+    if (y > 230) {
       doc.addPage();
       y = 20;
     }
 
     doc.text(`${index + 1}`, 17, y);
 
-    // Product details
+    // Product details with size description
     const details = [
       item.productName,
       `Mod: ${item.modulation}`,
+      item.sizeDescription ? `Tam: ${item.sizeDescription}` : '',
       item.base ? `Base: ${item.base}` : '',
       `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
     ]
@@ -163,24 +164,34 @@ export function generateQuotePDF(quote: Quote): void {
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
+  // Calculate IPI (3.25% on subtotal)
+  const ipiRate = 0.0325;
+  const ipiValue = quote.subtotal * ipiRate;
+  const totalWithIpi = quote.total + ipiValue;
+
   // Totals
   doc.setFontSize(10);
-  doc.text('Subtotal:', 130, y);
+  doc.text('Subtotal Produtos:', 120, y);
   doc.text(formatCurrency(quote.subtotal), 175, y);
   y += 6;
 
   if (quote.discount > 0) {
     doc.setTextColor(180, 0, 0);
-    doc.text('Desconto:', 130, y);
+    doc.text('Desconto:', 120, y);
     doc.text(`- ${formatCurrency(quote.discount)}`, 175, y);
     doc.setTextColor(0);
     y += 6;
   }
 
+  // IPI
+  doc.text('IPI (3,25%):', 120, y);
+  doc.text(formatCurrency(ipiValue), 175, y);
+  y += 6;
+
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL:', 130, y);
-  doc.text(formatCurrency(quote.total), 175, y);
+  doc.text('TOTAL GERAL:', 120, y);
+  doc.text(formatCurrency(totalWithIpi), 175, y);
   y += 12;
 
   // Payment Conditions
@@ -226,6 +237,12 @@ export function generateQuotePDF(quote: Quote): void {
   }
 
   doc.text(`Prazo de embarque: ${quote.payment.deliveryDays} dias corridos`, 15, y);
+  y += 5;
+
+  if (quote.payment.carrier) {
+    doc.text(`Transportadora: ${quote.payment.carrier}`, 15, y);
+    y += 5;
+  }
   y += 5;
 
   if (quote.payment.observations) {
