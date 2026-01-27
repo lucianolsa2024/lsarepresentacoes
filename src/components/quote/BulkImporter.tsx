@@ -355,17 +355,26 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       setProgress(10);
       setStatus('parsing');
 
-      // Load and parse first file (LSA)
-      setCurrentFile('Carregando TABELA_PV_26.01_LOVABLE-2.xlsx...');
+      // Load and parse first file (LSA 1)
+      setCurrentFile('Carregando tabela-lsa.xlsx...');
       const lsaData = await loadExcelFile('/data/tabela-lsa.xlsx');
-      setProgress(20);
+      setProgress(15);
       
       const lsaProducts = parseExcelData(lsaData);
-      console.log(`LSA: ${lsaProducts.length} produtos`);
-      setProgress(25);
+      console.log(`LSA 1: ${lsaProducts.length} produtos`);
+      setProgress(20);
 
-      // Load and parse second file (Century)
-      setCurrentFile('Carregando Produtos_Century_Lovable.xlsx...');
+      // Load and parse second file (LSA 2)
+      setCurrentFile('Carregando tabela-lsa-2.xlsx...');
+      const lsa2Data = await loadExcelFile('/data/tabela-lsa-2.xlsx');
+      setProgress(25);
+      
+      const lsa2Products = parseExcelData(lsa2Data);
+      console.log(`LSA 2: ${lsa2Products.length} produtos`);
+      setProgress(30);
+
+      // Load and parse third file (Century)
+      setCurrentFile('Carregando produtos-century.xlsx...');
       const centuryData = await loadExcelFile('/data/produtos-century.xlsx');
       setProgress(35);
       
@@ -375,13 +384,17 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
       setStatus('importing');
       
-      // Import LSA products (40-65%)
-      setCurrentFile('Importando produtos LSA...');
-      await importToDatabase(lsaProducts, 40, 65);
+      // Import LSA 1 products (40-55%)
+      setCurrentFile('Importando produtos LSA (parte 1)...');
+      await importToDatabase(lsaProducts, 40, 55);
 
-      // Import Century products (65-95%)
+      // Import LSA 2 products (55-70%)
+      setCurrentFile('Importando produtos LSA (parte 2)...');
+      await importToDatabase(lsa2Products, 55, 70);
+
+      // Import Century products (70-95%)
       setCurrentFile('Importando produtos Century...');
-      await importToDatabase(centuryProducts, 65, 95);
+      await importToDatabase(centuryProducts, 70, 95);
 
       setStatus('success');
       setProgress(100);
@@ -418,7 +431,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
           <DialogHeader>
             <DialogTitle>Atualizar Base de Produtos</DialogTitle>
             <DialogDescription>
-              Esta ação irá limpar toda a base atual e importar os produtos dos 2 arquivos Excel pré-carregados.
+              Esta ação irá limpar toda a base atual e importar os produtos dos 3 arquivos Excel pré-carregados.
             </DialogDescription>
           </DialogHeader>
 
@@ -428,8 +441,9 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <p className="font-medium">Arquivos que serão importados:</p>
                   <ul className="text-sm text-muted-foreground list-disc list-inside">
-                    <li>TABELA_PV_26.01_LOVABLE-2.xlsx</li>
-                    <li>Produtos_Century_Lovable.xlsx</li>
+                    <li>tabela-lsa.xlsx (Produtos PV parte 1)</li>
+                    <li>tabela-lsa-2.xlsx (Produtos PV parte 2)</li>
+                    <li>produtos-century.xlsx (Century)</li>
                   </ul>
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
