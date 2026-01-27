@@ -1,71 +1,35 @@
 
-# Plano: Ajustar Importação de Produtos com CAIXA
+# Plano: Atualização dos Arquivos Excel da Base de Produtos
 
-## O Que Será Feito
+## Objetivo
+Substituir os arquivos Excel existentes no projeto pelos novos arquivos atualizados enviados pelo usuário.
 
-Modificar o importador Excel para que produtos com "CAIXA: FX X" na descrição sejam tratados como tamanhos individuais, mantendo a descrição completa e todos os preços de faixa de tecido.
+## Arquivos a Substituir
 
-## Mudança Técnica
+| Arquivo Atual | Novo Arquivo |
+|---------------|--------------|
+| `public/data/tabela-lsa.xlsx` | `Produtos_pv_27-01.xlsx` (~5.476 linhas) |
+| `public/data/produtos-century.xlsx` | `produtos_century_27-01.xlsx` (~14.020 linhas) |
 
-**Arquivo:** `src/components/quote/ExcelImporter.tsx`
+## Etapas
 
-Simplificar a lógica de parsing para:
+1. **Copiar Novos Arquivos**
+   - Copiar `user-uploads://Produtos_pv_27-01.xlsx` para `public/data/tabela-lsa.xlsx`
+   - Copiar `user-uploads://produtos_century_27-01.xlsx` para `public/data/produtos-century.xlsx`
 
-1. **Remover a lógica de consolidação CAIXA** (linhas 292-341)
-2. **Tratar todas as linhas de forma igual** - cada linha é um tamanho único
-3. **Usar a descrição completa** (incluindo "CAIXA: FX X") como identificador
-4. **Importar todos os preços** das colunas FX B até FX COURO normalmente
+2. **Verificação**
+   - Os nomes dos arquivos de destino permanecem os mesmos para manter compatibilidade com o `BulkImporter`
+   - A estrutura das colunas é idêntica à versão anterior
 
-### Exemplo do Resultado
+## Após a Implementação
 
-Para o produto SONA com CAIXA:
+Depois que os arquivos forem substituídos, você poderá:
+1. Acessar a aba **"Produtos"**
+2. Clicar no botão **"Atualizar Base Completa"**
+3. O sistema irá limpar a base atual e importar os ~19.500 produtos dos novos arquivos
 
-| Antes (errado) | Depois (correto) |
-|----------------|------------------|
-| 1 tamanho com preços misturados | Múltiplos tamanhos separados |
+## Observações Técnicas
 
-**Tamanhos importados:**
-- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX B` → Preços: FX B=3845, FX C=3898, FX D=3972...
-- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX C` → Preços: FX B=3862, FX C=3914, FX D=3989...
-- `SONA 1B 1AS 1,15m x 1,10m CAIXA: FX D` → Preços: FX B=3879, FX C=3932...
-
-### Código Simplificado
-
-```typescript
-// Usar descrição RAW como chave (incluindo CAIXA: FX X)
-const dimensionKey = rawDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
-
-// Processar TODAS as linhas da mesma forma
-const prices: Record<string, number> = {};
-priceColumns.forEach(({ name, index }) => {
-  const rawValue = rowData[index];
-  const value = parseFloat(String(rawValue ?? '0').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
-  prices[name] = value;
-});
-
-sizeMap.set(dimensionKey, {
-  description: rawDescription || description,
-  dimensions,
-  length,
-  depth,
-  height,
-  fabricQuantity: fabricQty,
-  prices,
-});
-```
-
-## Fluxo do Usuário
-
-1. Ao selecionar o produto SONA
-2. Escolhe a modulação (ex: 1B 1AS)
-3. Na lista de tamanhos, verá opções como:
-   - "1,15m x 1,10m CAIXA: FX B"
-   - "1,15m x 1,10m CAIXA: FX C"
-   - etc.
-4. Após selecionar o tamanho (com CAIXA específica), escolhe a faixa de tecido normalmente
-
-## Resumo das Alterações
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/quote/ExcelImporter.tsx` | Remover lógica especial CAIXA e tratar todas as linhas igualmente |
+- O `BulkImporter` continuará funcionando normalmente pois os caminhos dos arquivos não mudam
+- A lógica de parsing existente é compatível com a estrutura das novas planilhas
+- Variações como CAIXA, PE, GIRATÓRIA continuarão sendo detectadas corretamente
