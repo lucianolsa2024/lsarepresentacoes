@@ -1,35 +1,51 @@
 
-# Plano: Atualização dos Arquivos Excel da Base de Produtos
+# Plano: Substituição dos Arquivos Excel de Produtos
 
 ## Objetivo
-Substituir os arquivos Excel existentes no projeto pelos novos arquivos atualizados enviados pelo usuário.
+Substituir os arquivos Excel existentes pelos novos arquivos atualizados enviados.
 
 ## Arquivos a Substituir
 
-| Arquivo Atual | Novo Arquivo |
-|---------------|--------------|
-| `public/data/tabela-lsa.xlsx` | `Produtos_pv_27-01.xlsx` (~5.476 linhas) |
-| `public/data/produtos-century.xlsx` | `produtos_century_27-01.xlsx` (~14.020 linhas) |
+| Novo Arquivo | Arquivo de Destino | Total de Linhas |
+|--------------|-------------------|-----------------|
+| `Produtos_pv_27-01-3.xlsx` | `public/data/tabela-lsa.xlsx` | ~5.476 |
+| `produtos_century_27-01-2.xlsx` | `public/data/produtos-century.xlsx` | ~14.020 |
 
-## Etapas
+## Compatibilidade
 
-1. **Copiar Novos Arquivos**
-   - Copiar `user-uploads://Produtos_pv_27-01.xlsx` para `public/data/tabela-lsa.xlsx`
-   - Copiar `user-uploads://produtos_century_27-01.xlsx` para `public/data/produtos-century.xlsx`
+Ambos os arquivos novos mantêm a estrutura idêntica à versão anterior:
 
-2. **Verificação**
-   - Os nomes dos arquivos de destino permanecem os mesmos para manter compatibilidade com o `BulkImporter`
-   - A estrutura das colunas é idêntica à versão anterior
+```text
+Colunas do Excel
+┌─────────────────┬──────────┬───────────┬───────────┬─────────────┬──────────────┬─────────────────┬────────┬────────┬───┬──────────┐
+│ Código do Item  │ Produto  │ Modulação │ Descrição │ Comprimento │ Profundidade │ SEM TEC/OUTRO   │ FX B   │ FX C   │...│ FX COURO │
+└─────────────────┴──────────┴───────────┴───────────┴─────────────┴──────────────┴─────────────────┴────────┴────────┴───┴──────────┘
+```
+
+## Etapas da Implementação
+
+1. **Copiar os novos arquivos para o projeto**
+   - Copiar `Produtos_pv_27-01-3.xlsx` → `public/data/tabela-lsa.xlsx`
+   - Copiar `produtos_century_27-01-2.xlsx` → `public/data/produtos-century.xlsx`
+
+2. **Manter o terceiro arquivo**
+   - O arquivo `public/data/tabela-lsa-2.xlsx` permanece inalterado
 
 ## Após a Implementação
 
-Depois que os arquivos forem substituídos, você poderá:
-1. Acessar a aba **"Produtos"**
-2. Clicar no botão **"Atualizar Base Completa"**
-3. O sistema irá limpar a base atual e importar os ~19.500 produtos dos novos arquivos
+Para atualizar a base de dados com os novos produtos:
 
-## Observações Técnicas
+1. Acesse a aba **"Produtos"**
+2. Clique no botão **"Atualizar Base Completa"**
+3. Confirme a operação clicando em **"Iniciar Importação"**
 
-- O `BulkImporter` continuará funcionando normalmente pois os caminhos dos arquivos não mudam
-- A lógica de parsing existente é compatível com a estrutura das novas planilhas
-- Variações como CAIXA, PE, GIRATÓRIA continuarão sendo detectadas corretamente
+O sistema irá:
+- Limpar toda a base atual
+- Importar os 3 arquivos: `tabela-lsa.xlsx`, `tabela-lsa-2.xlsx` e `produtos-century.xlsx`
+- Total aproximado: ~19.500 produtos
+
+## Observações
+
+- Nenhuma mudança de código é necessária - apenas substituição de arquivos
+- A lógica de parsing existente é 100% compatível com os novos arquivos
+- Variações como CAIXA, BASE/PE, GIRATÓRIA continuarão sendo detectadas corretamente
