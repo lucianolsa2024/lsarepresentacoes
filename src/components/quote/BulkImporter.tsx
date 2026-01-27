@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Database, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, Loader2, FilePlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BulkImporterProps {
@@ -33,8 +34,25 @@ interface ParsedProduct {
   }[];
 }
 
+type ImportMode = 'full' | 'individual';
+
+interface FileOption {
+  id: string;
+  name: string;
+  path: string;
+  description: string;
+}
+
+const AVAILABLE_FILES: FileOption[] = [
+  { id: 'lsa1', name: 'tabela-lsa.xlsx', path: '/data/tabela-lsa.xlsx', description: 'Produtos PV parte 1' },
+  { id: 'lsa2', name: 'tabela-lsa-2.xlsx', path: '/data/tabela-lsa-2.xlsx', description: 'Produtos PV parte 2' },
+  { id: 'century', name: 'produtos-century.xlsx', path: '/data/produtos-century.xlsx', description: 'Century' },
+];
+
 export function BulkImporter({ onImportComplete }: BulkImporterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>('full');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'clearing' | 'parsing' | 'importing' | 'success' | 'error'>('idle');
@@ -48,6 +66,15 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     setStats({ products: 0, modulations: 0, sizes: 0 });
     setErrorMessage('');
     setCurrentFile('');
+    setSelectedFiles([]);
+  };
+
+  const toggleFileSelection = (fileId: string) => {
+    setSelectedFiles(prev => 
+      prev.includes(fileId) 
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
   };
 
   const parseExcelData = (rows: unknown[][]): ParsedProduct[] => {
@@ -412,6 +439,60 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     }
   };
 
+  const handleIndividualImport = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Selecione pelo menos um arquivo para importar');
+      return;
+    }
+
+    setIsProcessing(true);
+    setStatus('parsing');
+    setProgress(5);
+
+    try {
+      const filesToImport = AVAILABLE_FILES.filter(f => selectedFiles.includes(f.id));
+      const progressPerFile = 90 / filesToImport.length;
+      let currentProgress = 5;
+
+      for (let i = 0; i < filesToImport.length; i++) {
+        const file = filesToImport[i];
+        
+        setCurrentFile(`Carregando ${file.name}...`);
+        const data = await loadExcelFile(file.path);
+        currentProgress += progressPerFile * 0.3;
+        setProgress(currentProgress);
+
+        const products = parseExcelData(data);
+        console.log(`${file.name}: ${products.length} produtos`);
+        currentProgress += progressPerFile * 0.1;
+        setProgress(currentProgress);
+
+        setStatus('importing');
+        setCurrentFile(`Importando ${file.description}...`);
+        
+        const startProg = currentProgress;
+        const endProg = currentProgress + progressPerFile * 0.6;
+        await importToDatabase(products, startProg, endProg);
+        currentProgress = endProg;
+        setProgress(currentProgress);
+      }
+
+      setStatus('success');
+      setProgress(100);
+      setCurrentFile('');
+      toast.success(`Importação concluída! ${stats.products} produtos adicionados/atualizados, ${stats.sizes} configurações.`);
+      onImportComplete();
+
+    } catch (error) {
+      console.error('Import error:', error);
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
+      toast.error('Erro ao importar planilhas');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleClose = () => {
     if (!isProcessing) {
       setIsOpen(false);
@@ -421,22 +502,32 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
   return (
     <>
-      <Button variant="default" onClick={() => setIsOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-        <Database className="h-4 w-4 mr-2" />
-        Atualizar Base Completa
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="default" onClick={() => { setImportMode('full'); setIsOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+          <Database className="h-4 w-4 mr-2" />
+          Atualizar Base Completa
+        </Button>
+        <Button variant="outline" onClick={() => { setImportMode('individual'); setIsOpen(true); }}>
+          <FilePlus className="h-4 w-4 mr-2" />
+          Adicionar Arquivo
+        </Button>
+      </div>
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Atualizar Base de Produtos</DialogTitle>
+            <DialogTitle>
+              {importMode === 'full' ? 'Atualizar Base de Produtos' : 'Importar Arquivo Individual'}
+            </DialogTitle>
             <DialogDescription>
-              Esta ação irá limpar toda a base atual e importar os produtos dos 3 arquivos Excel pré-carregados.
+              {importMode === 'full' 
+                ? 'Esta ação irá limpar toda a base atual e importar os produtos dos 3 arquivos Excel pré-carregados.'
+                : 'Selecione os arquivos que deseja importar. Os produtos existentes serão atualizados ou novos serão adicionados.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {status === 'idle' && (
+            {status === 'idle' && importMode === 'full' && (
               <div className="space-y-4">
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <p className="font-medium">Arquivos que serão importados:</p>
@@ -453,6 +544,39 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
                 </div>
                 <Button onClick={handleBulkImport} className="w-full">
                   Iniciar Importação
+                </Button>
+              </div>
+            )}
+
+            {status === 'idle' && importMode === 'individual' && (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <p className="font-medium">Selecione os arquivos para importar:</p>
+                  {AVAILABLE_FILES.map(file => (
+                    <div key={file.id} className="flex items-center space-x-3">
+                      <Checkbox 
+                        id={file.id}
+                        checked={selectedFiles.includes(file.id)}
+                        onCheckedChange={() => toggleFileSelection(file.id)}
+                      />
+                      <label htmlFor={file.id} className="text-sm cursor-pointer flex-1">
+                        <span className="font-medium">{file.name}</span>
+                        <span className="text-muted-foreground ml-2">({file.description})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <strong>Modo incremental:</strong> Os produtos existentes serão atualizados com as novas informações. Nenhum dado será excluído.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleIndividualImport} 
+                  className="w-full"
+                  disabled={selectedFiles.length === 0}
+                >
+                  Importar {selectedFiles.length > 0 ? `(${selectedFiles.length} arquivo${selectedFiles.length > 1 ? 's' : ''})` : ''}
                 </Button>
               </div>
             )}
@@ -496,9 +620,9 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
             {status === 'error' && (
               <div className="text-center space-y-4">
-                <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+                <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
                 <div>
-                  <p className="font-medium text-red-600">Erro na importação</p>
+                  <p className="font-medium text-destructive">Erro na importação</p>
                   <p className="text-sm text-muted-foreground mt-2">{errorMessage}</p>
                 </div>
                 <Button onClick={resetState} variant="outline" className="w-full">
