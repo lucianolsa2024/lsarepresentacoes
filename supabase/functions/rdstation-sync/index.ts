@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const RD_API_BASE = 'https://plugcrm.net/api/v1';
+const RD_API_BASE = 'https://crm.rdstation.com/api/v1';
 
 interface ClientData {
   name: string;
@@ -44,7 +44,8 @@ interface SyncRequest {
 }
 
 async function rdFetch(endpoint: string, options: RequestInit, token: string) {
-  const url = `${RD_API_BASE}${endpoint}?token=${token}`;
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${RD_API_BASE}${endpoint}${separator}token=${token}`;
   console.log(`RD Station API call: ${options.method || 'GET'} ${endpoint}`);
   
   const response = await fetch(url, {
@@ -53,6 +54,7 @@ async function rdFetch(endpoint: string, options: RequestInit, token: string) {
       'Content-Type': 'application/json',
       ...options.headers,
     },
+    redirect: 'follow',
   });
 
   const data = await response.json();
