@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Product, ProductModulation, ModulationSize, FabricTier, FABRIC_TIERS } from '@/types/quote';
 import { PRODUCT_CATEGORIES, BASE_OPTIONS } from '@/data/products';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit2, X, Package, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Package, Search, Factory } from 'lucide-react';
 import { toast } from 'sonner';
 import { ExcelImporter } from './ExcelImporter';
 import { BulkImporter } from './BulkImporter';
@@ -74,6 +74,16 @@ export function ProductManager({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFactory, setSelectedFactory] = useState<string>('');
+
+  // Get available factories from products
+  const availableFactories = useMemo(() => {
+    const factories = new Set<string>();
+    products.forEach(p => {
+      if (p.factory) factories.add(p.factory);
+    });
+    return Array.from(factories).sort();
+  }, [products]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -246,21 +256,32 @@ export function ProductManager({
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  // Filter products by search query
-  const filteredProducts = products.filter((product) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(query) ||
-      product.code.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query) ||
-      product.description.toLowerCase().includes(query) ||
-      product.modulations.some((mod) => 
-        mod.name.toLowerCase().includes(query) ||
-        mod.sizes.some((size) => size.description.toLowerCase().includes(query))
-      )
-    );
-  });
+  // Filter products by factory first, then by search query
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+    
+    // Filter by factory
+    if (selectedFactory) {
+      filtered = filtered.filter(p => p.factory === selectedFactory);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((product) =>
+        product.name.toLowerCase().includes(query) ||
+        product.code.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        product.modulations.some((mod) => 
+          mod.name.toLowerCase().includes(query) ||
+          mod.sizes.some((size) => size.description.toLowerCase().includes(query))
+        )
+      );
+    }
+    
+    return filtered;
+  }, [products, selectedFactory, searchQuery]);
 
   // Group filtered products by category
   const groupedProducts = filteredProducts.reduce((acc, product) => {
@@ -310,6 +331,33 @@ export function ProductManager({
           </div>
         </div>
         
+        {/* Factory Filter */}
+        {availableFactories.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Factory className="h-4 w-4" />
+              <span>Fábrica:</span>
+            </div>
+            <Button
+              variant={selectedFactory === '' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedFactory('')}
+            >
+              Todas
+            </Button>
+            {availableFactories.map((factory) => (
+              <Button
+                key={factory}
+                variant={selectedFactory === factory ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedFactory(factory)}
+              >
+                {factory}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -324,6 +372,7 @@ export function ProductManager({
         {/* Results count */}
         <div className="text-sm text-muted-foreground">
           {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+          {selectedFactory && ` em "${selectedFactory}"`}
           {searchQuery && ` para "${searchQuery}"`}
         </div>
       </div>

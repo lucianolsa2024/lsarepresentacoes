@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronRight, X, Package, Search, Factory } from 'lucide-react';
+import { ChevronRight, X, Package, Search } from 'lucide-react';
 
 interface ProductSelectorProps {
   products: Product[];
@@ -20,7 +20,6 @@ interface ProductSelectorProps {
 }
 
 export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
-  const [selectedFactory, setSelectedFactory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [fabricSearch, setFabricSearch] = useState('');
@@ -32,32 +31,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     fabricCode: '',
   });
 
-  // Get available factories
-  const availableFactories = useMemo(() => {
-    const factories = new Set<string>();
-    products.forEach(p => {
-      if (p.factory) factories.add(p.factory);
-    });
-    return Array.from(factories).sort();
-  }, [products]);
-
-  const handleSelectFactory = (factory: string) => {
-    setSelectedFactory(factory);
-    setSelectedProduct(null);
-    setSearchTerm('');
-    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '' });
-  };
-
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
     setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '' });
     setFabricSearch('');
-  };
-
-  const handleBackToFactories = () => {
-    setSelectedFactory('');
-    setSelectedProduct(null);
-    setSearchTerm('');
   };
 
   // Get selected modulation
@@ -188,28 +165,18 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedSize.prices[config.fabricTier as FabricTier] || 0;
   };
 
-  // Filter products by factory first, then by search term
+  // Filter products by search term (no factory filter - show all)
   const filteredProducts = useMemo(() => {
-    let filtered = products;
+    if (!searchTerm.trim()) return products;
     
-    // Filter by factory
-    if (selectedFactory) {
-      filtered = filtered.filter(p => p.factory === selectedFactory);
-    }
-    
-    // Filter by search term
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.description.toLowerCase().includes(term) ||
-          p.code.toLowerCase().includes(term)
-      );
-    }
-    
-    return filtered;
-  }, [products, selectedFactory, searchTerm]);
+    const term = searchTerm.toLowerCase();
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        p.description.toLowerCase().includes(term) ||
+        p.code.toLowerCase().includes(term)
+    );
+  }, [products, searchTerm]);
 
   // Group products by category
   const groupedProducts = filteredProducts.reduce((acc, product) => {
@@ -264,46 +231,9 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Factory Selection */}
-        {!selectedFactory && !selectedProduct ? (
+        {/* Product Selection - Direct search without factory step */}
+        {!selectedProduct ? (
           <div className="space-y-4">
-            <div className="text-center py-2">
-              <Factory className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Selecione uma fábrica para começar</p>
-            </div>
-            
-            <div className="space-y-2">
-              {availableFactories.map((factory) => (
-                <button
-                  key={factory}
-                  onClick={() => handleSelectFactory(factory)}
-                  className="w-full text-left bg-muted/50 p-4 rounded-lg hover:bg-muted transition flex justify-between items-center group"
-                >
-                  <div className="flex items-center gap-3">
-                    <Factory className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">{factory}</span>
-                  </div>
-                  <ChevronRight className="text-primary group-hover:translate-x-1 transition" />
-                </button>
-              ))}
-              
-              {availableFactories.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhuma fábrica cadastrada. Importe produtos com coluna "Fábrica" no Excel.
-                </p>
-              )}
-            </div>
-          </div>
-        ) : !selectedProduct ? (
-          <div className="space-y-4">
-            {/* Back to factories button */}
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={handleBackToFactories}>
-                ← Voltar
-              </Button>
-              <span className="text-sm font-medium text-primary">{selectedFactory}</span>
-            </div>
-            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
