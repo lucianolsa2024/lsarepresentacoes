@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Factory } from 'lucide-react';
 import { ProductImage } from '@/components/ProductImage';
+import { Badge } from '@/components/ui/badge';
 
 interface QuoteCartProps {
   items: QuoteItem[];
@@ -49,9 +50,17 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRem
                   <div className="flex gap-3 flex-1">
                     <ProductImage productName={item.productName} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold">
-                        {index + 1}. {item.productName}
-                      </h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold">
+                          {index + 1}. {item.productName}
+                        </h4>
+                        {item.factory && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Factory className="h-3 w-3 mr-1" />
+                            {item.factory}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Modulação: {item.modulation}
                       </p>

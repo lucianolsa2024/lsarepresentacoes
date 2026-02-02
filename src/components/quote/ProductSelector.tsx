@@ -138,6 +138,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       id: crypto.randomUUID(),
       productId: selectedProduct.id,
       productName: selectedProduct.name,
+      factory: selectedProduct.factory || '',
       modulation: modulation.name,
       modulationId: config.modulationId,
       sizeId: config.sizeId,
