@@ -1,129 +1,160 @@
 
-# Plano: Mover Filtro de Fábrica para Aba de Produtos
+# Plano: Integração com RD Station CRM
 
 ## Resumo
 
-Mover a seleção de fábrica da aba "Novo Orçamento" (`ProductSelector`) para a aba "Produtos" (`ProductManager`), criando uma experiência mais intuitiva onde o usuário filtra a visualização do catálogo pela fábrica desejada.
+Integrar o sistema de orçamentos com o RD Station CRM para criar automaticamente empresas (Organizations) e vincular os orçamentos como negociações (Deals) quando um orçamento for gerado.
 
 ---
 
-## Mudanças Propostas
+## O que será feito
 
-### 1. ProductManager (Aba Produtos)
+1. **Criar empresa no RD Station** quando um orçamento for gerado para um cliente novo
+2. **Criar negociação (Deal)** vinculada à empresa com os dados do orçamento
+3. **Sincronizar contato** do cliente com a empresa no CRM
 
-**Adicionar:**
-- Seletor de fábrica no topo, antes da barra de busca
-- Botões estilizados para cada fábrica disponível (SOHOME, CENTURY, etc.)
-- Opção "Todas" para ver todos os produtos
-- Filtrar a lista de produtos exibidos pela fábrica selecionada
+---
 
-**Fluxo na aba Produtos:**
+## Fluxo de Integração
+
 ```text
-[SOHOME] [CENTURY] [Todas]  ← Botões de fábrica
-[Buscar produtos...]        ← Barra de busca (filtra dentro da fábrica)
-Lista de produtos filtrados
+Usuário gera orçamento
+        ↓
+  É cliente novo?
+   /         \
+ Sim         Não
+  ↓           ↓
+Criar      Buscar
+Empresa    Empresa
+  ↓           ↓
+     ↓     ↓
+   Criar/Atualizar Contato
+        ↓
+   Criar Deal (Negociação)
+        ↓
+   Sucesso → Toast de confirmação
 ```
 
-### 2. ProductSelector (Aba Orçamento)
+---
 
-**Remover:**
-- O passo inicial de seleção de fábrica
-- O estado `selectedFactory` e funções relacionadas
+## Dados a Sincronizar
 
-**Manter:**
-- Busca de produtos
-- Fluxo: Produto → Modulação → Base → Tamanho → Tecido
+### Empresa (Organization)
+| Campo LSA | Campo RD Station |
+|-----------|------------------|
+| client.company | name |
+| client.document | custom_field (CNPJ) |
+| Endereço completo | custom_fields (endereço) |
 
-**Nova lógica:**
-- Mostrar todos os produtos disponíveis (sem filtro de fábrica)
-- Ou receber uma prop opcional `selectedFactory` do componente pai para filtrar
+### Contato (Contact)
+| Campo LSA | Campo RD Station |
+|-----------|------------------|
+| client.name | name |
+| client.email | emails[0] |
+| client.phone | phones[0] |
+| organization_id | Vinculado à empresa |
 
-### 3. Index.tsx (Página Principal)
-
-**Opcional - Se quiser persistir a fábrica selecionada entre abas:**
-- Elevar o estado `selectedFactory` para o componente pai
-- Passar para ambos ProductManager e ProductSelector
-- Quando o usuário seleciona uma fábrica em Produtos, ela persiste ao ir para Orçamento
+### Negociação (Deal)
+| Campo LSA | Campo RD Station |
+|-----------|------------------|
+| quote.total | deal_value |
+| "Orçamento #ID" | name |
+| Lista de produtos | custom_field ou notes |
+| quote.createdAt | created_at |
 
 ---
 
-## Arquivos a Modificar
+## Arquivos a Criar/Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/quote/ProductManager.tsx` | Adicionar filtro de fábrica no topo da página |
-| `src/components/quote/ProductSelector.tsx` | Remover seleção de fábrica, ir direto para busca de produtos |
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/rdstation-sync/index.ts` | Criar edge function para comunicação com API RD Station |
+| `src/hooks/useRDStation.ts` | Criar hook para gerenciar integração |
+| `src/pages/Index.tsx` | Adicionar chamada de sincronização ao gerar orçamento |
+| `src/components/quote/ClientForm.tsx` | Adicionar feedback de sincronização |
+
+---
+
+## Pré-requisitos
+
+Você precisará fornecer:
+
+1. **Token de API do RD Station CRM** - Obtido em:
+   - Acesse sua conta RD Station CRM
+   - Vá em Configurações → Integrações → API
+   - Gere um token de acesso
 
 ---
 
 ## Detalhes Técnicos
 
-### ProductManager - Nova Estrutura
+### Edge Function: rdstation-sync
 
 ```typescript
-// Novo estado
-const [selectedFactory, setSelectedFactory] = useState<string>('');
+// Endpoints RD Station CRM v2
+const RD_API_BASE = 'https://api.rd.services/crm/v2';
 
-// Obter fábricas disponíveis
-const availableFactories = useMemo(() => {
-  const factories = new Set<string>();
-  products.forEach(p => {
-    if (p.factory) factories.add(p.factory);
-  });
-  return Array.from(factories).sort();
-}, [products]);
+// Criar organização
+POST /organizations
+{
+  "data": {
+    "name": "Nome da Empresa",
+    "custom_fields": { ... }
+  }
+}
 
-// Filtrar por fábrica antes da busca
-const filteredProducts = useMemo(() => {
-  let filtered = products;
-  
-  // Filtrar por fábrica
-  if (selectedFactory) {
-    filtered = filtered.filter(p => p.factory === selectedFactory);
+// Criar contato
+POST /contacts
+{
+  "data": {
+    "name": "Nome do Contato",
+    "emails": [{ "email": "email@exemplo.com" }],
+    "phones": [{ "phone": "+5511999999999" }],
+    "organization_id": "uuid-da-empresa"
   }
-  
-  // Filtrar por busca
-  if (searchQuery.trim()) {
-    // ... lógica existente
+}
+
+// Criar deal
+POST /deals
+{
+  "data": {
+    "name": "Orçamento #123",
+    "deal_value": 15000.00,
+    "organization_id": "uuid-da-empresa",
+    "contact_id": "uuid-do-contato"
   }
-  
-  return filtered;
-}, [products, selectedFactory, searchQuery]);
+}
 ```
 
-### Interface do Filtro de Fábrica
+### Autenticação
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│  Catálogo de Produtos                    [Atualizar] [+]   │
-├────────────────────────────────────────────────────────────┤
-│  Fábrica:  [Todas] [SOHOME] [CENTURY]                      │
-│  ────────────────────────────────────────                  │
-│  [🔍 Buscar produtos por nome, código...]                  │
-│                                                            │
-│  45 produtos encontrados para "SOHOME"                     │
-│                                                            │
-│  ► Sofás                                                   │
-│    ├── ALENTO                                              │
-│    └── AFAGO                                               │
-│  ► Poltronas                                               │
-│    └── AMBER                                               │
-└────────────────────────────────────────────────────────────┘
+Todas as requisições usam Bearer Token:
+```
+Authorization: Bearer {RD_STATION_TOKEN}
 ```
 
-### ProductSelector - Simplificado
+### Tratamento de Erros
 
-Remove a lógica de fábrica e vai direto para a lista de produtos com busca.
+- Falha na sincronização não bloqueia a geração do PDF
+- Toast informativo sobre status da sincronização
+- Log de erros para debugging
 
 ---
 
 ## Resultado Esperado
 
-**Aba Produtos:**
-- Usuário seleciona a fábrica para ver/gerenciar apenas produtos daquela marca
-- A busca opera dentro da fábrica selecionada
+Ao gerar um orçamento:
 
-**Aba Novo Orçamento:**
-- Usuário vê todos os produtos de todas as fábricas
-- Busca por nome/código para encontrar rapidamente
-- Fluxo direto: Buscar → Selecionar → Configurar → Adicionar
+1. ✅ PDF é gerado normalmente
+2. ✅ Empresa é criada/encontrada no RD Station
+3. ✅ Contato é vinculado à empresa
+4. ✅ Negociação é criada com valor do orçamento
+5. ✅ Toast confirma sincronização bem-sucedida
+
+---
+
+## Próximos Passos Após Implementação
+
+- Adicionar campo para selecionar etapa do funil
+- Sincronizar status de orçamentos (ganho/perdido)
+- Dashboard mostrando orçamentos sincronizados
