@@ -1,67 +1,129 @@
 
+# Plano: Mover Filtro de Fábrica para Aba de Produtos
 
-# Plano: Extrair Imagens dos Produtos do Catálogo PDF
+## Resumo
 
-## Situação Atual
+Mover a seleção de fábrica da aba "Novo Orçamento" (`ProductSelector`) para a aba "Produtos" (`ProductManager`), criando uma experiência mais intuitiva onde o usuário filtra a visualização do catálogo pela fábrica desejada.
 
-O catálogo PDF foi processado com sucesso e foram extraídas imagens (screenshots) de cada página. Estas páginas contêm fotos dos produtos junto com especificações técnicas.
+---
 
-## Opção de Implementação
+## Mudanças Propostas
 
-### Usar as Páginas de Apresentação dos Produtos
+### 1. ProductManager (Aba Produtos)
 
-Cada produto tem uma página de "capa" com uma foto grande e bonita do produto. Vou copiar essas páginas específicas para usar como imagens dos produtos:
+**Adicionar:**
+- Seletor de fábrica no topo, antes da barra de busca
+- Botões estilizados para cada fábrica disponível (SOHOME, CENTURY, etc.)
+- Opção "Todas" para ver todos os produtos
+- Filtrar a lista de produtos exibidos pela fábrica selecionada
 
-| Produto | Página com Foto Principal |
-|---------|--------------------------|
-| ALENTO | page_3.jpg |
-| AMBER | page_6.jpg |
-| ARLO | page_10.jpg |
-| ATTO | page_14.jpg |
-| BOLD | page_19.jpg |
-| BONOBO | page_25.jpg |
-| CLIFF | page_29.jpg |
-| COBAIN | page_36.jpg |
-| CODE | page_38.jpg |
-| CORSO | page_43.jpg |
-| CROMIE | page_47.jpg |
+**Fluxo na aba Produtos:**
+```text
+[SOHOME] [CENTURY] [Todas]  ← Botões de fábrica
+[Buscar produtos...]        ← Barra de busca (filtra dentro da fábrica)
+Lista de produtos filtrados
+```
 
-## Passos da Implementação
+### 2. ProductSelector (Aba Orçamento)
 
-1. **Copiar imagens do catálogo**
-   - Selecionar as páginas de apresentação de cada produto
-   - Copiar para `public/images/products/` com nome do produto normalizado
-   - Exemplo: `page_3.jpg` → `ALENTO.jpg`
+**Remover:**
+- O passo inicial de seleção de fábrica
+- O estado `selectedFactory` e funções relacionadas
 
-2. **Manter compatibilidade**
-   - O sistema já está configurado para buscar imagens em `public/images/products/`
-   - Formato esperado: `NOME_DO_PRODUTO.jpg` (uppercase)
+**Manter:**
+- Busca de produtos
+- Fluxo: Produto → Modulação → Base → Tamanho → Tecido
 
-## Limitações
+**Nova lógica:**
+- Mostrar todos os produtos disponíveis (sem filtro de fábrica)
+- Ou receber uma prop opcional `selectedFactory` do componente pai para filtrar
 
-- As imagens são screenshots das páginas completas, não recortes isolados do produto
-- Para imagens mais limpas (só o produto), seria necessário recorte manual ou upload de imagens individuais
-- Apenas os produtos das primeiras 50 páginas foram processados
+### 3. Index.tsx (Página Principal)
 
-## Arquivos a Criar
+**Opcional - Se quiser persistir a fábrica selecionada entre abas:**
+- Elevar o estado `selectedFactory` para o componente pai
+- Passar para ambos ProductManager e ProductSelector
+- Quando o usuário seleciona uma fábrica em Produtos, ela persiste ao ir para Orçamento
 
-| Arquivo de Origem | Arquivo de Destino |
-|-------------------|-------------------|
-| `parsed-documents://...page_3.jpg` | `public/images/products/ALENTO.jpg` |
-| `parsed-documents://...page_6.jpg` | `public/images/products/AMBER.jpg` |
-| `parsed-documents://...page_10.jpg` | `public/images/products/ARLO.jpg` |
-| `parsed-documents://...page_14.jpg` | `public/images/products/ATTO.jpg` |
-| `parsed-documents://...page_19.jpg` | `public/images/products/BOLD.jpg` |
-| `parsed-documents://...page_25.jpg` | `public/images/products/BONOBO.jpg` |
-| `parsed-documents://...page_29.jpg` | `public/images/products/CLIFF.jpg` |
-| `parsed-documents://...page_36.jpg` | `public/images/products/COBAIN.jpg` |
-| `parsed-documents://...page_38.jpg` | `public/images/products/CODE.jpg` |
-| `parsed-documents://...page_43.jpg` | `public/images/products/CORSO.jpg` |
-| `parsed-documents://...page_47.jpg` | `public/images/products/CROMIE.jpg` |
+---
 
-## Próximos Passos Sugeridos
+## Arquivos a Modificar
 
-Após implementar esta primeira leva, posso:
-1. Continuar processando mais páginas do catálogo para outros produtos
-2. Se preferir imagens mais limpas, você pode fazer upload de imagens recortadas individualmente
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/quote/ProductManager.tsx` | Adicionar filtro de fábrica no topo da página |
+| `src/components/quote/ProductSelector.tsx` | Remover seleção de fábrica, ir direto para busca de produtos |
 
+---
+
+## Detalhes Técnicos
+
+### ProductManager - Nova Estrutura
+
+```typescript
+// Novo estado
+const [selectedFactory, setSelectedFactory] = useState<string>('');
+
+// Obter fábricas disponíveis
+const availableFactories = useMemo(() => {
+  const factories = new Set<string>();
+  products.forEach(p => {
+    if (p.factory) factories.add(p.factory);
+  });
+  return Array.from(factories).sort();
+}, [products]);
+
+// Filtrar por fábrica antes da busca
+const filteredProducts = useMemo(() => {
+  let filtered = products;
+  
+  // Filtrar por fábrica
+  if (selectedFactory) {
+    filtered = filtered.filter(p => p.factory === selectedFactory);
+  }
+  
+  // Filtrar por busca
+  if (searchQuery.trim()) {
+    // ... lógica existente
+  }
+  
+  return filtered;
+}, [products, selectedFactory, searchQuery]);
+```
+
+### Interface do Filtro de Fábrica
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│  Catálogo de Produtos                    [Atualizar] [+]   │
+├────────────────────────────────────────────────────────────┤
+│  Fábrica:  [Todas] [SOHOME] [CENTURY]                      │
+│  ────────────────────────────────────────                  │
+│  [🔍 Buscar produtos por nome, código...]                  │
+│                                                            │
+│  45 produtos encontrados para "SOHOME"                     │
+│                                                            │
+│  ► Sofás                                                   │
+│    ├── ALENTO                                              │
+│    └── AFAGO                                               │
+│  ► Poltronas                                               │
+│    └── AMBER                                               │
+└────────────────────────────────────────────────────────────┘
+```
+
+### ProductSelector - Simplificado
+
+Remove a lógica de fábrica e vai direto para a lista de produtos com busca.
+
+---
+
+## Resultado Esperado
+
+**Aba Produtos:**
+- Usuário seleciona a fábrica para ver/gerenciar apenas produtos daquela marca
+- A busca opera dentro da fábrica selecionada
+
+**Aba Novo Orçamento:**
+- Usuário vê todos os produtos de todas as fábricas
+- Busca por nome/código para encontrar rapidamente
+- Fluxo direto: Buscar → Selecionar → Configurar → Adicionar
