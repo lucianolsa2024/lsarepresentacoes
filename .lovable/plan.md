@@ -1,70 +1,67 @@
 
-# Plano: Filtro por Fábrica e Imagens nos Orçamentos ✅ CONCLUÍDO
 
-## Resumo
+# Plano: Extrair Imagens dos Produtos do Catálogo PDF
 
-Foram implementadas duas funcionalidades principais:
-1. ✅ **Filtro por Fábrica/Marca**: Adicionado passo inicial na seleção de produtos onde o usuário escolhe a fábrica antes de ver os produtos
-2. ✅ **Imagens nos Orçamentos**: Exibição de imagens dos produtos no carrinho e no PDF gerado
+## Situação Atual
 
----
+O catálogo PDF foi processado com sucesso e foram extraídas imagens (screenshots) de cada página. Estas páginas contêm fotos dos produtos junto com especificações técnicas.
 
-## Alterações Realizadas
+## Opção de Implementação
 
-### Banco de Dados
-- ✅ Coluna `factory` adicionada à tabela `products`
-- ✅ Índice `idx_products_factory` criado
+### Usar as Páginas de Apresentação dos Produtos
 
-### Código Modificado
+Cada produto tem uma página de "capa" com uma foto grande e bonita do produto. Vou copiar essas páginas específicas para usar como imagens dos produtos:
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/types/quote.ts` | ✅ Campo `factory` adicionado ao tipo `Product` |
-| `src/hooks/useProducts.ts` | ✅ Mapeamento do campo `factory` do banco |
-| `src/components/quote/BulkImporter.tsx` | ✅ Detecção e importação da coluna "Fábrica" |
-| `src/components/quote/ProductSelector.tsx` | ✅ Step de seleção de fábrica antes dos produtos |
-| `src/components/quote/QuoteCart.tsx` | ✅ Exibição de miniaturas dos produtos |
-| `src/utils/pdfGenerator.ts` | ✅ Imagens dos produtos no PDF |
-| `src/utils/productImage.ts` | ✅ NOVO - Utilitário para busca de imagens |
-| `src/components/ProductImage.tsx` | ✅ NOVO - Componente de imagem com fallback |
-| `public/images/products/.gitkeep` | ✅ NOVO - Pasta para imagens de produtos |
+| Produto | Página com Foto Principal |
+|---------|--------------------------|
+| ALENTO | page_3.jpg |
+| AMBER | page_6.jpg |
+| ARLO | page_10.jpg |
+| ATTO | page_14.jpg |
+| BOLD | page_19.jpg |
+| BONOBO | page_25.jpg |
+| CLIFF | page_29.jpg |
+| COBAIN | page_36.jpg |
+| CODE | page_38.jpg |
+| CORSO | page_43.jpg |
+| CROMIE | page_47.jpg |
 
----
+## Passos da Implementação
 
-## Instruções para o Usuário
+1. **Copiar imagens do catálogo**
+   - Selecionar as páginas de apresentação de cada produto
+   - Copiar para `public/images/products/` com nome do produto normalizado
+   - Exemplo: `page_3.jpg` → `ALENTO.jpg`
 
-### 1. Adicionar coluna "Fábrica" nos arquivos Excel
+2. **Manter compatibilidade**
+   - O sistema já está configurado para buscar imagens em `public/images/products/`
+   - Formato esperado: `NOME_DO_PRODUTO.jpg` (uppercase)
 
-Nos 3 arquivos Excel, adicione uma nova coluna chamada **"Fábrica"** (ou "Marca"):
+## Limitações
 
-| Arquivo | Valor sugerido |
-|---------|---------------|
-| `tabela-lsa.xlsx` | SOHOME |
-| `tabela-lsa-2.xlsx` | SOHOME |
-| `produtos-century.xlsx` | CENTURY |
+- As imagens são screenshots das páginas completas, não recortes isolados do produto
+- Para imagens mais limpas (só o produto), seria necessário recorte manual ou upload de imagens individuais
+- Apenas os produtos das primeiras 50 páginas foram processados
 
-### 2. Re-importar os produtos
+## Arquivos a Criar
 
-1. Acesse a aba **"Produtos"**
-2. Clique em **"Atualizar Base Completa"**
-3. Confirme a importação
+| Arquivo de Origem | Arquivo de Destino |
+|-------------------|-------------------|
+| `parsed-documents://...page_3.jpg` | `public/images/products/ALENTO.jpg` |
+| `parsed-documents://...page_6.jpg` | `public/images/products/AMBER.jpg` |
+| `parsed-documents://...page_10.jpg` | `public/images/products/ARLO.jpg` |
+| `parsed-documents://...page_14.jpg` | `public/images/products/ATTO.jpg` |
+| `parsed-documents://...page_19.jpg` | `public/images/products/BOLD.jpg` |
+| `parsed-documents://...page_25.jpg` | `public/images/products/BONOBO.jpg` |
+| `parsed-documents://...page_29.jpg` | `public/images/products/CLIFF.jpg` |
+| `parsed-documents://...page_36.jpg` | `public/images/products/COBAIN.jpg` |
+| `parsed-documents://...page_38.jpg` | `public/images/products/CODE.jpg` |
+| `parsed-documents://...page_43.jpg` | `public/images/products/CORSO.jpg` |
+| `parsed-documents://...page_47.jpg` | `public/images/products/CROMIE.jpg` |
 
-### 3. Adicionar imagens dos produtos
+## Próximos Passos Sugeridos
 
-1. Crie a pasta `public/images/products/` (já criada no projeto)
-2. Adicione imagens nomeadas pelo nome do produto em MAIÚSCULO:
-   - `ALENTO.jpg`
-   - `AFAGO.jpg`
-   - `ACCORD MESA.jpg`
-   - etc.
-3. Formatos suportados: `.jpg`, `.jpeg`, `.png`, `.webp`
+Após implementar esta primeira leva, posso:
+1. Continuar processando mais páginas do catálogo para outros produtos
+2. Se preferir imagens mais limpas, você pode fazer upload de imagens recortadas individualmente
 
----
-
-## Novo Fluxo de Seleção
-
-```text
-Fábrica → Produto → Modulação → Base → Tamanho → Faixa de Tecido → Tecido
-```
-
-O sistema agora mostra primeiro as fábricas disponíveis, filtrando os produtos após a seleção.
