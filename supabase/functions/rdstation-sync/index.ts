@@ -41,6 +41,7 @@ interface SyncRequest {
     items: QuoteItem[];
     createdAt: string;
   };
+  pdfBase64?: string;
 }
 
 async function rdFetch(endpoint: string, options: RequestInit, token: string) {
@@ -156,10 +157,6 @@ async function createDeal(
   client: ClientData,
   token: string
 ): Promise<string> {
-  const itemsList = quote.items
-    .map(item => `• ${item.productName} ${item.modulation} (${item.fabricTier}) x${item.quantity}`)
-    .join('\n');
-
   const dealData = {
     deal: {
       name: `Orçamento - ${client.company}`,
@@ -185,6 +182,47 @@ async function createDeal(
   return data._id;
 }
 
+async function uploadPdfToDeal(dealId: string, pdfBase64: string, clientCompany: string, token: string): Promise<void> {
+  try {
+    // Extract base64 data (remove data:application/pdf;base64, prefix if present)
+    const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+    
+    // Convert base64 to binary
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const fileName = `orcamento_${clientCompany.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    // Create FormData for file upload
+    const formData = new FormData();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    formData.append('file', blob, fileName);
+    
+    const url = `${RD_API_BASE}/deals/${dealId}/files?token=${token}`;
+    console.log(`Uploading PDF to deal: ${dealId}`);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      redirect: 'follow',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Failed to upload PDF [${response.status}]:`, errorData);
+      throw new Error(`Failed to upload PDF: ${response.status}`);
+    }
+
+    console.log('PDF uploaded successfully to deal');
+  } catch (error) {
+    console.error('Error uploading PDF:', error);
+    // Don't throw - PDF upload failure shouldn't block the sync
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -201,8 +239,7 @@ serve(async (req) => {
       );
     }
 
-    const { client, quote } = await req.json() as SyncRequest;
-
+    const { client, quote, pdfBase64 } = await req.json() as SyncRequest;
     if (!client.company) {
       return new Response(
         JSON.stringify({ success: false, error: 'Nome da empresa é obrigatório' }),
@@ -246,6 +283,12 @@ serve(async (req) => {
 
     // Step 3: Create deal
     const dealId = await createDeal(quote, organizationId, contactId, client, RD_STATION_TOKEN);
+
+    // Step 4: Upload PDF if provided
+    if (pdfBase64) {
+      console.log('Uploading PDF to deal...');
+      await uploadPdfToDeal(dealId, pdfBase64, client.company, RD_STATION_TOKEN);
+    }
 
     console.log(`RD Station sync completed successfully`);
     console.log(`Organization: ${organizationId}, Contact: ${contactId}, Deal: ${dealId}`);
