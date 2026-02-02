@@ -10,6 +10,7 @@ import {
 import { useProducts } from '@/hooks/useProducts';
 import { useQuotes } from '@/hooks/useQuotes';
 import { useAuth } from '@/hooks/useAuth';
+import { useRDStation } from '@/hooks/useRDStation';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { PaymentForm } from '@/components/quote/PaymentForm';
 import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
 import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -44,6 +45,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes, addQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { user, signOut } = useAuth();
+  const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
   const handleSignOut = async () => {
     await signOut();
@@ -114,6 +116,9 @@ const Index = () => {
     addQuote(quote);
     await generateQuotePDF(quote);
     toast.success('Orçamento gerado e salvo com sucesso!');
+
+    // Sync with RD Station CRM (non-blocking)
+    syncQuoteToRDStation(quote);
 
     if (clearAfterSave) {
       setClient(INITIAL_CLIENT);
@@ -266,9 +271,13 @@ const Index = () => {
                         <Button
                           onClick={() => handleGenerateQuote(false)}
                           className="flex-1"
-                          disabled={!client.company || items.length === 0}
+                          disabled={!client.company || items.length === 0 || isSyncing}
                         >
-                          <Download className="h-4 w-4 mr-2" />
+                          {isSyncing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
                           Gerar Orçamento
                         </Button>
                       </div>
@@ -277,9 +286,13 @@ const Index = () => {
                           onClick={() => handleGenerateQuote(true)}
                           variant="secondary"
                           className="flex-1"
-                          disabled={!client.company || items.length === 0}
+                          disabled={!client.company || items.length === 0 || isSyncing}
                         >
-                          <Download className="h-4 w-4 mr-2" />
+                          {isSyncing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
                           Gerar e Limpar
                         </Button>
                         <Button
