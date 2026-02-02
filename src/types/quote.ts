@@ -37,6 +37,7 @@ export interface QuoteItem {
   id: string;
   productId: string;
   productName: string;
+  factory: string;
   modulation: string;
   modulationId: string;
   sizeId: string;
