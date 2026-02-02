@@ -15,7 +15,7 @@ interface RDStationSyncResult {
 export function useRDStation() {
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const syncQuoteToRDStation = async (quote: Quote, pdfBase64?: string): Promise<RDStationSyncResult> => {
+  const syncQuoteToRDStation = async (quote: Quote): Promise<RDStationSyncResult> => {
     setIsSyncing(true);
 
     try {
@@ -36,7 +36,6 @@ export function useRDStation() {
             })),
             createdAt: quote.createdAt,
           },
-          pdfBase64,
         },
       });
 
