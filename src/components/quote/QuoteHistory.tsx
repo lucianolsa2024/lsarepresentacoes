@@ -68,8 +68,8 @@ export function QuoteHistory({
     );
   });
 
-  const handleDownload = (quote: Quote) => {
-    generateQuotePDF(quote);
+  const handleDownload = async (quote: Quote) => {
+    await generateQuotePDF(quote);
     toast.success('PDF gerado com sucesso');
   };
 

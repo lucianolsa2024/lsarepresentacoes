@@ -1,8 +1,54 @@
 import jsPDF from 'jspdf';
 import { Quote } from '@/types/quote';
 import logoLsa from '@/assets/logo-lsa.png';
+import { getProductImageUrl, getProductImageFallback } from '@/utils/productImage';
 
-export function generateQuotePDF(quote: Quote): void {
+// Helper to load image as base64
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        } else {
+          resolve(null);
+        }
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+// Cache for loaded images
+const imageCache: Record<string, string | null> = {};
+
+export async function generateQuotePDF(quote: Quote): Promise<void> {
+  // Preload product images
+  const uniqueProductNames = [...new Set(quote.items.map(item => item.productName))];
+  for (const productName of uniqueProductNames) {
+    if (!imageCache[productName]) {
+      const imageUrl = getProductImageUrl(productName);
+      const base64 = await loadImageAsBase64(imageUrl);
+      if (base64) {
+        imageCache[productName] = base64;
+      } else {
+        // Try fallback
+        const fallbackBase64 = await loadImageAsBase64(getProductImageFallback());
+        imageCache[productName] = fallbackBase64;
+      }
+    }
+  }
+  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = 15;
@@ -102,29 +148,41 @@ export function generateQuotePDF(quote: Quote): void {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-  // Table header
+  // Table header - adjusted for image column
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setFillColor(245, 245, 245);
   doc.rect(15, y - 4, pageWidth - 30, 7, 'F');
   doc.text('Item', 17, y);
-  doc.text('Descrição', 32, y);
-  doc.text('Qtd', 132, y);
-  doc.text('Unit.', 150, y);
+  doc.text('Img', 28, y);
+  doc.text('Descrição', 45, y);
+  doc.text('Qtd', 140, y);
+  doc.text('Unit.', 155, y);
   doc.text('Total', 175, y);
   y += 6;
 
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
     // Check if we need a new page
-    if (y > 230) {
+    if (y > 220) {
       doc.addPage();
       y = 20;
     }
 
+    const startY = y;
     doc.text(`${index + 1}`, 17, y);
 
-    // Product details with size description
+    // Add product image if available
+    const productImage = imageCache[item.productName];
+    if (productImage) {
+      try {
+        doc.addImage(productImage, 'JPEG', 27, y - 3, 12, 12);
+      } catch {
+        // Image failed, continue without
+      }
+    }
+
+    // Product details with size description - adjusted for image
     const details = [
       item.productName,
       `Mod: ${item.modulation}`,
@@ -135,22 +193,25 @@ export function generateQuotePDF(quote: Quote): void {
       .filter(Boolean)
       .join(' | ');
 
-    const splitDetails = doc.splitTextToSize(details, 95);
-    doc.text(splitDetails, 32, y);
+    const splitDetails = doc.splitTextToSize(details, 90);
+    doc.text(splitDetails, 45, y);
 
-    doc.text(item.quantity.toString(), 132, y);
-    doc.text(formatCurrency(item.price), 150, y);
+    doc.text(item.quantity.toString(), 140, y);
+    doc.text(formatCurrency(item.price), 155, y);
     doc.text(formatCurrency(item.price * item.quantity), 175, y);
 
-    y += splitDetails.length * 5 + 2;
+    // Ensure minimum row height for image
+    const textHeight = splitDetails.length * 5 + 2;
+    const imageHeight = 14;
+    y += Math.max(textHeight, imageHeight);
     
     // Item observations
     if (item.observations && item.observations.trim()) {
       doc.setFontSize(8);
       doc.setTextColor(100);
       const obsText = `Obs: ${item.observations}`;
-      const splitObs = doc.splitTextToSize(obsText, 160);
-      doc.text(splitObs, 32, y);
+      const splitObs = doc.splitTextToSize(obsText, 150);
+      doc.text(splitObs, 45, y);
       y += splitObs.length * 4 + 2;
       doc.setFontSize(9);
       doc.setTextColor(0);

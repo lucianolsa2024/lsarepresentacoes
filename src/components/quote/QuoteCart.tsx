@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ProductImage } from '@/components/ProductImage';
 
 interface QuoteCartProps {
   items: QuoteItem[];
@@ -45,21 +46,24 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRem
                 className="bg-muted/30 border rounded-lg p-4"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-semibold">
-                      {index + 1}. {item.productName}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Modulação: {item.modulation}
-                    </p>
-                    {item.base && (
+                  <div className="flex gap-3 flex-1">
+                    <ProductImage productName={item.productName} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold">
+                        {index + 1}. {item.productName}
+                      </h4>
                       <p className="text-sm text-muted-foreground">
-                        Base: {item.base}
+                        Modulação: {item.modulation}
                       </p>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      Tecido: {item.fabricDescription} ({item.fabricTier})
-                    </p>
+                      {item.base && (
+                        <p className="text-sm text-muted-foreground">
+                          Base: {item.base}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        Tecido: {item.fabricDescription} ({item.fabricTier})
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
