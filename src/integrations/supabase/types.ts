@@ -133,6 +133,7 @@ export type Database = {
           code: string
           created_at: string | null
           description: string | null
+          factory: string | null
           has_base: boolean | null
           id: string
           name: string
@@ -144,6 +145,7 @@ export type Database = {
           code?: string
           created_at?: string | null
           description?: string | null
+          factory?: string | null
           has_base?: boolean | null
           id?: string
           name: string
@@ -155,6 +157,7 @@ export type Database = {
           code?: string
           created_at?: string | null
           description?: string | null
+          factory?: string | null
           has_base?: boolean | null
           id?: string
           name?: string

@@ -167,6 +167,7 @@ export function ProductManager({
       name: formData.name,
       description: formData.description,
       category: formData.category,
+      factory: editingProduct?.factory || '',
       modulations: productModulations,
       hasBase: formData.hasBase,
       availableBases: formData.hasBase ? formData.availableBases : [],

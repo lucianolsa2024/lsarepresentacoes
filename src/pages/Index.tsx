@@ -89,7 +89,7 @@ const Index = () => {
     return calculateSubtotal() - calculateDiscount();
   };
 
-  const handleGenerateQuote = (clearAfterSave: boolean = false) => {
+  const handleGenerateQuote = async (clearAfterSave: boolean = false) => {
     if (!client.company) {
       toast.error('Preencha o nome da empresa');
       return;
@@ -112,7 +112,7 @@ const Index = () => {
     };
 
     addQuote(quote);
-    generateQuotePDF(quote);
+    await generateQuotePDF(quote);
     toast.success('Orçamento gerado e salvo com sucesso!');
 
     if (clearAfterSave) {

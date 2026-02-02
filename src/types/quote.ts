@@ -27,6 +27,7 @@ export interface Product {
   name: string;
   description: string;
   category: string;
+  factory: string;
   modulations: ProductModulation[];
   hasBase: boolean;
   availableBases: string[];

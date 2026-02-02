@@ -20,6 +20,7 @@ interface BulkImporterProps {
 
 interface ParsedProduct {
   name: string;
+  factory: string;
   modulations: {
     name: string;
     sizes: {
@@ -77,7 +78,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     );
   };
 
-  const parseExcelData = (rows: unknown[][]): ParsedProduct[] => {
+  const parseExcelData = (rows: unknown[][], defaultFactory: string = ''): ParsedProduct[] => {
     const products: ParsedProduct[] = [];
     const headers = rows[0] as string[];
     
@@ -102,6 +103,11 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       profundidade: findIndex(h => h.toLowerCase().includes('prof')),
       altura: findIndex(h => h.toLowerCase().includes('altura')),
       tecido: findIndex(h => h.toLowerCase().includes('tecido')),
+      fabrica: findIndex(h => {
+        const lower = h.toLowerCase();
+        return lower.includes('fabrica') || lower.includes('fábrica') || 
+               lower.includes('marca') || lower.includes('factory') || lower.includes('brand');
+      }),
     };
 
     if (colIndexes.produto === -1) {
@@ -127,7 +133,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       }
     });
 
-    const productMap = new Map<string, Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>>>();
+    const productMap = new Map<string, { factory: string; modMap: Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>> }>();
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -136,6 +142,11 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       const rowData = row as (string | number | null | undefined)[];
       const productName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
       const modulationName = String(rowData[colIndexes.modulacao] ?? '').trim().toUpperCase();
+      
+      // Get factory from column or use default
+      const rowFactory = colIndexes.fabrica !== -1 && rowData[colIndexes.fabrica]
+        ? String(rowData[colIndexes.fabrica]).trim().toUpperCase()
+        : defaultFactory;
       
       if (!productName || !modulationName) continue;
 
@@ -160,9 +171,10 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       }
 
       if (!productMap.has(productName)) {
-        productMap.set(productName, new Map());
+        productMap.set(productName, { factory: rowFactory, modMap: new Map() });
       }
-      const modMap = productMap.get(productName)!;
+      const productEntry = productMap.get(productName)!;
+      const modMap = productEntry.modMap;
       
       if (!modMap.has(modulationName)) {
         modMap.set(modulationName, new Map());
@@ -187,13 +199,13 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       });
     }
 
-    productMap.forEach((modMap, productName) => {
+    productMap.forEach((productEntry, productName) => {
       const modulations: ParsedProduct['modulations'] = [];
-      modMap.forEach((sizeMap, modName) => {
+      productEntry.modMap.forEach((sizeMap, modName) => {
         const sizes = Array.from(sizeMap.values());
         modulations.push({ name: modName, sizes });
       });
-      products.push({ name: productName, modulations });
+      products.push({ name: productName, factory: productEntry.factory, modulations });
     });
 
     return products;
@@ -286,7 +298,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       if (existingProduct) {
         await supabase
           .from('products')
-          .update({ has_base: hasBase, available_bases: availableBases })
+          .update({ has_base: hasBase, available_bases: availableBases, factory: product.factory })
           .eq('id', existingProduct.id);
           
         await supabase
@@ -304,6 +316,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
             description: '',
             has_base: hasBase,
             available_bases: availableBases,
+            factory: product.factory,
           })
           .select('id')
           .single();

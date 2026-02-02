@@ -168,6 +168,7 @@ export function useProducts() {
           name: p.name,
           description: p.description || '',
           category: p.category,
+          factory: (p as { factory?: string }).factory || '',
           hasBase: bases.length > 0,
           availableBases: bases,
           modulations: (modulationsByProduct[p.id] || []).map(mod => ({
