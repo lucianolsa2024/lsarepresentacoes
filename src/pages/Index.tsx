@@ -114,11 +114,17 @@ const Index = () => {
     };
 
     addQuote(quote);
+    
+    // Generate PDF and get base64 for RD Station
+    const pdfBase64 = await generateQuotePDF(quote, true) as string;
+    
+    // Also download the PDF for the user
     await generateQuotePDF(quote);
+    
     toast.success('Orçamento gerado e salvo com sucesso!');
 
-    // Sync with RD Station CRM (non-blocking)
-    syncQuoteToRDStation(quote);
+    // Sync with RD Station CRM (non-blocking) with PDF attached
+    syncQuoteToRDStation(quote, pdfBase64);
 
     if (clearAfterSave) {
       setClient(INITIAL_CLIENT);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ClientData, Quote } from '@/types/quote';
+import { Quote } from '@/types/quote';
 import { toast } from 'sonner';
 
 interface RDStationSyncResult {
@@ -15,7 +15,7 @@ interface RDStationSyncResult {
 export function useRDStation() {
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const syncQuoteToRDStation = async (quote: Quote): Promise<RDStationSyncResult> => {
+  const syncQuoteToRDStation = async (quote: Quote, pdfBase64?: string): Promise<RDStationSyncResult> => {
     setIsSyncing(true);
 
     try {
@@ -36,6 +36,7 @@ export function useRDStation() {
             })),
             createdAt: quote.createdAt,
           },
+          pdfBase64,
         },
       });
 
