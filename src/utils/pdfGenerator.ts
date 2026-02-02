@@ -32,7 +32,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 // Cache for loaded images
 const imageCache: Record<string, string | null> = {};
 
-export async function generateQuotePDF(quote: Quote, returnBase64: boolean = false): Promise<string | void> {
+export async function generateQuotePDF(quote: Quote): Promise<void> {
   // Preload product images
   const uniqueProductNames = [...new Set(quote.items.map(item => item.productName))];
   for (const productName of uniqueProductNames) {
@@ -328,13 +328,8 @@ export async function generateQuotePDF(quote: Quote, returnBase64: boolean = fal
   y += 4;
   doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
-  // Save or return base64
+  // Save
   const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
   const date = formatDate(quote.createdAt).replace(/\//g, '-');
-  
-  if (returnBase64) {
-    return doc.output('datauristring');
-  }
-  
   doc.save(`orcamento_sohome_${clientName}_${date}.pdf`);
 }
