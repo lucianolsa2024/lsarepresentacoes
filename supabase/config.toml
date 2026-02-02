@@ -1,1 +1,4 @@
 project_id = "pjdyaeprvtwoltynoqri"
+
+[functions.rdstation-sync]
+verify_jwt = false
