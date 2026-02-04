@@ -368,11 +368,17 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(formatCurrency(quote.subtotal), 175, y);
   y += 6;
 
-  // Only show discount if greater than 0
+  // Show discount (positive) or surcharge (negative)
   if (quote.discount > 0) {
     doc.setTextColor(180, 0, 0);
     doc.text('Desconto:', 120, y);
     doc.text(`- ${formatCurrency(quote.discount)}`, 175, y);
+    doc.setTextColor(0);
+    y += 6;
+  } else if (quote.discount < 0) {
+    doc.setTextColor(0, 100, 0);
+    doc.text('Acréscimo:', 120, y);
+    doc.text(`+ ${formatCurrency(Math.abs(quote.discount))}`, 175, y);
     doc.setTextColor(0);
     y += 6;
   }
