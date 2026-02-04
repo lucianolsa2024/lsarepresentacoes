@@ -15,6 +15,32 @@ function isExternalUrl(url: string): boolean {
   }
 }
 
+// Maximum image size for PDF optimization (reduces file size significantly)
+const MAX_IMAGE_SIZE = 100;
+
+// Helper to compress and resize image
+function compressImage(img: HTMLImageElement, maxSize: number, quality: number): string {
+  const canvas = document.createElement('canvas');
+  let width = img.naturalWidth || img.width;
+  let height = img.naturalHeight || img.height;
+  
+  // Resize to max dimensions while maintaining aspect ratio
+  if (width > maxSize || height > maxSize) {
+    const ratio = Math.min(maxSize / width, maxSize / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+  
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+  return '';
+}
+
 // Helper to load image via fetch (handles CORS better)
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
@@ -25,18 +51,20 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
       return null;
     }
     const blob = await response.blob();
+    
+    // Create an image element to resize/compress
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        console.log('Image fetched successfully:', url.substring(0, 50));
-        resolve(base64);
+      const img = new Image();
+      img.onload = () => {
+        const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.5);
+        console.log('Image fetched and compressed:', url.substring(0, 50));
+        resolve(compressed || null);
       };
-      reader.onerror = () => {
-        console.log('FileReader error');
+      img.onerror = () => {
+        console.log('Image load error after fetch');
         resolve(null);
       };
-      reader.readAsDataURL(blob);
+      img.src = URL.createObjectURL(blob);
     });
   } catch (e) {
     console.log('Fetch error:', e);
@@ -68,17 +96,12 @@ async function loadImageViaElement(url: string): Promise<string | null> {
     img.onload = () => {
       clearTimeout(timeout);
       try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const base64 = canvas.toDataURL('image/jpeg', 0.8);
-          console.log('Image loaded via element:', url.substring(0, 50));
-          resolve(base64);
+        const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.5);
+        if (compressed) {
+          console.log('Image loaded and compressed via element:', url.substring(0, 50));
+          resolve(compressed);
         } else {
-          console.log('Failed to get canvas context');
+          console.log('Failed to compress image');
           resolve(null);
         }
       } catch (e) {

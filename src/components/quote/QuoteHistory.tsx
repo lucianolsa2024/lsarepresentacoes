@@ -64,10 +64,12 @@ export function QuoteHistory({
 
   const filteredQuotes = quotes.filter((quote) => {
     const search = searchTerm.toLowerCase();
+    const quoteNumber = quote.id.slice(0, 8).toLowerCase();
     return (
       quote.client.name.toLowerCase().includes(search) ||
       quote.client.company?.toLowerCase().includes(search) ||
-      formatDate(quote.createdAt).includes(search)
+      formatDate(quote.createdAt).includes(search) ||
+      quoteNumber.includes(search)
     );
   });
 
@@ -134,7 +136,11 @@ export function QuoteHistory({
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        <FileText className="h-3 w-3" />
+                        #{quote.id.slice(0, 8).toUpperCase()}
+                      </span>
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-semibold truncate">
                         {quote.client.company || quote.client.name}
