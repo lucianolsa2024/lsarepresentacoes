@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Product, QuoteItem, FabricTier, FABRIC_TIERS } from '@/types/quote';
+import { Product, QuoteItem, FabricTier, FABRIC_TIERS, TABLE_TIERS, isTableCategory } from '@/types/quote';
 import { FABRICS, getFabricsByTier } from '@/data/fabrics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,14 +102,29 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return Array.from(bases);
   }, [selectedModulation]);
 
-  // Get available fabric tiers (only those with price > 0)
+  // Check if the selected product is a table
+  const isTable = useMemo(() => {
+    return selectedProduct ? isTableCategory(selectedProduct.category) : false;
+  }, [selectedProduct]);
+
+  // Get available fabric/finish tiers (only those with price > 0)
   const availableFabricTiers = useMemo(() => {
     if (!selectedSize) return [];
+    
+    if (isTable) {
+      // For tables, use TABLE_TIERS and filter by available prices
+      return TABLE_TIERS.filter(tier => {
+        const price = selectedSize.prices[tier.key] || 0;
+        return price > 0;
+      });
+    }
+    
+    // For other products, use FABRIC_TIERS
     return FABRIC_TIERS.filter(tier => {
       const price = selectedSize.prices[tier] || 0;
       return price > 0;
     });
-  }, [selectedSize]);
+  }, [selectedSize, isTable]);
 
   // Get fabrics for selected tier, filtered by search
   const availableFabrics = useMemo(() => {
@@ -126,13 +141,24 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   }, [config.fabricTier, fabricSearch]);
 
   const handleConfirm = () => {
-    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricTier || !config.fabricCode) return;
+    // For tables, we don't need fabric selection
+    const needsFabricCode = !isTable;
+    
+    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricTier) return;
+    if (needsFabricCode && !config.fabricCode) return;
 
     const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
     const size = modulation?.sizes.find(s => s.id === config.sizeId);
     if (!modulation || !size) return;
 
     const price = size.prices[config.fabricTier as FabricTier] || 0;
+    
+    // For tables, use the tier label as the fabric description
+    let fabricDescription = config.fabricCode;
+    if (isTable) {
+      const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
+      fabricDescription = tableTier?.label || config.fabricTier;
+    }
 
     const item: QuoteItem = {
       id: crypto.randomUUID(),
@@ -145,7 +171,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeDescription: size.description,
       base: size.base || config.base,
       fabricTier: config.fabricTier as FabricTier,
-      fabricDescription: config.fabricCode,
+      fabricDescription,
       price,
       quantity: 1,
       observations: '',
@@ -400,34 +426,50 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 4: Fabric Tier */}
+              {/* Step 4: Finish/Fabric Tier */}
               {config.sizeId && (
                 <div className="space-y-2">
-                  <Label>{getStepNumber('fabricTier')}. Faixa de Tecido *</Label>
+                  <Label>{getStepNumber('fabricTier')}. {isTable ? 'Acabamento' : 'Faixa de Tecido'} *</Label>
                   <Select
                     value={config.fabricTier}
                     onValueChange={handleFabricTierChange}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a faixa..." />
+                      <SelectValue placeholder={isTable ? "Selecione o acabamento..." : "Selecione a faixa..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableFabricTiers.map((tier) => {
-                        const price = selectedSize?.prices[tier] || 0;
-                        const fabricCount = getFabricsByTier(tier).length;
-                        return (
-                          <SelectItem key={tier} value={tier}>
-                            {tier} - {formatCurrency(price)} ({fabricCount} tecidos)
-                          </SelectItem>
-                        );
-                      })}
+                      {isTable ? (
+                        // Table finish options
+                        (availableFabricTiers as Array<{ key: FabricTier; label: string }>).map((tier) => {
+                          const price = selectedSize?.prices[tier.key] || 0;
+                          return (
+                            <SelectItem key={tier.key} value={tier.key}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{formatCurrency(price)}</span>
+                                <span className="text-xs text-muted-foreground">{tier.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        // Fabric tier options
+                        (availableFabricTiers as FabricTier[]).map((tier) => {
+                          const price = selectedSize?.prices[tier] || 0;
+                          const fabricCount = getFabricsByTier(tier).length;
+                          return (
+                            <SelectItem key={tier} value={tier}>
+                              {tier} - {formatCurrency(price)} ({fabricCount} tecidos)
+                            </SelectItem>
+                          );
+                        })
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
               )}
 
-              {/* Step 5: Fabric Selection (Two-step: search + select) */}
-              {config.fabricTier && (
+              {/* Step 5: Fabric Selection (only for non-table products) */}
+              {config.fabricTier && !isTable && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricCode')}. Tecido *</Label>
                   
@@ -481,8 +523,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Item Summary */}
-              {config.fabricCode && (() => {
+              {/* Item Summary - show for tables when tier is selected, for others when fabric code is selected */}
+              {((isTable && config.fabricTier) || (!isTable && config.fabricCode)) && (() => {
                 // Check if this is a CAIXA product and extract the tier
                 const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
                 const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
@@ -493,6 +535,11 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                   [selectedSize?.length, selectedSize?.depth, selectedSize?.height]
                     .filter(Boolean)
                     .join(' × ');
+                
+                // Get table tier label if applicable
+                const tableTierLabel = isTable 
+                  ? TABLE_TIERS.find(t => t.key === config.fabricTier)?.label 
+                  : null;
                 
                 return (
                 <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
@@ -519,8 +566,20 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       <span className="font-medium">{cleanDimensions}</span>
                     </div>
                     
+                    {/* Table finish section */}
+                    {isTable && tableTierLabel && (
+                      <div className="mt-2 pt-2 border-t border-dashed">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                          Acabamento
+                        </div>
+                        <div className="font-medium text-primary text-xs">
+                          {tableTierLabel}
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* CAIXA + CORPO section for CAIXA products */}
-                    {isCaixaProduct ? (
+                    {!isTable && isCaixaProduct ? (
                       <>
                         <div className="mt-2 pt-2 border-t border-dashed">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
@@ -540,7 +599,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                           </div>
                         </div>
                       </>
-                    ) : (
+                    ) : !isTable && (
                       <>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Faixa de Tecido:</span>
@@ -565,8 +624,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 );
               })()}
 
-              {/* Simple price preview before fabric code selection */}
-              {config.fabricTier && !config.fabricCode && (
+              {/* Simple price preview before fabric code selection (only for non-table products) */}
+              {config.fabricTier && !config.fabricCode && !isTable && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
                   <span className="text-sm text-muted-foreground">Preço da faixa {config.fabricTier}:</span>
                   <span className="text-xl font-bold text-primary ml-2">
@@ -577,7 +636,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulationId || !config.sizeId || !config.fabricTier || !config.fabricCode}
+                disabled={!config.modulationId || !config.sizeId || !config.fabricTier || (!isTable && !config.fabricCode)}
                 className="w-full"
               >
                 Confirmar Item

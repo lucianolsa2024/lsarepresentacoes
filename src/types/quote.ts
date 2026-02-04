@@ -1,6 +1,21 @@
-// Fabric price tiers
+// Fabric price tiers for upholstered furniture
 export const FABRIC_TIERS = ['SEM TEC', 'FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J', 'FX 3D', 'FX COURO'] as const;
 export type FabricTier = typeof FABRIC_TIERS[number];
+
+// Table finish tiers (mapped to existing price columns)
+// These map to: FX B, FX C, FX D, FX E, FX F respectively
+export const TABLE_TIERS = [
+  { key: 'FX B' as FabricTier, label: 'Tampo: Vidro Fosco ou Clear / Corpo: Laca ou Lamina' },
+  { key: 'FX C' as FabricTier, label: 'Tampo: Laca ou Lamina com ou sem Vidro Normal Pintado / Corpo: Laca ou Lamina' },
+  { key: 'FX D' as FabricTier, label: 'Tampo: Mármore Especial / Corpo: Laca ou Lamina' },
+  { key: 'FX E' as FabricTier, label: 'Tampo: Mármore Normal / Corpo: Laca ou Lamina' },
+  { key: 'FX F' as FabricTier, label: 'Tampo ou Base em Recoro' },
+] as const;
+
+// Helper to check if a category is a table
+export function isTableCategory(category: string): boolean {
+  return category.toLowerCase().includes('mesa');
+}
 
 export interface ModulationSize {
   id: string;
