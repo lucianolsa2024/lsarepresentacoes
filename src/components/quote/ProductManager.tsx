@@ -20,10 +20,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit2, X, Package, Search, Factory } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Package, Search, Factory, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { ExcelImporter } from './ExcelImporter';
 import { BulkImporter } from './BulkImporter';
+import { ProductImageUpload } from './ProductImageUpload';
+import { ProductImage } from '@/components/ProductImage';
 
 interface ProductManagerProps {
   products: Product[];
@@ -599,24 +601,40 @@ export function ProductManager({
                   <Card key={product.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{product.name}</CardTitle>
-                          {product.code && (
-                            <p className="text-xs text-muted-foreground">Cód: {product.code}</p>
-                          )}
+                        <div className="flex gap-3">
+                          {/* Product thumbnail */}
+                          <ProductImage
+                            productName={product.name}
+                            imageUrl={product.imageUrl}
+                            size="md"
+                            className="shrink-0"
+                          />
+                          <div>
+                            <CardTitle className="text-lg">{product.name}</CardTitle>
+                            {product.code && (
+                              <p className="text-xs text-muted-foreground">Cód: {product.code}</p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-1">
+                          <ProductImageUpload
+                            productId={product.id}
+                            productName={product.name}
+                            currentImageUrl={product.imageUrl || null}
+                            onImageUpdated={onRefresh || (() => {})}
+                          />
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => openEditDialog(product)}
+                            className="h-8 w-8"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive"
+                            className="text-destructive h-8 w-8"
                             onClick={() => handleDelete(product.id)}
                           >
                             <Trash2 className="h-4 w-4" />

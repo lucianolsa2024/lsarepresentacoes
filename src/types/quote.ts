@@ -31,6 +31,7 @@ export interface Product {
   modulations: ProductModulation[];
   hasBase: boolean;
   availableBases: string[];
+  imageUrl?: string | null;
 }
 
 export interface QuoteItem {
