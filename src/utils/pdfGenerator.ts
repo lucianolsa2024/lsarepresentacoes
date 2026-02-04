@@ -362,20 +362,8 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   const ipiValue = quote.subtotal * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
 
-  // Totals
+  // Totals - only show IPI and final total (no subtotal or discount lines)
   doc.setFontSize(10);
-  doc.text('Subtotal Produtos:', 120, y);
-  doc.text(formatCurrency(quote.subtotal), 175, y);
-  y += 6;
-
-  // Only show discount if greater than 0 (surcharge/negative is hidden but reflected in total)
-  if (quote.discount > 0) {
-    doc.setTextColor(180, 0, 0);
-    doc.text('Desconto:', 120, y);
-    doc.text(`- ${formatCurrency(quote.discount)}`, 175, y);
-    doc.setTextColor(0);
-    y += 6;
-  }
 
   // IPI
   doc.text('IPI (3,25%):', 120, y);
