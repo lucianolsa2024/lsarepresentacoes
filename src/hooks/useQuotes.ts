@@ -1,38 +1,178 @@
-import { useState, useEffect } from 'react';
-import { Quote } from '@/types/quote';
+import { useState, useEffect, useCallback } from 'react';
+import { Quote, ClientData, QuoteItem, PaymentConditions } from '@/types/quote';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
+// Legacy localStorage key for migration
 const STORAGE_KEY = 'quote-system-quotes';
+
+const dbToQuote = (row: {
+  id: string;
+  client_id: string | null;
+  client_data: Json;
+  items: Json;
+  payment: Json;
+  subtotal: number;
+  discount: number;
+  total: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}): Quote => ({
+  id: row.id,
+  createdAt: row.created_at,
+  client: row.client_data as unknown as ClientData,
+  items: row.items as unknown as QuoteItem[],
+  payment: row.payment as unknown as PaymentConditions,
+  subtotal: row.subtotal,
+  discount: row.discount,
+  total: row.total,
+});
 
 export function useQuotes() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setQuotes(JSON.parse(stored));
-      } catch {
-        setQuotes([]);
+  const fetchQuotes = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        // If RLS blocks access, fall back to localStorage
+        console.log('Using localStorage for quotes');
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          try {
+            setQuotes(JSON.parse(stored));
+          } catch {
+            setQuotes([]);
+          }
+        }
+        return;
       }
+
+      setQuotes((data || []).map(dbToQuote));
+    } catch (error) {
+      console.error('Error fetching quotes:', error);
+      // Fall back to localStorage
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          setQuotes(JSON.parse(stored));
+        } catch {
+          setQuotes([]);
+        }
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const saveQuotes = (newQuotes: Quote[]) => {
-    setQuotes(newQuotes);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newQuotes));
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
+
+  const addQuote = async (quote: Quote, clientId?: string): Promise<Quote | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('quotes')
+        .insert({
+          id: quote.id,
+          client_id: clientId || null,
+          client_data: quote.client as unknown as Json,
+          items: quote.items as unknown as Json,
+          payment: quote.payment as unknown as Json,
+          subtotal: quote.subtotal,
+          discount: quote.discount,
+          total: quote.total,
+          status: 'completed',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('DB error, saving to localStorage:', error);
+        // Fall back to localStorage
+        const newQuotes = [quote, ...quotes];
+        setQuotes(newQuotes);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newQuotes));
+        return quote;
+      }
+
+      const newQuote = dbToQuote(data);
+      setQuotes((prev) => [newQuote, ...prev]);
+      return newQuote;
+    } catch (error) {
+      console.error('Error adding quote:', error);
+      // Fall back to localStorage
+      const newQuotes = [quote, ...quotes];
+      setQuotes(newQuotes);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newQuotes));
+      return quote;
+    }
   };
 
-  const addQuote = (quote: Quote) => {
-    const newQuotes = [quote, ...quotes];
-    saveQuotes(newQuotes);
+  const updateQuote = async (id: string, quote: Quote): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({
+          client_data: quote.client as unknown as Json,
+          items: quote.items as unknown as Json,
+          payment: quote.payment as unknown as Json,
+          subtotal: quote.subtotal,
+          discount: quote.discount,
+          total: quote.total,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('DB error updating quote:', error);
+        // Fall back to localStorage
+        const newQuotes = quotes.map((q) => (q.id === id ? quote : q));
+        setQuotes(newQuotes);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newQuotes));
+        return true;
+      }
+
+      await fetchQuotes();
+      return true;
+    } catch (error) {
+      console.error('Error updating quote:', error);
+      return false;
+    }
   };
 
-  const deleteQuote = (id: string) => {
-    const newQuotes = quotes.filter((q) => q.id !== id);
-    saveQuotes(newQuotes);
+  const deleteQuote = async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('DB error deleting quote:', error);
+        // Fall back to localStorage
+        const newQuotes = quotes.filter((q) => q.id !== id);
+        setQuotes(newQuotes);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newQuotes));
+        return true;
+      }
+
+      setQuotes((prev) => prev.filter((q) => q.id !== id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      return false;
+    }
   };
 
-  const duplicateQuote = (id: string): Quote | null => {
+  const duplicateQuote = async (id: string): Promise<Quote | null> => {
     const quote = quotes.find((q) => q.id === id);
     if (!quote) return null;
 
@@ -41,14 +181,22 @@ export function useQuotes() {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
     };
-    addQuote(newQuote);
-    return newQuote;
+    
+    return await addQuote(newQuote);
+  };
+
+  const getQuoteById = (id: string): Quote | undefined => {
+    return quotes.find((q) => q.id === id);
   };
 
   return {
     quotes,
+    loading,
     addQuote,
+    updateQuote,
     deleteQuote,
     duplicateQuote,
+    getQuoteById,
+    refetch: fetchQuotes,
   };
 }

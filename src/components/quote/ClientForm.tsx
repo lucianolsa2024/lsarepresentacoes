@@ -1,16 +1,30 @@
 import { ClientData } from '@/types/quote';
+import { Client } from '@/hooks/useClients';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { User, Building, Phone, Mail, MapPin, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Building, Phone, Mail, MapPin, UserPlus, Save } from 'lucide-react';
+import { ClientSelector } from './ClientSelector';
 
 interface ClientFormProps {
   client: ClientData;
   onChange: (client: ClientData) => void;
+  clients?: Client[];
+  onSaveClient?: (client: ClientData) => Promise<Client | null>;
+  selectedClientId?: string | null;
+  onSelectClient?: (client: Client | null) => void;
 }
 
-export function ClientForm({ client, onChange }: ClientFormProps) {
+export function ClientForm({ 
+  client, 
+  onChange, 
+  clients = [], 
+  onSaveClient,
+  selectedClientId,
+  onSelectClient 
+}: ClientFormProps) {
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     onChange({ ...client, [field]: value });
   };
@@ -21,6 +35,33 @@ export function ClientForm({ client, onChange }: ClientFormProps) {
       address: { ...client.address, [field]: value },
     });
   };
+
+  const handleSelectClient = (selectedClient: Client) => {
+    onChange({
+      name: selectedClient.name,
+      company: selectedClient.company,
+      document: selectedClient.document,
+      phone: selectedClient.phone,
+      email: selectedClient.email,
+      isNewClient: selectedClient.isNewClient,
+      address: selectedClient.address,
+    });
+    onSelectClient?.(selectedClient);
+  };
+
+  const handleCreateNew = () => {
+    onSelectClient?.(null);
+  };
+
+  const handleSaveClient = async () => {
+    if (!client.company) {
+      return;
+    }
+    await onSaveClient?.(client);
+  };
+
+  const isClientSelected = !!selectedClientId;
+  const hasClientData = !!client.company;
 
   return (
     <Card>
@@ -47,6 +88,44 @@ export function ClientForm({ client, onChange }: ClientFormProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Client Selection */}
+        {clients.length > 0 && (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <ClientSelector 
+                clients={clients} 
+                onSelect={handleSelectClient}
+                onCreateNew={handleCreateNew}
+              />
+            </div>
+            {hasClientData && !isClientSelected && onSaveClient && (
+              <Button 
+                variant="outline" 
+                onClick={handleSaveClient}
+                title="Salvar como novo cliente"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Cliente
+              </Button>
+            )}
+          </div>
+        )}
+
+        {isClientSelected && (
+          <div className="bg-primary/10 text-primary text-sm px-3 py-2 rounded-md flex items-center justify-between">
+            <span>Cliente selecionado: {client.company}</span>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                onSelectClient?.(null);
+              }}
+            >
+              Limpar seleção
+            </Button>
+          </div>
+        )}
+
         {/* Personal Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
