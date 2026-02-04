@@ -161,12 +161,15 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
           </div>
         )}
 
-        {/* Discount */}
+        {/* Discount / Surcharge */}
         <div className="space-y-3">
           <Label className="flex items-center gap-1">
             <Percent className="h-3 w-3" />
-            Desconto
+            Desconto / Acréscimo
           </Label>
+          <p className="text-xs text-muted-foreground">
+            Use valores positivos para desconto e negativos para acréscimo
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
               value={payment.discountType}
@@ -184,7 +187,6 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
             </Select>
             <Input
               type="number"
-              min={0}
               value={payment.discountValue}
               onChange={(e) =>
                 updateField('discountValue', parseFloat(e.target.value) || 0)
