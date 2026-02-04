@@ -15,8 +15,37 @@ function isExternalUrl(url: string): boolean {
   }
 }
 
-// Helper to load image as base64
-async function loadImageAsBase64(url: string): Promise<string | null> {
+// Helper to load image via fetch (handles CORS better)
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    console.log('Fetching image via fetch:', url.substring(0, 80));
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.log('Fetch failed with status:', response.status);
+      return null;
+    }
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        console.log('Image fetched successfully:', url.substring(0, 50));
+        resolve(base64);
+      };
+      reader.onerror = () => {
+        console.log('FileReader error');
+        resolve(null);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.log('Fetch error:', e);
+    return null;
+  }
+}
+
+// Helper to load image as base64 using Image element
+async function loadImageViaElement(url: string): Promise<string | null> {
   return new Promise((resolve) => {
     // Skip invalid URLs
     if (!url || url === '/placeholder.svg') {
@@ -46,7 +75,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
         if (ctx) {
           ctx.drawImage(img, 0, 0);
           const base64 = canvas.toDataURL('image/jpeg', 0.8);
-          console.log('Image loaded successfully:', url.substring(0, 80));
+          console.log('Image loaded via element:', url.substring(0, 50));
           resolve(base64);
         } else {
           console.log('Failed to get canvas context');
@@ -60,13 +89,33 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
     
     img.onerror = (e) => {
       clearTimeout(timeout);
-      console.log('Image load error:', url.substring(0, 80), e);
+      console.log('Image element load error:', url.substring(0, 50), e);
       resolve(null);
     };
     
     // Set src AFTER crossOrigin
     img.src = url;
   });
+}
+
+// Main image loading function - tries fetch first for external URLs, then element
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  if (!url || url === '/placeholder.svg') {
+    return null;
+  }
+  
+  // For external URLs (like Supabase Storage), try fetch first as it handles CORS better
+  if (isExternalUrl(url)) {
+    const fetchResult = await fetchImageAsBase64(url);
+    if (fetchResult) {
+      return fetchResult;
+    }
+    // Fallback to element method
+    console.log('Fetch failed, trying element method for:', url.substring(0, 50));
+  }
+  
+  // For local URLs or as fallback, use element method
+  return loadImageViaElement(url);
 }
 
 // Cache for loaded images (per session, cleared on each PDF generation for fresh data)
