@@ -16,9 +16,22 @@ interface QuoteWithImages extends Omit<Quote, 'items'> {
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
   return new Promise((resolve) => {
+    // Skip invalid URLs
+    if (!url || url === '/placeholder.svg') {
+      resolve(null);
+      return;
+    }
+    
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    
+    const timeout = setTimeout(() => {
+      console.log('Image load timeout:', url);
+      resolve(null);
+    }, 5000);
+    
     img.onload = () => {
+      clearTimeout(timeout);
       try {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -26,15 +39,22 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          console.log('Image loaded successfully:', url.substring(0, 50));
+          resolve(base64);
         } else {
           resolve(null);
         }
-      } catch {
+      } catch (e) {
+        console.log('Image canvas error:', e);
         resolve(null);
       }
     };
-    img.onerror = () => resolve(null);
+    img.onerror = () => {
+      clearTimeout(timeout);
+      console.log('Image load error:', url.substring(0, 50));
+      resolve(null);
+    };
     img.src = url;
   });
 }
@@ -306,7 +326,7 @@ export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<
   y += 5;
 
   if (quote.payment.method === 'parcelado') {
-    const installmentValue = quote.total / quote.payment.installments;
+    const installmentValue = totalWithIpi / quote.payment.installments;
     doc.text(
       `${quote.payment.installments}x de ${formatCurrency(installmentValue)}`,
       15,
@@ -314,7 +334,7 @@ export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<
     );
     y += 5;
   } else if (quote.payment.method === 'entrada_parcelas') {
-    const remaining = quote.total - quote.payment.downPayment;
+    const remaining = totalWithIpi - quote.payment.downPayment;
     const installmentValue = remaining / quote.payment.installments;
     doc.text(`Entrada: ${formatCurrency(quote.payment.downPayment)}`, 15, y);
     y += 5;
