@@ -136,6 +136,7 @@ export type Database = {
           factory: string | null
           has_base: boolean | null
           id: string
+          image_url: string | null
           name: string
           updated_at: string | null
         }
@@ -148,6 +149,7 @@ export type Database = {
           factory?: string | null
           has_base?: boolean | null
           id?: string
+          image_url?: string | null
           name: string
           updated_at?: string | null
         }
@@ -160,6 +162,7 @@ export type Database = {
           factory?: string | null
           has_base?: boolean | null
           id?: string
+          image_url?: string | null
           name?: string
           updated_at?: string | null
         }

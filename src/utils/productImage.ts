@@ -18,6 +18,17 @@ export function getProductImageFallback(): string {
 }
 
 /**
+ * Get the best available image URL for a product.
+ * Priority: 1. Storage URL (imageUrl), 2. Local file, 3. Fallback placeholder
+ */
+export function getBestProductImageUrl(productName: string, imageUrl?: string | null): string {
+  if (imageUrl) {
+    return imageUrl;
+  }
+  return getProductImageUrl(productName);
+}
+
+/**
  * Try to load an image and return true if it exists, false otherwise.
  * This is useful for checking if a product image exists before rendering.
  */

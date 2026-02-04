@@ -1,7 +1,17 @@
 import jsPDF from 'jspdf';
-import { Quote } from '@/types/quote';
+import { Quote, QuoteItem } from '@/types/quote';
 import logoLsa from '@/assets/logo-lsa.png';
-import { getProductImageUrl, getProductImageFallback } from '@/utils/productImage';
+import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
+
+// Extended QuoteItem with optional imageUrl for PDF generation
+interface QuoteItemWithImage extends QuoteItem {
+  imageUrl?: string | null;
+}
+
+// Extended Quote type for PDF generation
+interface QuoteWithImages extends Omit<Quote, 'items'> {
+  items: QuoteItemWithImage[];
+}
 
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
@@ -32,19 +42,36 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 // Cache for loaded images
 const imageCache: Record<string, string | null> = {};
 
-export async function generateQuotePDF(quote: Quote): Promise<void> {
-  // Preload product images
-  const uniqueProductNames = [...new Set(quote.items.map(item => item.productName))];
-  for (const productName of uniqueProductNames) {
-    if (!imageCache[productName]) {
-      const imageUrl = getProductImageUrl(productName);
-      const base64 = await loadImageAsBase64(imageUrl);
+export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<void> {
+  // Preload product images - prioritize storage URLs
+  // Create a map of productName -> imageUrl for unique products
+  const productImageMap = new Map<string, string | null>();
+  quote.items.forEach(item => {
+    const itemWithImage = item as QuoteItemWithImage;
+    if (!productImageMap.has(item.productName)) {
+      productImageMap.set(item.productName, itemWithImage.imageUrl || null);
+    }
+  });
+  
+  for (const [productName, imageUrl] of productImageMap) {
+    const cacheKey = imageUrl || productName;
+    if (!imageCache[cacheKey]) {
+      // Try storage URL first, then local, then fallback
+      const bestUrl = getBestProductImageUrl(productName, imageUrl);
+      const base64 = await loadImageAsBase64(bestUrl);
       if (base64) {
-        imageCache[productName] = base64;
+        imageCache[cacheKey] = base64;
       } else {
-        // Try fallback
-        const fallbackBase64 = await loadImageAsBase64(getProductImageFallback());
-        imageCache[productName] = fallbackBase64;
+        // Try local file
+        const localUrl = getProductImageUrl(productName);
+        const localBase64 = await loadImageAsBase64(localUrl);
+        if (localBase64) {
+          imageCache[cacheKey] = localBase64;
+        } else {
+          // Use fallback
+          const fallbackBase64 = await loadImageAsBase64(getProductImageFallback());
+          imageCache[cacheKey] = fallbackBase64;
+        }
       }
     }
   }
@@ -173,7 +200,9 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(`${index + 1}`, 17, y);
 
     // Add product image if available
-    const productImage = imageCache[item.productName];
+    const itemWithImage = item as QuoteItemWithImage;
+    const cacheKey = itemWithImage.imageUrl || item.productName;
+    const productImage = imageCache[cacheKey];
     if (productImage) {
       try {
         doc.addImage(productImage, 'JPEG', 27, y - 3, 12, 12);
