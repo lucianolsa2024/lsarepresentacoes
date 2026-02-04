@@ -149,6 +149,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       price,
       quantity: 1,
       observations: '',
+      imageUrl: selectedProduct.imageUrl,
     };
 
     onAddItem(item);

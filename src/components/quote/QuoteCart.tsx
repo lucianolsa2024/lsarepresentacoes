@@ -48,7 +48,7 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRem
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex gap-3 flex-1">
-                    <ProductImage productName={item.productName} size="sm" />
+                    <ProductImage productName={item.productName} imageUrl={item.imageUrl} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-semibold">

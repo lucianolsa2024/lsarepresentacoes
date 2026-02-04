@@ -49,6 +49,7 @@ export interface QuoteItem {
   price: number;
   quantity: number;
   observations: string;
+  imageUrl?: string | null;
 }
 
 export interface ClientData {
