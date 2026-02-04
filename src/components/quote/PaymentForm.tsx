@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, Percent, Calendar } from 'lucide-react';
+import { CreditCard, Percent, Calendar, User } from 'lucide-react';
 
 const INSTALLMENT_OPTIONS = [
   { value: '15', label: '15 dias', installments: 1 },
@@ -180,6 +180,19 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
               placeholder={payment.discountType === 'percentage' ? '0%' : 'R$ 0,00'}
             />
           </div>
+        </div>
+
+        {/* Representative Name */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            Nome do Representante
+          </Label>
+          <Input
+            value={payment.representativeName}
+            onChange={(e) => updateField('representativeName', e.target.value)}
+            placeholder="Nome do representante comercial"
+          />
         </div>
 
         {/* Delivery */}

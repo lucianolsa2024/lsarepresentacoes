@@ -79,6 +79,7 @@ export interface PaymentConditions {
   deliveryDays: number;
   carrier: string;
   observations: string;
+  representativeName: string; // Name of the sales representative
 }
 
 export interface Quote {
@@ -120,4 +121,5 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   deliveryDays: 30,
   carrier: '',
   observations: '',
+  representativeName: 'Luciano Abreu',
 };

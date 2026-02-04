@@ -106,35 +106,51 @@ export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('pt-BR');
 
-  // Logo
-  const logoWidth = 40;
-  const logoHeight = 15;
-  const logoX = (pageWidth - logoWidth) / 2;
+  // ===== HEADER LAYOUT (similar to RD style) =====
+  // Logo on the left - maintain aspect ratio (original logo is approximately 300x100)
+  const logoOriginalWidth = 300;
+  const logoOriginalHeight = 100;
+  const logoWidth = 45;
+  const logoHeight = (logoWidth * logoOriginalHeight) / logoOriginalWidth; // ~15
+  const logoX = 15;
   doc.addImage(logoLsa, 'PNG', logoX, y, logoWidth, logoHeight);
-  y += logoHeight + 5;
 
-  // Company Info
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
+  // Company info on the right (italic style)
+  const rightX = pageWidth - 15;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bolditalic');
   doc.setTextColor(80);
-  doc.text('(11) 98207-1185  |  lucianoabreu@lsarepresentacoes.com.br', pageWidth / 2, y, { align: 'center' });
-  y += 4;
-  doc.text('Rua Mont\'alverne, 345 - CEP 04265-060', pageWidth / 2, y, { align: 'center' });
+  
+  // Representative name (if available)
+  const representativeName = quote.payment.representativeName || 'Luciano Abreu';
+  doc.text(representativeName, rightX, y + 3, { align: 'right' });
+  
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.text('(11) 98207-1185', rightX, y + 8, { align: 'right' });
+  doc.text('lucianoabreu@lsarepresentacoes.com.br', rightX, y + 13, { align: 'right' });
+  
   doc.setTextColor(0);
+  y += logoHeight + 10;
+
+  // Divider line
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.3);
+  doc.line(15, y, pageWidth - 15, y);
   y += 8;
 
-  // Header
-  doc.setFontSize(18);
+  // Title centered
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('ORÇAMENTO SOHOME', pageWidth / 2, y, { align: 'center' });
-  y += 8;
+  y += 7;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Data: ${formatDate(quote.createdAt)}  |  Nº ${quote.id.slice(0, 8).toUpperCase()}`, pageWidth / 2, y, {
     align: 'center',
   });
-  y += 12;
+  y += 10;
 
   // Divider
   doc.setDrawColor(180);
