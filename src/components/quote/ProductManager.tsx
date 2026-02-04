@@ -43,27 +43,32 @@ interface NewModulation {
 interface NewSize {
   description: string;
   dimensions: string;
-  priceB: string;
-  priceE: string;
+  prices: Record<FabricTier, string>;
 }
 
-// Helper to create default prices from base prices
-const createDefaultPrices = (priceB: number, priceE: number): Record<FabricTier, number> => {
-  const step = (priceE - priceB) / 3;
-  return {
-    'SEM TEC': 0,
-    'FX B': priceB,
-    'FX C': Math.round(priceB + step),
-    'FX D': Math.round(priceB + step * 2),
-    'FX E': priceE,
-    'FX F': Math.round(priceE + step),
-    'FX G': Math.round(priceE + step * 2),
-    'FX H': Math.round(priceE + step * 3),
-    'FX I': Math.round(priceE + step * 4),
-    'FX J': Math.round(priceE + step * 6),
-    'FX 3D': 0,
-    'FX COURO': 0,
-  };
+// Helper to create empty prices
+const createEmptyPrices = (): Record<FabricTier, string> => ({
+  'SEM TEC': '',
+  'FX B': '',
+  'FX C': '',
+  'FX D': '',
+  'FX E': '',
+  'FX F': '',
+  'FX G': '',
+  'FX H': '',
+  'FX I': '',
+  'FX J': '',
+  'FX 3D': '',
+  'FX COURO': '',
+});
+
+// Helper to convert string prices to numbers
+const convertPricesToNumbers = (prices: Record<FabricTier, string>): Record<FabricTier, number> => {
+  const result: Record<FabricTier, number> = {} as Record<FabricTier, number>;
+  for (const tier of FABRIC_TIERS) {
+    result[tier] = prices[tier] ? parseFloat(prices[tier]) : 0;
+  }
+  return result;
 };
 
 export function ProductManager({
@@ -97,7 +102,7 @@ export function ProductManager({
   });
   
   const [modulations, setModulations] = useState<{mod: NewModulation, sizes: NewSize[]}[]>([
-    { mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', priceB: '', priceE: '' }] }
+    { mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', prices: createEmptyPrices() }] }
   ]);
 
   const resetForm = () => {
@@ -109,7 +114,7 @@ export function ProductManager({
       hasBase: false,
       availableBases: [],
     });
-    setModulations([{ mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', priceB: '', priceE: '' }] }]);
+    setModulations([{ mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', prices: createEmptyPrices() }] }]);
     setEditingProduct(null);
   };
 
@@ -132,15 +137,20 @@ export function ProductManager({
     // Convert product modulations to form format
     const formModulations = product.modulations.map((m) => ({
       mod: { name: m.name, description: m.description },
-      sizes: m.sizes.map((s) => ({
-        description: s.description,
-        dimensions: s.dimensions,
-        priceB: s.prices['FX B'].toString(),
-        priceE: s.prices['FX E'].toString(),
-      }))
+      sizes: m.sizes.map((s) => {
+        const prices: Record<FabricTier, string> = {} as Record<FabricTier, string>;
+        for (const tier of FABRIC_TIERS) {
+          prices[tier] = s.prices[tier] ? s.prices[tier].toString() : '';
+        }
+        return {
+          description: s.description,
+          dimensions: s.dimensions,
+          prices,
+        };
+      })
     }));
     
-    setModulations(formModulations.length > 0 ? formModulations : [{ mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', priceB: '', priceE: '' }] }]);
+    setModulations(formModulations.length > 0 ? formModulations : [{ mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', prices: createEmptyPrices() }] }]);
     setIsDialogOpen(true);
   };
 
@@ -160,7 +170,7 @@ export function ProductManager({
       id: crypto.randomUUID(),
       name: m.mod.name,
       description: m.mod.description || m.mod.name,
-      sizes: m.sizes.filter(s => s.priceB && s.priceE).map((s) => ({
+      sizes: m.sizes.filter(s => Object.values(s.prices).some(p => p !== '')).map((s) => ({
         id: crypto.randomUUID(),
         description: s.description || s.dimensions,
         dimensions: s.dimensions,
@@ -169,7 +179,7 @@ export function ProductManager({
         height: '',
         base: '',
         fabricQuantity: 0,
-        prices: createDefaultPrices(parseFloat(s.priceB), parseFloat(s.priceE)),
+        prices: convertPricesToNumbers(s.prices),
       })),
     }));
 
@@ -205,7 +215,7 @@ export function ProductManager({
   };
 
   const addModulation = () => {
-    setModulations([...modulations, { mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', priceB: '', priceE: '' }] }]);
+    setModulations([...modulations, { mod: { name: '', description: '' }, sizes: [{ description: '', dimensions: '', prices: createEmptyPrices() }] }]);
   };
 
   const removeModulation = (index: number) => {
@@ -222,7 +232,7 @@ export function ProductManager({
 
   const addSize = (modIndex: number) => {
     const updated = [...modulations];
-    updated[modIndex].sizes.push({ description: '', dimensions: '', priceB: '', priceE: '' });
+    updated[modIndex].sizes.push({ description: '', dimensions: '', prices: createEmptyPrices() });
     setModulations(updated);
   };
 
@@ -234,9 +244,15 @@ export function ProductManager({
     }
   };
 
-  const updateSize = (modIndex: number, sizeIndex: number, field: keyof NewSize, value: string) => {
+  const updateSize = (modIndex: number, sizeIndex: number, field: 'description' | 'dimensions', value: string) => {
     const updated = [...modulations];
     updated[modIndex].sizes[sizeIndex][field] = value;
+    setModulations(updated);
+  };
+
+  const updateSizePrice = (modIndex: number, sizeIndex: number, tier: FabricTier, value: string) => {
+    const updated = [...modulations];
+    updated[modIndex].sizes[sizeIndex].prices[tier] = value;
     setModulations(updated);
   };
 
@@ -488,50 +504,57 @@ export function ProductManager({
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Informe o preço da FX B e FX E. Os demais serão calculados automaticamente.
+                        Informe os preços para cada faixa de tecido. Deixe em branco as faixas que não se aplicam.
                       </p>
                       
                       {modData.sizes.map((size, sizeIndex) => (
-                        <div key={sizeIndex} className="flex gap-2 items-end bg-muted/50 p-2 rounded">
-                          <div className="flex-1">
-                            <Label className="text-xs">Dimensões</Label>
-                            <Input
-                              placeholder="Ex: 1,05m + 0,80m"
-                              value={size.dimensions}
-                              onChange={(e) => updateSize(modIndex, sizeIndex, 'dimensions', e.target.value)}
-                              className="h-8 text-sm"
-                            />
+                        <div key={sizeIndex} className="bg-muted/50 p-3 rounded space-y-3">
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1">
+                              <Label className="text-xs">Dimensões</Label>
+                              <Input
+                                placeholder="Ex: 1,05m + 0,80m"
+                                value={size.dimensions}
+                                onChange={(e) => updateSize(modIndex, sizeIndex, 'dimensions', e.target.value)}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <Label className="text-xs">Descrição</Label>
+                              <Input
+                                placeholder="Descrição adicional"
+                                value={size.description}
+                                onChange={(e) => updateSize(modIndex, sizeIndex, 'description', e.target.value)}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            {modData.sizes.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeSize(modIndex, sizeIndex)}
+                                className="h-8 w-8 text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
-                          <div className="w-24">
-                            <Label className="text-xs">FX B</Label>
-                            <Input
-                              type="number"
-                              placeholder="R$"
-                              value={size.priceB}
-                              onChange={(e) => updateSize(modIndex, sizeIndex, 'priceB', e.target.value)}
-                              className="h-8 text-sm"
-                            />
+                          
+                          {/* Price grid for all fabric tiers */}
+                          <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                            {FABRIC_TIERS.map((tier) => (
+                              <div key={tier} className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">{tier}</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="R$"
+                                  value={size.prices[tier]}
+                                  onChange={(e) => updateSizePrice(modIndex, sizeIndex, tier, e.target.value)}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                            ))}
                           </div>
-                          <div className="w-24">
-                            <Label className="text-xs">FX E</Label>
-                            <Input
-                              type="number"
-                              placeholder="R$"
-                              value={size.priceE}
-                              onChange={(e) => updateSize(modIndex, sizeIndex, 'priceE', e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          {modData.sizes.length > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeSize(modIndex, sizeIndex)}
-                              className="h-8 w-8 text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
                         </div>
                       ))}
                     </div>
