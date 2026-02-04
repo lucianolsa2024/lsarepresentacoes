@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      clients: {
+        Row: {
+          city: string | null
+          company: string
+          complement: string | null
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          is_new_client: boolean | null
+          name: string | null
+          neighborhood: string | null
+          number: string | null
+          phone: string | null
+          state: string | null
+          street: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          city?: string | null
+          company: string
+          complement?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_new_client?: boolean | null
+          name?: string | null
+          neighborhood?: string | null
+          number?: string | null
+          phone?: string | null
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string | null
+          company?: string
+          complement?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_new_client?: boolean | null
+          name?: string | null
+          neighborhood?: string | null
+          number?: string | null
+          phone?: string | null
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       modulation_sizes: {
         Row: {
           created_at: string | null
@@ -167,6 +224,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      quotes: {
+        Row: {
+          client_data: Json
+          client_id: string | null
+          created_at: string
+          discount: number
+          id: string
+          items: Json
+          payment: Json
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          client_data: Json
+          client_id?: string | null
+          created_at?: string
+          discount?: number
+          id?: string
+          items: Json
+          payment: Json
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          client_data?: Json
+          client_id?: string | null
+          created_at?: string
+          discount?: number
+          id?: string
+          items?: Json
+          payment?: Json
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

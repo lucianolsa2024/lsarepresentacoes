@@ -29,6 +29,7 @@ import {
   FileText,
   Calendar,
   User,
+  Edit2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,12 +37,14 @@ interface QuoteHistoryProps {
   quotes: Quote[];
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onEdit?: (quote: Quote) => void;
 }
 
 export function QuoteHistory({
   quotes,
   onDelete,
   onDuplicate,
+  onEdit,
 }: QuoteHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
@@ -76,6 +79,13 @@ export function QuoteHistory({
   const handleDuplicate = (id: string) => {
     onDuplicate(id);
     toast.success('Orçamento duplicado');
+  };
+
+  const handleEdit = (quote: Quote) => {
+    if (onEdit) {
+      onEdit(quote);
+      toast.info('Orçamento carregado para edição');
+    }
   };
 
   const confirmDelete = () => {
@@ -127,11 +137,11 @@ export function QuoteHistory({
                     <div className="flex items-center gap-2 mb-1">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-semibold truncate">
-                        {quote.client.name}
+                        {quote.client.company || quote.client.name}
                       </span>
-                      {quote.client.company && (
+                      {quote.client.company && quote.client.name && (
                         <span className="text-sm text-muted-foreground truncate">
-                          ({quote.client.company})
+                          ({quote.client.name})
                         </span>
                       )}
                     </div>
@@ -168,6 +178,16 @@ export function QuoteHistory({
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(quote)}
+                          title="Editar orçamento"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -215,12 +235,14 @@ export function QuoteHistory({
               <div>
                 <h4 className="font-semibold mb-2">Cliente</h4>
                 <div className="text-sm space-y-1">
-                  <p>
-                    <strong>Nome:</strong> {selectedQuote.client.name}
-                  </p>
                   {selectedQuote.client.company && (
                     <p>
                       <strong>Empresa:</strong> {selectedQuote.client.company}
+                    </p>
+                  )}
+                  {selectedQuote.client.name && (
+                    <p>
+                      <strong>Contato:</strong> {selectedQuote.client.name}
                     </p>
                   )}
                   {selectedQuote.client.phone && (
@@ -287,13 +309,28 @@ export function QuoteHistory({
                 </div>
               </div>
 
-              <Button
-                onClick={() => handleDownload(selectedQuote)}
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Baixar PDF
-              </Button>
+              <div className="flex gap-2">
+                {onEdit && (
+                  <Button
+                    onClick={() => {
+                      handleEdit(selectedQuote);
+                      setSelectedQuote(null);
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                )}
+                <Button
+                  onClick={() => handleDownload(selectedQuote)}
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar PDF
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

@@ -9,6 +9,7 @@ import {
 } from '@/types/quote';
 import { useProducts } from '@/hooks/useProducts';
 import { useQuotes } from '@/hooks/useQuotes';
+import { useClients, Client } from '@/hooks/useClients';
 import { useAuth } from '@/hooks/useAuth';
 import { useRDStation } from '@/hooks/useRDStation';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
@@ -21,7 +22,8 @@ import { PaymentForm } from '@/components/quote/PaymentForm';
 import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
 import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2 } from 'lucide-react';
+import { ClientManager } from '@/components/quote/ClientManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -43,7 +45,8 @@ const formatWhatsAppMessage = (quote: Quote) => {
 
 const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
-  const { quotes, addQuote, deleteQuote, duplicateQuote } = useQuotes();
+  const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
+  const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
@@ -54,8 +57,10 @@ const Index = () => {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [payment, setPayment] = useState<PaymentConditions>(INITIAL_PAYMENT);
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
@@ -91,6 +96,18 @@ const Index = () => {
     return calculateSubtotal() - calculateDiscount();
   };
 
+  const handleSelectClient = (selectedClient: Client | null) => {
+    setSelectedClientId(selectedClient?.id || null);
+  };
+
+  const handleSaveClient = async (clientData: ClientData): Promise<Client | null> => {
+    const result = await addClient(clientData);
+    if (result) {
+      setSelectedClientId(result.id);
+    }
+    return result;
+  };
+
   const handleGenerateQuote = async (clearAfterSave: boolean = false) => {
     if (!client.company) {
       toast.error('Preencha o nome da empresa');
@@ -103,8 +120,8 @@ const Index = () => {
     }
 
     const quote: Quote = {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
+      id: editingQuoteId || crypto.randomUUID(),
+      createdAt: editingQuoteId ? new Date().toISOString() : new Date().toISOString(),
       client,
       items,
       payment,
@@ -113,25 +130,42 @@ const Index = () => {
       total: calculateTotal(),
     };
 
-    addQuote(quote);
+    if (editingQuoteId) {
+      await updateQuote(editingQuoteId, quote);
+      toast.success('Orçamento atualizado com sucesso!');
+    } else {
+      await addQuote(quote, selectedClientId || undefined);
+      toast.success('Orçamento gerado e salvo com sucesso!');
+    }
+    
     await generateQuotePDF(quote);
-    toast.success('Orçamento gerado e salvo com sucesso!');
 
     // Sync with RD Station CRM (non-blocking)
     syncQuoteToRDStation(quote);
 
     if (clearAfterSave) {
-      setClient(INITIAL_CLIENT);
-      setItems([]);
-      setPayment(INITIAL_PAYMENT);
+      handleReset();
+    } else {
+      setEditingQuoteId(null);
     }
   };
 
   const handleReset = () => {
     setClient(INITIAL_CLIENT);
+    setSelectedClientId(null);
     setItems([]);
     setPayment(INITIAL_PAYMENT);
+    setEditingQuoteId(null);
     toast.success('Orçamento limpo');
+  };
+
+  const handleEditQuote = (quote: Quote) => {
+    setClient(quote.client);
+    setItems(quote.items);
+    setPayment(quote.payment);
+    setEditingQuoteId(quote.id);
+    setSelectedClientId(null);
+    setActiveTab('quote');
   };
 
   const handleSendWhatsApp = () => {
@@ -196,34 +230,41 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-5 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <LayoutDashboard className="h-4 w-4 mr-2" />
-                Dashboard
+                <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               <TabsTrigger
                 value="quote"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Novo Orçamento
+                <span className="hidden sm:inline">{editingQuoteId ? 'Editar' : 'Novo'}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="history"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <History className="h-4 w-4 mr-2" />
-                Histórico
+                <span className="hidden sm:inline">Histórico</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="clients"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Clientes</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <Package className="h-4 w-4 mr-2" />
-                Produtos
+                <span className="hidden sm:inline">Produtos</span>
               </TabsTrigger>
             </TabsList>
 
@@ -233,10 +274,27 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="quote" className="mt-0">
+                {editingQuoteId && (
+                  <div className="mb-4 p-3 bg-warning/20 border border-warning rounded-lg flex items-center justify-between">
+                    <span className="text-sm text-warning-foreground">
+                      📝 Editando orçamento existente
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={handleReset}>
+                      Cancelar edição
+                    </Button>
+                  </div>
+                )}
                 <div className="grid lg:grid-cols-2 gap-6">
                   {/* Left Column */}
                   <div className="space-y-6">
-                    <ClientForm client={client} onChange={setClient} />
+                    <ClientForm 
+                      client={client} 
+                      onChange={setClient}
+                      clients={clients}
+                      onSaveClient={handleSaveClient}
+                      selectedClientId={selectedClientId}
+                      onSelectClient={handleSelectClient}
+                    />
                     <ProductSelector
                       products={products}
                       onAddItem={handleAddItem}
@@ -275,35 +333,39 @@ const Index = () => {
                         >
                           {isSyncing ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : editingQuoteId ? (
+                            <Save className="h-4 w-4 mr-2" />
                           ) : (
                             <Download className="h-4 w-4 mr-2" />
                           )}
-                          Gerar Orçamento
+                          {editingQuoteId ? 'Salvar Alterações' : 'Gerar Orçamento'}
                         </Button>
                       </div>
-                      <div className="flex gap-3">
-                        <Button
-                          onClick={() => handleGenerateQuote(true)}
-                          variant="secondary"
-                          className="flex-1"
-                          disabled={!client.company || items.length === 0 || isSyncing}
-                        >
-                          {isSyncing ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4 mr-2" />
-                          )}
-                          Gerar e Limpar
-                        </Button>
-                        <Button
-                          onClick={handleSendWhatsApp}
-                          className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
-                          disabled={!client.company || items.length === 0}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          WhatsApp
-                        </Button>
-                      </div>
+                      {!editingQuoteId && (
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => handleGenerateQuote(true)}
+                            variant="secondary"
+                            className="flex-1"
+                            disabled={!client.company || items.length === 0 || isSyncing}
+                          >
+                            {isSyncing ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4 mr-2" />
+                            )}
+                            Gerar e Limpar
+                          </Button>
+                          <Button
+                            onClick={handleSendWhatsApp}
+                            className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
+                            disabled={!client.company || items.length === 0}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            WhatsApp
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -314,6 +376,17 @@ const Index = () => {
                   quotes={quotes}
                   onDelete={deleteQuote}
                   onDuplicate={duplicateQuote}
+                  onEdit={handleEditQuote}
+                />
+              </TabsContent>
+
+              <TabsContent value="clients" className="mt-0">
+                <ClientManager
+                  clients={clients}
+                  loading={clientsLoading}
+                  onAdd={addClient}
+                  onUpdate={updateClient}
+                  onDelete={deleteClient}
                 />
               </TabsContent>
 
