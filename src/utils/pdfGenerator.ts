@@ -3,6 +3,18 @@ import { Quote, QuoteItem } from '@/types/quote';
 import logoLsa from '@/assets/logo-lsa.png';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
 
+// Helper to check if URL is external
+function isExternalUrl(url: string): boolean {
+  if (!url || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
+    return false;
+  }
+  try {
+    return new URL(url).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
   return new Promise((resolve) => {
@@ -13,7 +25,11 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
     }
     
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    
+    // CRITICAL: Only set crossOrigin for external URLs, and set it BEFORE src
+    if (isExternalUrl(url)) {
+      img.crossOrigin = 'anonymous';
+    }
     
     const timeout = setTimeout(() => {
       console.log('Image load timeout:', url);
@@ -24,15 +40,16 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
       clearTimeout(timeout);
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
           const base64 = canvas.toDataURL('image/jpeg', 0.8);
-          console.log('Image loaded successfully:', url.substring(0, 50));
+          console.log('Image loaded successfully:', url.substring(0, 80));
           resolve(base64);
         } else {
+          console.log('Failed to get canvas context');
           resolve(null);
         }
       } catch (e) {
@@ -40,23 +57,32 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
         resolve(null);
       }
     };
-    img.onerror = () => {
+    
+    img.onerror = (e) => {
       clearTimeout(timeout);
-      console.log('Image load error:', url.substring(0, 50));
+      console.log('Image load error:', url.substring(0, 80), e);
       resolve(null);
     };
+    
+    // Set src AFTER crossOrigin
     img.src = url;
   });
 }
 
-// Cache for loaded images
-const imageCache: Record<string, string | null> = {};
+// Cache for loaded images (per session, cleared on each PDF generation for fresh data)
+let imageCache: Record<string, string | null> = {};
 
 export async function generateQuotePDF(quote: Quote): Promise<void> {
+  // Clear image cache to ensure fresh images
+  imageCache = {};
+  
+  console.log('Starting PDF generation with', quote.items.length, 'items');
+  
   // Preload product images - prioritize storage URLs
   // Create a map of productName -> imageUrl for unique products
   const productImageMap = new Map<string, string | null>();
   quote.items.forEach(item => {
+    console.log('Item:', item.productName, 'imageUrl:', item.imageUrl);
     if (!productImageMap.has(item.productName)) {
       productImageMap.set(item.productName, item.imageUrl || null);
     }
@@ -64,24 +90,28 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   
   for (const [productName, imageUrl] of productImageMap) {
     const cacheKey = imageUrl || productName;
-    if (!imageCache[cacheKey]) {
-      // Try storage URL first, then local, then fallback
-      const bestUrl = getBestProductImageUrl(productName, imageUrl);
-      const base64 = await loadImageAsBase64(bestUrl);
+    console.log('Loading image for:', productName, 'URL:', imageUrl);
+    
+    // Try storage URL first if available
+    if (imageUrl) {
+      const base64 = await loadImageAsBase64(imageUrl);
       if (base64) {
+        console.log('Loaded from storage URL:', productName);
         imageCache[cacheKey] = base64;
-      } else {
-        // Try local file
-        const localUrl = getProductImageUrl(productName);
-        const localBase64 = await loadImageAsBase64(localUrl);
-        if (localBase64) {
-          imageCache[cacheKey] = localBase64;
-        } else {
-          // Use fallback
-          const fallbackBase64 = await loadImageAsBase64(getProductImageFallback());
-          imageCache[cacheKey] = fallbackBase64;
-        }
+        continue;
       }
+    }
+    
+    // Try local file
+    const localUrl = getProductImageUrl(productName);
+    console.log('Trying local URL:', localUrl);
+    const localBase64 = await loadImageAsBase64(localUrl);
+    if (localBase64) {
+      console.log('Loaded from local file:', productName);
+      imageCache[cacheKey] = localBase64;
+    } else {
+      console.log('No image found for:', productName);
+      imageCache[cacheKey] = null;
     }
   }
   
