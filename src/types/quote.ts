@@ -69,6 +69,8 @@ export interface ClientData {
   };
 }
 
+export type FreightType = 'CIF' | 'FOB';
+
 export interface PaymentConditions {
   method: 'avista' | 'parcelado' | 'entrada_parcelas';
   installments: number;
@@ -78,6 +80,7 @@ export interface PaymentConditions {
   discountValue: number;
   deliveryDays: number;
   carrier: string;
+  freightType: FreightType;
   observations: string;
   representativeName: string; // Name of the sales representative
 }
@@ -120,6 +123,7 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   discountValue: 0,
   deliveryDays: 30,
   carrier: '',
+  freightType: 'CIF',
   observations: '',
   representativeName: 'Luciano Abreu',
 };

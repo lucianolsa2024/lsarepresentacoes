@@ -301,6 +301,7 @@ export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<
   doc.text(formatCurrency(quote.subtotal), 175, y);
   y += 6;
 
+  // Only show discount if greater than 0
   if (quote.discount > 0) {
     doc.setTextColor(180, 0, 0);
     doc.text('Desconto:', 120, y);
@@ -365,8 +366,14 @@ export async function generateQuotePDF(quote: Quote | QuoteWithImages): Promise<
   doc.text(`Prazo de embarque: ${quote.payment.deliveryDays} dias corridos`, 15, y);
   y += 5;
 
+  // Carrier and freight type
+  const freightType = quote.payment.freightType || 'CIF';
+  const freightLabel = freightType === 'CIF' ? 'CIF (Frete Pago)' : 'FOB (Frete a Pagar)';
   if (quote.payment.carrier) {
-    doc.text(`Transportadora: ${quote.payment.carrier}`, 15, y);
+    doc.text(`Transportadora: ${quote.payment.carrier} - ${freightLabel}`, 15, y);
+    y += 5;
+  } else {
+    doc.text(`Frete: ${freightLabel}`, 15, y);
     y += 5;
   }
   y += 5;

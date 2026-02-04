@@ -1,4 +1,4 @@
-import { PaymentConditions } from '@/types/quote';
+import { PaymentConditions, FreightType } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, Percent, Calendar, User } from 'lucide-react';
+import { CreditCard, Percent, Calendar, User, Truck } from 'lucide-react';
+
+const CARRIER_OPTIONS = [
+  'A combinar',
+  'Braspress',
+  'Jamef',
+  'TNT',
+  'Jadlog',
+  'Rodonaves',
+  'Patrus',
+  'Total Express',
+  'Outro',
+];
 
 const INSTALLMENT_OPTIONS = [
   { value: '15', label: '15 dias', installments: 1 },
@@ -196,28 +208,61 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         </div>
 
         {/* Delivery */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Prazo de Embarque (dias corridos)
-            </Label>
-            <Input
-              type="number"
-              min={1}
-              value={payment.deliveryDays}
-              onChange={(e) =>
-                updateField('deliveryDays', parseInt(e.target.value) || 30)
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Transportadora</Label>
-            <Input
-              value={payment.carrier}
-              onChange={(e) => updateField('carrier', e.target.value)}
-              placeholder="Nome da transportadora"
-            />
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Prazo de Embarque (dias corridos)
+          </Label>
+          <Input
+            type="number"
+            min={1}
+            value={payment.deliveryDays}
+            onChange={(e) =>
+              updateField('deliveryDays', parseInt(e.target.value) || 30)
+            }
+          />
+        </div>
+
+        {/* Carrier and Freight Type */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1">
+            <Truck className="h-3 w-3" />
+            Transporte
+          </Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-2">
+              <Label className="text-xs text-muted-foreground">Transportadora</Label>
+              <Select
+                value={payment.carrier || ''}
+                onValueChange={(value) => updateField('carrier', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a transportadora..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARRIER_OPTIONS.map((carrier) => (
+                    <SelectItem key={carrier} value={carrier}>
+                      {carrier}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Tipo de Frete</Label>
+              <Select
+                value={payment.freightType || 'CIF'}
+                onValueChange={(value) => updateField('freightType', value as FreightType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CIF">CIF (Pago)</SelectItem>
+                  <SelectItem value="FOB">FOB (A pagar)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
