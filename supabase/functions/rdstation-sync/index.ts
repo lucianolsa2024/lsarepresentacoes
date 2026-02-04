@@ -111,11 +111,30 @@ async function createOrganization(client: ClientData, token: string): Promise<st
   return data._id;
 }
 
+// Extract valid email from string (handles cases like "Name name@email.com")
+function extractValidEmail(input: string): string | null {
+  if (!input) return null;
+  
+  // Regex to find email pattern
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const match = input.match(emailRegex);
+  
+  if (match) {
+    const email = match[0].toLowerCase();
+    console.log(`Extracted valid email: ${email} from input: ${input}`);
+    return email;
+  }
+  
+  console.log(`No valid email found in: ${input}`);
+  return null;
+}
+
 async function searchContact(email: string, token: string): Promise<string | null> {
-  if (!email) return null;
+  const validEmail = extractValidEmail(email);
+  if (!validEmail) return null;
   
   try {
-    const data = await rdFetch(`/contacts?email=${encodeURIComponent(email)}`, { method: 'GET' }, token);
+    const data = await rdFetch(`/contacts?email=${encodeURIComponent(validEmail)}`, { method: 'GET' }, token);
     
     if (data.contacts && data.contacts.length > 0) {
       console.log(`Found existing contact: ${data.contacts[0]._id}`);
@@ -129,11 +148,13 @@ async function searchContact(email: string, token: string): Promise<string | nul
 }
 
 async function createContact(client: ClientData, organizationId: string, token: string): Promise<string> {
+  const validEmail = extractValidEmail(client.email);
+  
   const contactData = {
     contact: {
       name: client.name || client.company,
       title: 'Cliente',
-      emails: client.email ? [{ email: client.email }] : [],
+      emails: validEmail ? [{ email: validEmail }] : [],
       phones: client.phone ? [{ phone: client.phone, type: 'cellphone' }] : [],
       organization_id: organizationId,
     }
