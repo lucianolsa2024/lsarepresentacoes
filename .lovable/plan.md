@@ -1,169 +1,95 @@
 
-# Plano: Ícone de Upload de Imagem nos Produtos
+# Plano: Reduzir Tamanho do PDF e Adicionar Número do Orçamento no Histórico
 
-## Resumo
+## 1. Problema do Tamanho do PDF (11MB)
 
-Adicionar um ícone de câmera/imagem em cada card de produto no catálogo que permite fazer upload de uma imagem. A imagem será armazenada no Storage do backend e exibida automaticamente no carrinho e no PDF do orçamento.
+### Causa Principal
+As imagens dos produtos estão sendo convertidas para base64 sem compressão adequada. Na linha 77 do `pdfGenerator.ts`, a qualidade está em 0.8 (80%), mas as imagens originais podem ser muito grandes.
 
----
+### Solução
+1. **Reduzir qualidade das imagens** - Diminuir de 0.8 para 0.5 (50%)
+2. **Redimensionar imagens antes de converter** - Limitar a 100x100 pixels (já que são exibidas em 12x12mm no PDF)
+3. **Usar formato mais leve** - JPEG com compressão agressiva para fotos
 
-## Situação Atual
+## 2. Número do Orçamento no Histórico
 
-- O PDF já tem código para exibir imagens de produtos (linhas 175-183 do `pdfGenerator.ts`)
-- O carrinho já usa o componente `ProductImage` para exibir imagens
-- Atualmente, as imagens são buscadas em `public/images/products/` pelo nome do produto
-- Existem 11 imagens de produtos já cadastradas (ALENTO, AMBER, ARLO, etc.)
-- Problema: a maioria dos produtos não tem imagem porque depende de arquivos locais
+### Situação Atual
+- O histórico mostra: nome do cliente, data e total
+- O número do orçamento (primeiros 8 caracteres do UUID) só aparece no PDF
 
----
-
-## O Que Será Feito
-
-1. **Criar bucket de storage** `product-images` para armazenar as imagens
-2. **Adicionar coluna `image_url`** na tabela `products` para salvar a URL da imagem
-3. **Criar componente de upload** com preview e funcionalidade de remover
-4. **Adicionar ícone de câmera** nos cards de produto no `ProductManager`
-5. **Atualizar lógica de exibição** para priorizar imagem do storage
-
----
-
-## Fluxo de Upload
-
-```text
-Usuário clica no ícone de câmera no card
-              |
-              v
-     Abre dialog de upload
-              |
-              v
-  Mostra imagem atual (se existir)
-              |
-              v
-  Seleciona nova imagem (JPG/PNG/WebP)
-              |
-              v
-    Upload para o Storage
-              |
-              v
-   URL salva na tabela products
-              |
-              v
- Imagem aparece no card e orçamentos
-```
-
----
-
-## Alterações Visuais
-
-### Card de Produto (antes)
-```text
-+-------------------------------+
-| Nome do Produto    [✏️] [🗑️]  |
-| Cód: 12345                    |
-| Modulações: 3                 |
-| Tamanhos: 5                   |
-+-------------------------------+
-```
-
-### Card de Produto (depois)
-```text
-+-------------------------------+
-| Nome do Produto [📷] [✏️] [🗑️] |
-| Cód: 12345                    |
-| [    Miniatura    ]           |
-| Modulações: 3                 |
-| Tamanhos: 5                   |
-+-------------------------------+
-```
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/quote/ProductImageUpload.tsx` | **Criar** - Dialog de upload com preview |
-| `src/components/quote/ProductManager.tsx` | **Modificar** - Adicionar ícone e integração |
-| `src/hooks/useProducts.ts` | **Modificar** - Incluir campo `image_url` nas operações |
-| `src/utils/productImage.ts` | **Modificar** - Priorizar imagem do storage |
-| `src/types/quote.ts` | **Modificar** - Adicionar campo `imageUrl` em Product |
-| `src/components/ProductImage.tsx` | **Modificar** - Receber URL do storage como prop |
+### Solução
+- Adicionar o número do orçamento no card do histórico
+- Permitir busca pelo número do orçamento
 
 ---
 
 ## Detalhes Técnicos
 
-### 1. Migration: Criar Bucket e Coluna
+### Arquivo: `src/utils/pdfGenerator.ts`
 
-```sql
--- Criar bucket público para imagens de produtos
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('product-images', 'product-images', true);
-
--- Políticas de acesso
-CREATE POLICY "Imagens de produtos são públicas"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'product-images');
-
-CREATE POLICY "Usuários autenticados podem fazer upload"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
-
-CREATE POLICY "Admins podem deletar imagens"
-ON storage.objects FOR DELETE
-USING (bucket_id = 'product-images' AND has_role(auth.uid(), 'admin'::app_role));
-
--- Adicionar coluna na tabela products
-ALTER TABLE products
-ADD COLUMN image_url TEXT;
-```
-
-### 2. Componente ProductImageUpload
-
-Funcionalidades:
-- Input de arquivo com validação (JPG, PNG, WebP, máx 2MB)
-- Preview da imagem selecionada
-- Upload para storage com nome único (product_id + timestamp)
-- Atualização automática do produto
-- Botão para remover imagem existente
-
-### 3. Lógica de Exibição Atualizada
+**Modificações na função de carregamento de imagem:**
 
 ```typescript
-// Prioridade de busca de imagem:
-// 1. image_url do banco (storage do backend)
-// 2. Arquivo local em /images/products/NOME.jpg
-// 3. Placeholder padrão
+// Novo tamanho máximo para imagens (pixels)
+const MAX_IMAGE_SIZE = 100;
+
+// Na função loadImageViaElement, redimensionar a imagem:
+img.onload = () => {
+  const canvas = document.createElement('canvas');
+  // Calcular dimensões mantendo proporção, máximo 100x100
+  let width = img.naturalWidth;
+  let height = img.naturalHeight;
+  if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
+    const ratio = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
+    width = width * ratio;
+    height = height * ratio;
+  }
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(img, 0, 0, width, height);
+  // Usar qualidade 0.5 ao invés de 0.8
+  const base64 = canvas.toDataURL('image/jpeg', 0.5);
+};
 ```
 
-### 4. Integração com PDF
+### Arquivo: `src/components/quote/QuoteHistory.tsx`
 
-O `pdfGenerator.ts` será atualizado para:
-- Receber a URL da imagem do storage via `imageUrl` do item
-- Fazer o carregamento da imagem do storage se disponível
-- Manter fallback para imagens locais
+**Adicionar número do orçamento no card:**
+
+```tsx
+// Na exibição do card, adicionar:
+<span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+  <FileText className="h-3 w-3" />
+  #{quote.id.slice(0, 8).toUpperCase()}
+</span>
+```
+
+**Permitir busca pelo número:**
+
+```typescript
+// No filtro de busca, adicionar:
+const filteredQuotes = quotes.filter((quote) => {
+  const search = searchTerm.toLowerCase();
+  const quoteNumber = quote.id.slice(0, 8).toLowerCase();
+  return (
+    quote.client.name.toLowerCase().includes(search) ||
+    quote.client.company?.toLowerCase().includes(search) ||
+    formatDate(quote.createdAt).includes(search) ||
+    quoteNumber.includes(search) // Novo
+  );
+});
+```
 
 ---
 
 ## Resultado Esperado
 
-Ao clicar no ícone de câmera em um produto:
-1. Abre dialog com área de upload
-2. Mostra imagem atual se existir (do storage ou local)
-3. Permite selecionar nova imagem
-4. Faz upload automático ao confirmar
-5. Atualiza o card imediatamente
-6. Imagem aparece nos próximos orçamentos (carrinho + PDF)
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| Tamanho PDF | ~11MB | ~500KB-1MB |
+| Busca por número | Não | Sim |
+| Visualização número | Só no PDF | Card + PDF |
 
----
-
-## Considerações
-
-- **Formatos aceitos**: JPG, PNG, WebP
-- **Tamanho máximo**: 2MB
-- **Dimensões de exibição**: 
-  - Cards: 80x80px
-  - Carrinho: 40x40px
-  - PDF: 12x12mm
-- **Fallback**: Mantém compatibilidade com imagens locais existentes
-- **Permissões**: Apenas usuários autenticados podem fazer upload; apenas admins podem deletar
+## Arquivos a Modificar
+- `src/utils/pdfGenerator.ts` - Otimização de imagens
+- `src/components/quote/QuoteHistory.tsx` - Exibição e busca por número
