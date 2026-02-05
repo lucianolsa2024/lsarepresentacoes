@@ -1,162 +1,258 @@
 
-
-# Plano: Data Estimada de Fechamento e Integração com Outlook
+# Plano: Sistema de Rotas de Visitas
 
 ## Resumo
-Adicionar um campo de "data estimada de fechamento" no formulário de pagamento, calcular automaticamente a "data prevista de entrega" (fechamento + prazo de embarque) para exibir no PDF, e criar um botão para adicionar lembrete no Outlook.
+Implementar um módulo de planejamento de rotas de visitas a clientes, permitindo criar roteiros de viagem com múltiplos clientes agrupados por cidade/região, integrado ao calendário Outlook e com visualização em mapa.
 
 ---
 
-## 1. Adicionar Campo de Data Estimada de Fechamento
+## 1. Estrutura de Dados
 
-### Alterações no Tipo `PaymentConditions` (`src/types/quote.ts`)
-```typescript
-export interface PaymentConditions {
-  // ... campos existentes ...
-  estimatedClosingDate: string; // Data no formato ISO (YYYY-MM-DD)
-}
+### Nova Tabela: `visit_routes` (Rotas de Visita)
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid | Identificador único |
+| name | text | Nome da rota (ex: "Rota Curitiba - Fevereiro") |
+| start_date | date | Data de início da viagem |
+| end_date | date | Data de término |
+| status | text | 'planejada', 'em_andamento', 'concluida' |
+| notes | text | Observações gerais |
+| created_at | timestamp | Data de criação |
+| updated_at | timestamp | Última atualização |
 
-export const INITIAL_PAYMENT: PaymentConditions = {
-  // ... valores existentes ...
-  estimatedClosingDate: '', // Vazio por padrão
-};
-```
-
-### Alterações no Formulário (`src/components/quote/PaymentForm.tsx`)
-- Adicionar campo de data com `<Input type="date">` 
-- Posicionar após o campo de prazo de embarque
-- Label: "Data Estimada de Fechamento"
-- Ícone: CalendarCheck
-
----
-
-## 2. Calcular e Exibir Data de Entrega no PDF
-
-### Lógica de Cálculo
-```
-Data Prevista de Entrega = Data Estimada de Fechamento + Prazo de Embarque (dias)
-```
-
-### Alterações no PDF (`src/utils/pdfGenerator.ts`)
-- Se `estimatedClosingDate` estiver preenchida:
-  - Calcular data de entrega usando `date-fns`
-  - Exibir na seção de condições de pagamento: "Previsão de entrega: DD/MM/YYYY"
-- A data de fechamento **NÃO** é exibida no PDF
+### Nova Tabela: `route_visits` (Visitas da Rota)
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid | Identificador único |
+| route_id | uuid | FK para visit_routes |
+| client_id | uuid | FK para clients |
+| visit_date | date | Data planejada da visita |
+| visit_order | integer | Ordem na sequência do dia |
+| status | text | 'pendente', 'realizada', 'cancelada' |
+| notes | text | Observações da visita |
+| check_in_at | timestamp | Horário de check-in (opcional) |
+| check_out_at | timestamp | Horário de check-out (opcional) |
 
 ---
 
-## 3. Integração com Outlook Calendar
+## 2. Funcionalidades Principais
 
-### Funcionalidade
-Ao gerar o orçamento, se a data de fechamento estiver preenchida, oferecer botão para criar evento no Outlook.
+### 2.1 Tela de Gerenciamento de Rotas
+- Nova aba "Rotas" no sistema
+- Listagem de rotas com filtros por status e período
+- Criar/editar/excluir rotas
 
-### Implementação
+### 2.2 Criação de Rota
+1. Definir nome, período (data início/fim)
+2. Selecionar clientes da base
+3. Agrupar por cidade automaticamente
+4. Definir ordem de visitas por dia
+5. Adicionar observações
 
-**Nova função utilitária (`src/utils/outlookCalendar.ts`):**
-```typescript
-export function generateOutlookCalendarUrl(params: {
-  subject: string;
-  startDate: Date;
-  body: string;
-  location?: string;
-}): string {
-  // Usar URL do Outlook Live
-  // https://outlook.live.com/calendar/deeplink/compose
-  // Parâmetros: path, rru, startdt, enddt, subject, body
-}
+### 2.3 Visualização
+```
+┌────────────────────────────────────────────────────────────┐
+│ Rota: Curitiba/Ponta Grossa - Fev/2026                    │
+│ Status: Planejada | 10/02 a 12/02                         │
+├────────────────────────────────────────────────────────────┤
+│ 📅 10/02 (Segunda) - Curitiba                             │
+│   ┌─────────────────────────────────────────────────────┐ │
+│   │ 1. Cliente ABC Móveis                               │ │
+│   │    📍 R. das Flores, 123 - Centro                   │ │
+│   │    📞 (41) 99999-0000                               │ │
+│   │    ⏱️ Pendente                                      │ │
+│   ├─────────────────────────────────────────────────────┤ │
+│   │ 2. Decorações XYZ                                   │ │
+│   │    📍 Av. Brasil, 456 - Batel                       │ │
+│   │    📞 (41) 88888-0000                               │ │
+│   │    ⏱️ Pendente                                      │ │
+│   └─────────────────────────────────────────────────────┘ │
+│ 📅 11/02 (Terça) - Ponta Grossa                           │
+│   ...                                                     │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### Fluxo de Uso
-1. Usuário preenche a data estimada de fechamento
-2. Ao clicar em "Gerar Orçamento":
-   - PDF é gerado (com data de entrega calculada)
-   - Se data de fechamento preenchida, mostrar botão "Adicionar ao Outlook"
-3. Botão abre o Outlook Live com evento pré-preenchido:
-   - **Título**: "Fechamento Orçamento - [Nome da Empresa] #[ID]"
-   - **Data**: Data estimada de fechamento
-   - **Descrição**: Resumo do orçamento (cliente, valor, nº itens)
-
-### Opção Alternativa - Botão no Histórico
-Adicionar ícone de calendário no card do histórico para criar lembrete a qualquer momento.
+### 2.4 Ações por Visita
+- **Check-in/Check-out**: Marcar início e fim da visita
+- **Novo Orçamento**: Criar orçamento já vinculado ao cliente
+- **Adicionar ao Outlook**: Criar evento no calendário
+- **Abrir no Maps**: Link para Google Maps com o endereço
+- **Registrar Observação**: Anotar informações da visita
 
 ---
 
-## 4. Arquivos a Modificar
+## 3. Funcionalidades Extras
 
+### 3.1 Agrupamento Inteligente por Cidade
+Ao adicionar clientes, o sistema sugere agrupá-los por cidade:
+- Filtra clientes por cidade/estado
+- Sugere ordem baseada em proximidade (opcional)
+- Permite arrastar para reordenar (drag & drop)
+
+### 3.2 Integração com Outlook
+Criar eventos de calendário para:
+- Rota completa (evento de múltiplos dias)
+- Cada visita individual com horário estimado
+- Incluir endereço e dados do cliente
+
+### 3.3 Link para Google Maps
+- Botão que abre o Maps com o endereço do cliente
+- Opção de abrir rota completa do dia (múltiplos pontos)
+
+### 3.4 Check-in/Check-out
+- Registrar horário real da visita
+- Calcular tempo total no cliente
+- Relatório de tempo por cliente/região
+
+---
+
+## 4. Arquivos a Criar/Modificar
+
+### Novos Arquivos
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/hooks/useRoutes.ts` | Hook para gerenciar rotas |
+| `src/components/routes/RouteManager.tsx` | Tela principal de rotas |
+| `src/components/routes/RouteCard.tsx` | Card de exibição da rota |
+| `src/components/routes/RouteForm.tsx` | Formulário de criação/edição |
+| `src/components/routes/VisitCard.tsx` | Card de visita individual |
+| `src/components/routes/ClientSelector.tsx` | Seletor de clientes para rota |
+| `src/types/route.ts` | Tipos TypeScript |
+| `src/utils/mapUtils.ts` | Utilitários para links do Maps |
+
+### Arquivos Modificados
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/types/quote.ts` | Adicionar `estimatedClosingDate` ao `PaymentConditions` |
-| `src/components/quote/PaymentForm.tsx` | Adicionar campo de data |
-| `src/utils/pdfGenerator.ts` | Calcular e exibir data de entrega |
-| `src/utils/outlookCalendar.ts` | **NOVO** - Função para gerar URL do Outlook |
-| `src/pages/Index.tsx` | Chamar função do Outlook após gerar orçamento |
-| `src/components/quote/QuoteHistory.tsx` | Adicionar botão de lembrete no card |
+| `src/pages/Index.tsx` | Adicionar aba "Rotas" |
+| `src/utils/outlookCalendar.ts` | Adicionar função para rotas |
 
 ---
 
-## 5. Detalhes Técnicos
+## 5. Fluxo de Uso
 
-### URL do Outlook Calendar
 ```
-https://outlook.live.com/calendar/deeplink/compose
-  ?path=/calendar/action/compose
-  &rru=addevent
-  &startdt=2026-02-10T09:00:00Z
-  &enddt=2026-02-10T10:00:00Z
-  &subject=Fechamento%20Orçamento%20-%20Cliente%20ABC
-  &body=Valor%3A%20R%24%2050.000%0AItens%3A%205
-```
-
-### Formato de Data
-- Input: `YYYY-MM-DD` (formato HTML date input)
-- Outlook: `YYYY-MM-DDTHH:mm:ssZ` (ISO 8601 UTC)
-- PDF: `DD/MM/YYYY` (formato brasileiro)
-
-### Cálculo com date-fns
-```typescript
-import { addDays, format } from 'date-fns';
-
-const closingDate = new Date(payment.estimatedClosingDate);
-const deliveryDate = addDays(closingDate, payment.deliveryDays);
-const formattedDelivery = format(deliveryDate, 'dd/MM/yyyy');
+1. Usuário cria nova rota
+   ↓
+2. Define período (ex: 10-12/02/2026)
+   ↓
+3. Seleciona clientes (filtro por cidade disponível)
+   ↓
+4. Sistema agrupa por cidade automaticamente
+   ↓
+5. Usuário ajusta ordem de visitas
+   ↓
+6. Salva a rota
+   ↓
+7. Pode adicionar eventos ao Outlook
+   ↓
+8. Durante a viagem: check-in/check-out
+   ↓
+9. Ao finalizar: marca como concluída
 ```
 
 ---
 
 ## 6. Interface do Usuário
 
-### Campo no Formulário de Pagamento
+### Nova Aba "Rotas"
 ```
-┌─────────────────────────────────────┐
-│ 📅 Data Estimada de Fechamento      │
-│ ┌─────────────────────────────────┐ │
-│ │ [   10/02/2026              ▾ ] │ │
-│ └─────────────────────────────────┘ │
-│ ⓘ Esta data será usada para criar  │
-│   lembrete e calcular previsão de   │
-│   entrega                           │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ [Dashboard] [Novo] [Histórico] [Clientes] [Produtos] [Rotas]│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Botão no Card do Histórico
+### Tela de Rotas
 ```
-[ 👁 ] [ ✏ ] [ 📥 ] [ 📋 ] [ 📅 ] [ 🗑 ]
-                              ↑
-                    Adicionar ao Outlook
+┌────────────────────────────────────────────────────────────┐
+│ Rotas de Visitas                           [+ Nova Rota]   │
+├────────────────────────────────────────────────────────────┤
+│ Filtros: [Todas ▾] [Este mês ▾] [Pesquisar...          ]   │
+├────────────────────────────────────────────────────────────┤
+│ ┌──────────────────────┐ ┌──────────────────────┐          │
+│ │ 🗺️ Curitiba Fev      │ │ 🗺️ Londrina Jan      │          │
+│ │ 10/02 - 12/02/2026   │ │ 20/01 - 21/01/2026   │          │
+│ │ 5 clientes           │ │ 3 clientes           │          │
+│ │ ⚡ Planejada          │ │ ✅ Concluída          │          │
+│ │                      │ │                      │          │
+│ │ [Ver] [Outlook] [📍] │ │ [Ver] [Relatório]    │          │
+│ └──────────────────────┘ └──────────────────────┘          │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 7. Exibição no PDF
+## 7. Detalhes Técnicos
 
-Na seção "Condições de Pagamento":
+### Migração SQL
+```sql
+-- Tabela de rotas
+CREATE TABLE visit_routes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  status text DEFAULT 'planejada' CHECK (status IN ('planejada', 'em_andamento', 'concluida')),
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Tabela de visitas
+CREATE TABLE route_visits (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  route_id uuid REFERENCES visit_routes(id) ON DELETE CASCADE,
+  client_id uuid REFERENCES clients(id) ON DELETE SET NULL,
+  visit_date date NOT NULL,
+  visit_order integer DEFAULT 1,
+  status text DEFAULT 'pendente' CHECK (status IN ('pendente', 'realizada', 'cancelada')),
+  notes text,
+  check_in_at timestamptz,
+  check_out_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+
+-- RLS policies
+ALTER TABLE visit_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_visits ENABLE ROW LEVEL SECURITY;
 ```
-Forma: Parcelado
-3x de R$ 17.083,33
-Prazo de embarque: 30 dias corridos
-Previsão de entrega: 12/03/2026     ← NOVO
-Transportadora: Braspress - CIF (Frete Pago)
+
+### Link Google Maps
+```typescript
+export function generateGoogleMapsUrl(address: {
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+}): string {
+  const query = encodeURIComponent(
+    `${address.street}, ${address.number} - ${address.city}, ${address.state}`
+  );
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+// Rota com múltiplos pontos
+export function generateMultiPointRoute(addresses: string[]): string {
+  const waypoints = addresses.map(encodeURIComponent).join('/');
+  return `https://www.google.com/maps/dir/${waypoints}`;
+}
 ```
 
-**Nota**: A "data estimada de fechamento" NÃO aparece no PDF, apenas a data de entrega calculada.
+---
 
+## 8. Benefícios
+
+- **Organização**: Planejamento estruturado de visitas
+- **Produtividade**: Agrupamento por cidade economiza tempo
+- **Integração**: Outlook + Google Maps
+- **Histórico**: Registro de check-in/out para análise
+- **Mobilidade**: Funciona no celular para uso em campo
+
+---
+
+## 9. Próximas Evoluções (Futuras)
+
+- Estimativa de tempo de deslocamento
+- Otimização automática de rota (API de rotas)
+- Relatório de visitas realizadas vs planejadas
+- Integração com despesas de viagem
+- Notificações de lembrete
