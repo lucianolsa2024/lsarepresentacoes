@@ -275,6 +275,60 @@ export type Database = {
           },
         ]
       }
+      route_visits: {
+        Row: {
+          check_in_at: string | null
+          check_out_at: string | null
+          client_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          route_id: string
+          status: string | null
+          visit_date: string
+          visit_order: number | null
+        }
+        Insert: {
+          check_in_at?: string | null
+          check_out_at?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          route_id: string
+          status?: string | null
+          visit_date: string
+          visit_order?: number | null
+        }
+        Update: {
+          check_in_at?: string | null
+          check_out_at?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          route_id?: string
+          status?: string | null
+          visit_date?: string
+          visit_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_visits_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_visits_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "visit_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -293,6 +347,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      visit_routes: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          name: string
+          notes: string | null
+          start_date: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          name: string
+          notes?: string | null
+          start_date: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
