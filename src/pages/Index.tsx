@@ -12,6 +12,7 @@ import { useQuotes } from '@/hooks/useQuotes';
 import { useClients, Client } from '@/hooks/useClients';
 import { useAuth } from '@/hooks/useAuth';
 import { useRDStation } from '@/hooks/useRDStation';
+import { useActivities } from '@/hooks/useActivities';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,8 @@ import { QuoteHistory } from '@/components/quote/QuoteHistory';
 import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
 import { ClientManager } from '@/components/quote/ClientManager';
 import { RouteManager } from '@/components/routes/RouteManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map } from 'lucide-react';
+import { ActivityManager } from '@/components/activities/ActivityManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -48,6 +50,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
+  const { activities } = useActivities();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
@@ -231,7 +234,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-6 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-7 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -261,6 +264,13 @@ const Index = () => {
                 <span className="hidden sm:inline">Clientes</span>
               </TabsTrigger>
               <TabsTrigger
+                value="activities"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Atividades</span>
+              </TabsTrigger>
+              <TabsTrigger
                 value="products"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
@@ -278,7 +288,11 @@ const Index = () => {
 
             <div className="p-6">
               <TabsContent value="dashboard" className="mt-0">
-                <QuoteDashboard quotes={quotes} />
+                <QuoteDashboard 
+                  quotes={quotes} 
+                  activities={activities}
+                  onViewActivities={() => setActiveTab('activities')}
+                />
               </TabsContent>
 
               <TabsContent value="quote" className="mt-0">
@@ -385,6 +399,27 @@ const Index = () => {
                   onDelete={deleteQuote}
                   onDuplicate={duplicateQuote}
                   onEdit={handleEditQuote}
+                />
+              </TabsContent>
+
+              <TabsContent value="activities" className="mt-0">
+                <ActivityManager
+                  onCreateQuote={(clientId) => {
+                    const selectedClient = clients.find(c => c.id === clientId);
+                    if (selectedClient) {
+                      setClient({
+                        name: selectedClient.name,
+                        company: selectedClient.company,
+                        document: selectedClient.document,
+                        phone: selectedClient.phone,
+                        email: selectedClient.email,
+                        isNewClient: selectedClient.isNewClient,
+                        address: selectedClient.address,
+                      });
+                      setSelectedClientId(clientId);
+                      setActiveTab('quote');
+                    }
+                  }}
                 />
               </TabsContent>
 

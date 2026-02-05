@@ -14,6 +14,191 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          completed_notes: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string
+          due_time: string | null
+          id: string
+          parent_activity_id: string | null
+          priority: string | null
+          quote_id: string | null
+          recurrence_rule: Json | null
+          reminder_at: string | null
+          reminder_sent: boolean | null
+          route_visit_id: string | null
+          status: string | null
+          template_id: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          completed_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          due_time?: string | null
+          id?: string
+          parent_activity_id?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          recurrence_rule?: Json | null
+          reminder_at?: string | null
+          reminder_sent?: boolean | null
+          route_visit_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          completed_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          due_time?: string | null
+          id?: string
+          parent_activity_id?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          recurrence_rule?: Json | null
+          reminder_at?: string | null
+          reminder_sent?: boolean | null
+          route_visit_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_parent_fkey"
+            columns: ["parent_activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_route_visit_id_fkey"
+            columns: ["route_visit_id"]
+            isOneToOne: false
+            referencedRelation: "route_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_template_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "activity_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_reminders: {
+        Row: {
+          activity_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          reminder_type: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reminder_type?: string | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reminder_type?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_reminders_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_templates: {
+        Row: {
+          created_at: string | null
+          days_offset: number | null
+          default_priority: string | null
+          default_time: string | null
+          description_template: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          title_template: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          days_offset?: number | null
+          default_priority?: string | null
+          default_time?: string | null
+          description_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          title_template: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          days_offset?: number | null
+          default_priority?: string | null
+          default_time?: string | null
+          description_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          title_template?: string
+          type?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           city: string | null
