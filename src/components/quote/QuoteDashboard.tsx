@@ -1,12 +1,16 @@
 import { Quote } from '@/types/quote';
+import { Activity } from '@/types/activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, TrendingUp, Calendar, Package } from 'lucide-react';
+import { ActivityWidget } from '@/components/activities/ActivityWidget';
 
 interface QuoteDashboardProps {
   quotes: Quote[];
+  activities?: Activity[];
+  onViewActivities?: () => void;
 }
 
-export function QuoteDashboard({ quotes }: QuoteDashboardProps) {
+export function QuoteDashboard({ quotes, activities = [], onViewActivities }: QuoteDashboardProps) {
   // Calculate statistics
   const totalQuotes = quotes.length;
   
@@ -29,58 +33,69 @@ export function QuoteDashboard({ quotes }: QuoteDashboardProps) {
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Orçamentos</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalQuotes}</div>
-          <p className="text-xs text-muted-foreground">
-            {quotesThisMonth.length} este mês
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Orçamentos</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalQuotes}</div>
+            <p className="text-xs text-muted-foreground">
+              {quotesThisMonth.length} este mês
+            </p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">
-            Soma de todos os orçamentos
-          </p>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Soma de todos os orçamentos
+            </p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(averageTicket)}</div>
-          <p className="text-xs text-muted-foreground">
-            Por orçamento
-          </p>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(averageTicket)}</div>
+            <p className="text-xs text-muted-foreground">
+              Por orçamento
+            </p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalItems}</div>
-          <p className="text-xs text-muted-foreground">
-            Em todos os orçamentos
-          </p>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalItems}</div>
+            <p className="text-xs text-muted-foreground">
+              Em todos os orçamentos
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Activity Widget */}
+      {activities.length >= 0 && onViewActivities && (
+        <ActivityWidget 
+          activities={activities} 
+          onViewAll={onViewActivities}
+        />
+      )}
     </div>
   );
 }
