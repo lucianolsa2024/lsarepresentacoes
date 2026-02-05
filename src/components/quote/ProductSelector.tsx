@@ -285,8 +285,13 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                         onClick={() => handleSelectProduct(product)}
                         className="w-full text-left bg-muted/50 p-3 rounded-lg hover:bg-muted transition flex justify-between items-center group"
                       >
-                        <span className="font-semibold">{product.name}</span>
-                        <ChevronRight className="text-primary group-hover:translate-x-1 transition" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-semibold block">{product.name}</span>
+                          {product.description && (
+                            <span className="text-sm text-muted-foreground line-clamp-1">{product.description}</span>
+                          )}
+                        </div>
+                        <ChevronRight className="text-primary group-hover:translate-x-1 transition flex-shrink-0 ml-2" />
                       </button>
                     ))}
                   </div>
