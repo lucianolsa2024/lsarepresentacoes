@@ -1,95 +1,162 @@
 
-# Plano: Reduzir Tamanho do PDF e Adicionar Número do Orçamento no Histórico
 
-## 1. Problema do Tamanho do PDF (11MB)
+# Plano: Data Estimada de Fechamento e Integração com Outlook
 
-### Causa Principal
-As imagens dos produtos estão sendo convertidas para base64 sem compressão adequada. Na linha 77 do `pdfGenerator.ts`, a qualidade está em 0.8 (80%), mas as imagens originais podem ser muito grandes.
-
-### Solução
-1. **Reduzir qualidade das imagens** - Diminuir de 0.8 para 0.5 (50%)
-2. **Redimensionar imagens antes de converter** - Limitar a 100x100 pixels (já que são exibidas em 12x12mm no PDF)
-3. **Usar formato mais leve** - JPEG com compressão agressiva para fotos
-
-## 2. Número do Orçamento no Histórico
-
-### Situação Atual
-- O histórico mostra: nome do cliente, data e total
-- O número do orçamento (primeiros 8 caracteres do UUID) só aparece no PDF
-
-### Solução
-- Adicionar o número do orçamento no card do histórico
-- Permitir busca pelo número do orçamento
+## Resumo
+Adicionar um campo de "data estimada de fechamento" no formulário de pagamento, calcular automaticamente a "data prevista de entrega" (fechamento + prazo de embarque) para exibir no PDF, e criar um botão para adicionar lembrete no Outlook.
 
 ---
 
-## Detalhes Técnicos
+## 1. Adicionar Campo de Data Estimada de Fechamento
 
-### Arquivo: `src/utils/pdfGenerator.ts`
-
-**Modificações na função de carregamento de imagem:**
-
+### Alterações no Tipo `PaymentConditions` (`src/types/quote.ts`)
 ```typescript
-// Novo tamanho máximo para imagens (pixels)
-const MAX_IMAGE_SIZE = 100;
+export interface PaymentConditions {
+  // ... campos existentes ...
+  estimatedClosingDate: string; // Data no formato ISO (YYYY-MM-DD)
+}
 
-// Na função loadImageViaElement, redimensionar a imagem:
-img.onload = () => {
-  const canvas = document.createElement('canvas');
-  // Calcular dimensões mantendo proporção, máximo 100x100
-  let width = img.naturalWidth;
-  let height = img.naturalHeight;
-  if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
-    const ratio = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
-    width = width * ratio;
-    height = height * ratio;
-  }
-  canvas.width = width;
-  canvas.height = height;
-  ctx.drawImage(img, 0, 0, width, height);
-  // Usar qualidade 0.5 ao invés de 0.8
-  const base64 = canvas.toDataURL('image/jpeg', 0.5);
+export const INITIAL_PAYMENT: PaymentConditions = {
+  // ... valores existentes ...
+  estimatedClosingDate: '', // Vazio por padrão
 };
 ```
 
-### Arquivo: `src/components/quote/QuoteHistory.tsx`
+### Alterações no Formulário (`src/components/quote/PaymentForm.tsx`)
+- Adicionar campo de data com `<Input type="date">` 
+- Posicionar após o campo de prazo de embarque
+- Label: "Data Estimada de Fechamento"
+- Ícone: CalendarCheck
 
-**Adicionar número do orçamento no card:**
+---
 
-```tsx
-// Na exibição do card, adicionar:
-<span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-  <FileText className="h-3 w-3" />
-  #{quote.id.slice(0, 8).toUpperCase()}
-</span>
+## 2. Calcular e Exibir Data de Entrega no PDF
+
+### Lógica de Cálculo
+```
+Data Prevista de Entrega = Data Estimada de Fechamento + Prazo de Embarque (dias)
 ```
 
-**Permitir busca pelo número:**
+### Alterações no PDF (`src/utils/pdfGenerator.ts`)
+- Se `estimatedClosingDate` estiver preenchida:
+  - Calcular data de entrega usando `date-fns`
+  - Exibir na seção de condições de pagamento: "Previsão de entrega: DD/MM/YYYY"
+- A data de fechamento **NÃO** é exibida no PDF
 
+---
+
+## 3. Integração com Outlook Calendar
+
+### Funcionalidade
+Ao gerar o orçamento, se a data de fechamento estiver preenchida, oferecer botão para criar evento no Outlook.
+
+### Implementação
+
+**Nova função utilitária (`src/utils/outlookCalendar.ts`):**
 ```typescript
-// No filtro de busca, adicionar:
-const filteredQuotes = quotes.filter((quote) => {
-  const search = searchTerm.toLowerCase();
-  const quoteNumber = quote.id.slice(0, 8).toLowerCase();
-  return (
-    quote.client.name.toLowerCase().includes(search) ||
-    quote.client.company?.toLowerCase().includes(search) ||
-    formatDate(quote.createdAt).includes(search) ||
-    quoteNumber.includes(search) // Novo
-  );
-});
+export function generateOutlookCalendarUrl(params: {
+  subject: string;
+  startDate: Date;
+  body: string;
+  location?: string;
+}): string {
+  // Usar URL do Outlook Live
+  // https://outlook.live.com/calendar/deeplink/compose
+  // Parâmetros: path, rru, startdt, enddt, subject, body
+}
+```
+
+### Fluxo de Uso
+1. Usuário preenche a data estimada de fechamento
+2. Ao clicar em "Gerar Orçamento":
+   - PDF é gerado (com data de entrega calculada)
+   - Se data de fechamento preenchida, mostrar botão "Adicionar ao Outlook"
+3. Botão abre o Outlook Live com evento pré-preenchido:
+   - **Título**: "Fechamento Orçamento - [Nome da Empresa] #[ID]"
+   - **Data**: Data estimada de fechamento
+   - **Descrição**: Resumo do orçamento (cliente, valor, nº itens)
+
+### Opção Alternativa - Botão no Histórico
+Adicionar ícone de calendário no card do histórico para criar lembrete a qualquer momento.
+
+---
+
+## 4. Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/types/quote.ts` | Adicionar `estimatedClosingDate` ao `PaymentConditions` |
+| `src/components/quote/PaymentForm.tsx` | Adicionar campo de data |
+| `src/utils/pdfGenerator.ts` | Calcular e exibir data de entrega |
+| `src/utils/outlookCalendar.ts` | **NOVO** - Função para gerar URL do Outlook |
+| `src/pages/Index.tsx` | Chamar função do Outlook após gerar orçamento |
+| `src/components/quote/QuoteHistory.tsx` | Adicionar botão de lembrete no card |
+
+---
+
+## 5. Detalhes Técnicos
+
+### URL do Outlook Calendar
+```
+https://outlook.live.com/calendar/deeplink/compose
+  ?path=/calendar/action/compose
+  &rru=addevent
+  &startdt=2026-02-10T09:00:00Z
+  &enddt=2026-02-10T10:00:00Z
+  &subject=Fechamento%20Orçamento%20-%20Cliente%20ABC
+  &body=Valor%3A%20R%24%2050.000%0AItens%3A%205
+```
+
+### Formato de Data
+- Input: `YYYY-MM-DD` (formato HTML date input)
+- Outlook: `YYYY-MM-DDTHH:mm:ssZ` (ISO 8601 UTC)
+- PDF: `DD/MM/YYYY` (formato brasileiro)
+
+### Cálculo com date-fns
+```typescript
+import { addDays, format } from 'date-fns';
+
+const closingDate = new Date(payment.estimatedClosingDate);
+const deliveryDate = addDays(closingDate, payment.deliveryDays);
+const formattedDelivery = format(deliveryDate, 'dd/MM/yyyy');
 ```
 
 ---
 
-## Resultado Esperado
+## 6. Interface do Usuário
 
-| Aspecto | Antes | Depois |
-|---------|-------|--------|
-| Tamanho PDF | ~11MB | ~500KB-1MB |
-| Busca por número | Não | Sim |
-| Visualização número | Só no PDF | Card + PDF |
+### Campo no Formulário de Pagamento
+```
+┌─────────────────────────────────────┐
+│ 📅 Data Estimada de Fechamento      │
+│ ┌─────────────────────────────────┐ │
+│ │ [   10/02/2026              ▾ ] │ │
+│ └─────────────────────────────────┘ │
+│ ⓘ Esta data será usada para criar  │
+│   lembrete e calcular previsão de   │
+│   entrega                           │
+└─────────────────────────────────────┘
+```
 
-## Arquivos a Modificar
-- `src/utils/pdfGenerator.ts` - Otimização de imagens
-- `src/components/quote/QuoteHistory.tsx` - Exibição e busca por número
+### Botão no Card do Histórico
+```
+[ 👁 ] [ ✏ ] [ 📥 ] [ 📋 ] [ 📅 ] [ 🗑 ]
+                              ↑
+                    Adicionar ao Outlook
+```
+
+---
+
+## 7. Exibição no PDF
+
+Na seção "Condições de Pagamento":
+```
+Forma: Parcelado
+3x de R$ 17.083,33
+Prazo de embarque: 30 dias corridos
+Previsão de entrega: 12/03/2026     ← NOVO
+Transportadora: Braspress - CIF (Frete Pago)
+```
+
+**Nota**: A "data estimada de fechamento" NÃO aparece no PDF, apenas a data de entrega calculada.
+
