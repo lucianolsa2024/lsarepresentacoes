@@ -57,12 +57,15 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     // Check if this is a CAIXA product (description contains "CAIXA:")
     const hasCaixa = sizes.some(s => s.description.toUpperCase().includes('CAIXA:'));
     
-    if (hasCaixa) {
-      // For CAIXA products, each row is unique - don't deduplicate
+    // Check if this is a table/buffet product (has TAMPO in description)
+    const hasTampo = sizes.some(s => s.description.toUpperCase().includes('TAMPO:'));
+    
+    if (hasCaixa || hasTampo) {
+      // For CAIXA products or table/buffet products with TAMPO, each row is unique - don't deduplicate
       return sizes;
     }
     
-    // For non-CAIXA products, deduplicate by dimensions + base variation (PE, GIRATORIA, etc.)
+    // For other products, deduplicate by dimensions + base variation (PE, GIRATORIA, etc.)
     const uniqueSizes = new Map<string, typeof sizes[0]>();
     sizes.forEach(size => {
       // Extract base variation from description (PE, BASE GIRATORIA, etc.)
