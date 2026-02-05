@@ -445,14 +445,14 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(`Prazo de embarque: ${quote.payment.deliveryDays} dias corridos`, 15, y);
   y += 5;
 
-  // Estimated delivery date (if closing date is set)
-  if (quote.payment.estimatedClosingDate) {
-    const closingDate = new Date(quote.payment.estimatedClosingDate);
-    const deliveryDate = addDays(closingDate, quote.payment.deliveryDays);
-    const formattedDelivery = format(deliveryDate, 'dd/MM/yyyy');
-    doc.text(`Previsão de entrega: ${formattedDelivery}`, 15, y);
-    y += 5;
-  }
+  // TODO: Cálculo automático de data de entrega desabilitado temporariamente
+  // if (quote.payment.estimatedClosingDate) {
+  //   const closingDate = new Date(quote.payment.estimatedClosingDate);
+  //   const deliveryDate = addDays(closingDate, quote.payment.deliveryDays);
+  //   const formattedDelivery = format(deliveryDate, 'dd/MM/yyyy');
+  //   doc.text(`Previsão de entrega: ${formattedDelivery}`, 15, y);
+  //   y += 5;
+  // }
 
   // Carrier and freight type
   const freightType = quote.payment.freightType || 'CIF';
