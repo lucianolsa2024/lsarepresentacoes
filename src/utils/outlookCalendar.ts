@@ -1,5 +1,8 @@
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Quote } from '@/types/quote';
+import { RouteWithVisits, RouteVisit, RouteClient } from '@/types/route';
+import { formatAddress } from '@/utils/mapUtils';
 
 export interface OutlookCalendarParams {
   subject: string;
@@ -7,6 +10,7 @@ export interface OutlookCalendarParams {
   endDate?: Date;
   body: string;
   location?: string;
+  isAllDay?: boolean;
 }
 
 /**
@@ -14,7 +18,7 @@ export interface OutlookCalendarParams {
  * Opens Outlook web to create a new event with pre-filled data
  */
 export function generateOutlookCalendarUrl(params: OutlookCalendarParams): string {
-  const { subject, startDate, body, location } = params;
+  const { subject, startDate, body, location, isAllDay } = params;
   
   // End date defaults to 1 hour after start
   const endDate = params.endDate || new Date(startDate.getTime() + 60 * 60 * 1000);
@@ -34,6 +38,10 @@ export function generateOutlookCalendarUrl(params: OutlookCalendarParams): strin
   
   if (location) {
     searchParams.set('location', location);
+  }
+
+  if (isAllDay) {
+    searchParams.set('allday', 'true');
   }
   
   return `https://outlook.live.com/calendar/deeplink/compose?${searchParams.toString()}`;
@@ -88,4 +96,80 @@ export function openQuoteReminder(quote: Quote): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Creates an Outlook calendar URL for an entire route (multi-day event)
+ */
+export function generateRouteCalendarUrl(route: RouteWithVisits): string {
+  const startDate = new Date(route.start_date + 'T09:00:00');
+  const endDate = new Date(route.end_date + 'T18:00:00');
+  
+  // Get unique cities from visits
+  const cities = [...new Set(route.visits.map(v => v.client?.city).filter(Boolean))];
+  const citiesStr = cities.join(', ');
+  
+  const clientsList = route.visits
+    .filter(v => v.client)
+    .map(v => `• ${v.client?.company}`)
+    .join('\n');
+  
+  const body = [
+    `Rota de Visitas: ${route.name}`,
+    ``,
+    `Período: ${format(startDate, "dd/MM", { locale: ptBR })} a ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`,
+    `Total de visitas: ${route.visits.length}`,
+    ``,
+    `Clientes:`,
+    clientsList,
+    ``,
+    route.notes ? `Observações: ${route.notes}` : '',
+  ].filter(Boolean).join('\n');
+  
+  return generateOutlookCalendarUrl({
+    subject: `🗺️ ${route.name}`,
+    startDate,
+    endDate,
+    body,
+    location: citiesStr,
+    isAllDay: true,
+  });
+}
+
+/**
+ * Creates an Outlook calendar URL for a single visit
+ */
+export function generateVisitCalendarUrl(visit: RouteVisit, client: RouteClient): string {
+  const visitDate = new Date(visit.visit_date + 'T09:00:00');
+  // Add 1 hour visit duration
+  visitDate.setHours(9 + (visit.visit_order - 1), 0, 0, 0);
+  const endTime = new Date(visitDate.getTime() + 60 * 60 * 1000);
+  
+  const address = formatAddress({
+    street: client.street,
+    number: client.number,
+    neighborhood: client.neighborhood,
+    city: client.city,
+    state: client.state,
+  });
+  
+  const body = [
+    `Visita ao cliente: ${client.company}`,
+    ``,
+    client.name ? `Contato: ${client.name}` : '',
+    client.phone ? `Telefone: ${client.phone}` : '',
+    client.email ? `Email: ${client.email}` : '',
+    ``,
+    address ? `Endereço: ${address}` : '',
+    ``,
+    visit.notes ? `Observações: ${visit.notes}` : '',
+  ].filter(Boolean).join('\n');
+  
+  return generateOutlookCalendarUrl({
+    subject: `📍 Visita - ${client.company}`,
+    startDate: visitDate,
+    endDate: endTime,
+    body,
+    location: address,
+  });
 }

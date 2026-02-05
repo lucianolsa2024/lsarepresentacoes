@@ -23,7 +23,8 @@ import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
 import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
 import { ClientManager } from '@/components/quote/ClientManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save } from 'lucide-react';
+import { RouteManager } from '@/components/routes/RouteManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -230,7 +231,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-5 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-6 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -265,6 +266,13 @@ const Index = () => {
               >
                 <Package className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="routes"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Map className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Rotas</span>
               </TabsTrigger>
             </TabsList>
 
@@ -397,6 +405,28 @@ const Index = () => {
                   onUpdate={updateProduct}
                   onDelete={deleteProduct}
                   onRefresh={refetchProducts}
+                />
+              </TabsContent>
+
+              <TabsContent value="routes" className="mt-0">
+                <RouteManager 
+                  onCreateQuote={(clientId) => {
+                    // Find the client and populate the form
+                    const selectedClient = clients.find(c => c.id === clientId);
+                    if (selectedClient) {
+                      setClient({
+                        name: selectedClient.name,
+                        company: selectedClient.company,
+                        document: selectedClient.document,
+                        phone: selectedClient.phone,
+                        email: selectedClient.email,
+                        isNewClient: selectedClient.isNewClient,
+                        address: selectedClient.address,
+                      });
+                      setSelectedClientId(clientId);
+                      setActiveTab('quote');
+                    }
+                  }}
                 />
               </TabsContent>
             </div>
