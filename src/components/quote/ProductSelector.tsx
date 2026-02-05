@@ -422,7 +422,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                         
                         return (
                           <SelectItem key={size.id} value={size.id}>
-                            {displayText}
+                            <div className="flex flex-col items-start">
+                              <span>{displayText}</span>
+                              <span className="text-xs text-muted-foreground">{size.description}</span>
+                            </div>
                           </SelectItem>
                         );
                       })}
