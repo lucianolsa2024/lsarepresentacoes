@@ -99,6 +99,7 @@ export interface PaymentConditions {
   freightType: FreightType;
   observations: string;
   representativeName: string; // Name of the sales representative
+  estimatedClosingDate: string; // Data no formato ISO (YYYY-MM-DD)
 }
 
 export interface Quote {
@@ -142,4 +143,5 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   freightType: 'CIF',
   observations: '',
   representativeName: 'Luciano Abreu',
+  estimatedClosingDate: '',
 };

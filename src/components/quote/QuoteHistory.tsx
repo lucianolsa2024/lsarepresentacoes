@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Quote } from '@/types/quote';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
+import { openQuoteReminder } from '@/utils/outlookCalendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Search,
   Download,
   Copy,
@@ -28,6 +34,7 @@ import {
   Eye,
   FileText,
   Calendar,
+  CalendarPlus,
   User,
   Edit2,
 } from 'lucide-react';
@@ -87,6 +94,19 @@ export function QuoteHistory({
     if (onEdit) {
       onEdit(quote);
       toast.info('Orçamento carregado para edição');
+    }
+  };
+
+  const handleAddToOutlook = (quote: Quote) => {
+    if (!quote.payment.estimatedClosingDate) {
+      toast.error('Este orçamento não tem data de fechamento definida');
+      return;
+    }
+    const opened = openQuoteReminder(quote);
+    if (opened) {
+      toast.success('Abrindo Outlook para criar lembrete');
+    } else {
+      toast.error('Não foi possível criar o lembrete');
     }
   };
 
@@ -210,6 +230,24 @@ export function QuoteHistory({
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleAddToOutlook(quote)}
+                            disabled={!quote.payment.estimatedClosingDate}
+                            title="Adicionar lembrete ao Outlook"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {quote.payment.estimatedClosingDate 
+                            ? 'Adicionar lembrete ao Outlook'
+                            : 'Sem data de fechamento definida'}
+                        </TooltipContent>
+                      </Tooltip>
                       <Button
                         variant="ghost"
                         size="icon"
