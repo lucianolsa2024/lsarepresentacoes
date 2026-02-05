@@ -110,9 +110,17 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedProduct ? isTableCategory(selectedProduct.category) : false;
   }, [selectedProduct]);
 
+  // Check if the selected size already includes finish info (TAMPO:) - skip fabric/finish step
+  const hasTampoInSize = useMemo(() => {
+    return selectedSize?.description.toUpperCase().includes('TAMPO:') ?? false;
+  }, [selectedSize]);
+
   // Get available fabric/finish tiers (only those with price > 0)
   const availableFabricTiers = useMemo(() => {
     if (!selectedSize) return [];
+    
+    // If TAMPO is already in the size description, no need for separate finish selection
+    if (hasTampoInSize) return [];
     
     if (isTable) {
       // For tables, use TABLE_TIERS and filter by available prices
@@ -127,7 +135,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       const price = selectedSize.prices[tier] || 0;
       return price > 0;
     });
-  }, [selectedSize, isTable]);
+  }, [selectedSize, isTable, hasTampoInSize]);
 
   // Get fabrics for selected tier, filtered by search
   const availableFabrics = useMemo(() => {
@@ -144,23 +152,41 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   }, [config.fabricTier, fabricSearch]);
 
   const handleConfirm = () => {
-    // For tables, we don't need fabric selection
-    const needsFabricCode = !isTable;
+    // For tables with TAMPO in size, we skip both fabric tier and code selection
+    // For other tables, we skip fabric code but need tier
+    // For regular products, we need both
+    const needsFabricTier = !hasTampoInSize;
+    const needsFabricCode = !isTable && !hasTampoInSize;
     
-    if (!selectedProduct || !config.modulationId || !config.sizeId || !config.fabricTier) return;
+    if (!selectedProduct || !config.modulationId || !config.sizeId) return;
+    if (needsFabricTier && !config.fabricTier) return;
     if (needsFabricCode && !config.fabricCode) return;
 
     const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
     const size = modulation?.sizes.find(s => s.id === config.sizeId);
     if (!modulation || !size) return;
 
-    const price = size.prices[config.fabricTier as FabricTier] || 0;
+    // For products with TAMPO in size, get the price from the first available price column
+    let price: number;
+    let fabricDescription: string;
     
-    // For tables, use the tier label as the fabric description
-    let fabricDescription = config.fabricCode;
-    if (isTable) {
-      const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
-      fabricDescription = tableTier?.label || config.fabricTier;
+    if (hasTampoInSize) {
+      // Find first non-zero price
+      const priceKeys: FabricTier[] = ['FX B', 'FX C', 'FX D', 'FX E', 'FX F'];
+      const priceEntry = priceKeys.find(key => (size.prices[key] || 0) > 0);
+      price = priceEntry ? size.prices[priceEntry] : 0;
+      // Extract TAMPO info from description
+      const tampoMatch = size.description.match(/TAMPO:\s*([^,\n]+)/i);
+      fabricDescription = tampoMatch ? `TAMPO: ${tampoMatch[1].trim()}` : 'Acabamento incluído';
+    } else {
+      price = size.prices[config.fabricTier as FabricTier] || 0;
+      
+      // For tables, use the tier label as the fabric description
+      fabricDescription = config.fabricCode;
+      if (isTable) {
+        const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
+        fabricDescription = tableTier?.label || config.fabricTier;
+      }
     }
 
     const item: QuoteItem = {
@@ -173,7 +199,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeId: config.sizeId,
       sizeDescription: size.description,
       base: size.base || config.base,
-      fabricTier: config.fabricTier as FabricTier,
+      fabricTier: (hasTampoInSize ? 'FX B' : config.fabricTier) as FabricTier,
       fabricDescription,
       price,
       quantity: 1,
@@ -434,8 +460,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 4: Finish/Fabric Tier */}
-              {config.sizeId && (
+              {/* Step 4: Finish/Fabric Tier (skip if TAMPO is in size description) */}
+              {config.sizeId && !hasTampoInSize && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricTier')}. {isTable ? 'Acabamento' : 'Faixa de Tecido'} *</Label>
                   <Select
@@ -531,8 +557,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Item Summary - show for tables when tier is selected, for others when fabric code is selected */}
-              {((isTable && config.fabricTier) || (!isTable && config.fabricCode)) && (() => {
+              {/* Item Summary - show for TAMPO products when size selected, tables when tier selected, others when fabric code selected */}
+              {(hasTampoInSize || (isTable && config.fabricTier) || (!isTable && config.fabricCode)) && (() => {
                 // Check if this is a CAIXA product and extract the tier
                 const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
                 const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
@@ -644,7 +670,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulationId || !config.sizeId || !config.fabricTier || (!isTable && !config.fabricCode)}
+                disabled={!config.modulationId || !config.sizeId || (!hasTampoInSize && !config.fabricTier) || (!isTable && !hasTampoInSize && !config.fabricCode)}
                 className="w-full"
               >
                 Confirmar Item
