@@ -12,9 +12,10 @@ export const TABLE_TIERS = [
   { key: 'FX F' as FabricTier, label: 'Tampo ou Base em Recoro' },
 ] as const;
 
-// Helper to check if a category is a table
+// Helper to check if a category is a table or buffet (no fabric)
 export function isTableCategory(category: string): boolean {
-  return category.toLowerCase().includes('mesa');
+  const lower = category.toLowerCase();
+  return lower.includes('mesa') || lower.includes('buffet');
 }
 
 export interface ModulationSize {
