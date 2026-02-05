@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, Percent, Calendar, User, Truck } from 'lucide-react';
+import { CreditCard, Percent, Calendar, User, Truck, CalendarCheck } from 'lucide-react';
 
 const CARRIER_OPTIONS = [
   'A combinar',
@@ -223,6 +223,22 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
               updateField('deliveryDays', parseInt(e.target.value) || 30)
             }
           />
+        </div>
+
+        {/* Estimated Closing Date */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <CalendarCheck className="h-3 w-3" />
+            Data Estimada de Fechamento
+          </Label>
+          <Input
+            type="date"
+            value={payment.estimatedClosingDate}
+            onChange={(e) => updateField('estimatedClosingDate', e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Esta data será usada para criar lembrete e calcular previsão de entrega
+          </p>
         </div>
 
         {/* Carrier and Freight Type */}
