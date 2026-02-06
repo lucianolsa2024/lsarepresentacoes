@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, 
   Check, X, MessageCircle, Calendar, MoreHorizontal, Clock,
-  Building2, Play
+  Building2, Play, GraduationCap, Wrench, Heart
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +38,10 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   visita: MapPin,
   reuniao: Users,
   tarefa: ClipboardList,
+  treinamento: GraduationCap,
+  assistencia: Wrench,
+  relacionamento: Heart,
+  outros: MoreHorizontal,
 };
 
 export function ActivityCard({
@@ -90,6 +94,10 @@ export function ActivityCard({
     visita: 'text-orange-600 dark:text-orange-400',
     reuniao: 'text-indigo-600 dark:text-indigo-400',
     tarefa: 'text-gray-600 dark:text-gray-400',
+    treinamento: 'text-cyan-600 dark:text-cyan-400',
+    assistencia: 'text-amber-600 dark:text-amber-400',
+    relacionamento: 'text-pink-600 dark:text-pink-400',
+    outros: 'text-slate-600 dark:text-slate-400',
   };
 
   if (compact) {

@@ -119,6 +119,41 @@ export type Database = {
           },
         ]
       }
+      activity_checklist_items: {
+        Row: {
+          activity_id: string
+          checked: boolean
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          activity_id: string
+          checked?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          activity_id?: string
+          checked?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_checklist_items_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_reminders: {
         Row: {
           activity_id: string

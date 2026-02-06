@@ -73,6 +73,10 @@ function getTypeEmoji(type: Activity['type']): string {
     visita: '📍',
     reuniao: '🤝',
     tarefa: '📋',
+    treinamento: '🎓',
+    assistencia: '🔧',
+    relacionamento: '💝',
+    outros: '📌',
   };
   return emojis[type];
 }

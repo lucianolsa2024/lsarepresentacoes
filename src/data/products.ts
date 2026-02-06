@@ -2,9 +2,14 @@
 export const PRODUCT_CATEGORIES = [
   'Sofás',
   'Poltronas',
-  'Puffs',
   'Cadeiras',
   'Mesas',
+  'Buffets',
+  'Puffs',
+  'Banquetas',
+  'Mesas Laterais',
+  'Mesas de Centro',
+  'Mesas de Cabeceira',
   'Outros',
 ];
 
