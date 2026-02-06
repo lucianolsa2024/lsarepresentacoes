@@ -21,6 +21,14 @@ const messageTemplates: Record<ActivityType, (clientName: string, activityDate?:
     `Olá ${clientName}! Confirmando nossa reunião para ${date || 'o horário agendado'}. Nos vemos lá!`,
   tarefa: (clientName, _date) => 
     `Olá ${clientName}! Tudo bem?`,
+  treinamento: (clientName, date) => 
+    `Olá ${clientName}! Confirmando nosso treinamento para ${date || 'o dia agendado'}. Tudo certo?`,
+  assistencia: (clientName, _date) => 
+    `Olá ${clientName}! Estou entrando em contato sobre a assistência técnica solicitada. Podemos alinhar os detalhes?`,
+  relacionamento: (clientName, _date) => 
+    `Olá ${clientName}! Tudo bem? Estou passando para saber como estão as coisas!`,
+  outros: (clientName, _date) => 
+    `Olá ${clientName}! Tudo bem?`,
 };
 
 export function generateWhatsAppMessage(activity: Activity, client: ClientInfo): string {
