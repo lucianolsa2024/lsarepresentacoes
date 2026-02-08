@@ -301,14 +301,14 @@ export function ActivityForm({
           <div className="space-y-2">
             <Label>Lembrete</Label>
             <Select 
-              value={reminderMinutes?.toString() || ''} 
-              onValueChange={(v) => setReminderMinutes(v ? parseInt(v) : null)}
+              value={reminderMinutes?.toString() || 'none'} 
+              onValueChange={(v) => setReminderMinutes(v === 'none' ? null : parseInt(v))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sem lembrete" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem lembrete</SelectItem>
+                <SelectItem value="none">Sem lembrete</SelectItem>
                 {REMINDER_OPTIONS.map(opt => (
                   <SelectItem key={opt.value} value={opt.value.toString()}>
                     {opt.label}

@@ -13,6 +13,7 @@ import { useClients, Client } from '@/hooks/useClients';
 import { useAuth } from '@/hooks/useAuth';
 import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
+import { useOrders } from '@/hooks/useOrders';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const Index = () => {
   const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { activities } = useActivities();
+  const { orders } = useOrders();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
@@ -299,6 +301,7 @@ const Index = () => {
                 <QuoteDashboard 
                   quotes={quotes} 
                   activities={activities}
+                  orders={orders}
                   onViewActivities={() => setActiveTab('activities')}
                 />
               </TabsContent>
