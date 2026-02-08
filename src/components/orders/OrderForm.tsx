@@ -86,7 +86,7 @@ export function OrderForm({ clients, onSave, onAddClient, initialData }: Props) 
           </div>
           <div>
             <Label>Cliente</Label>
-            <Select onValueChange={handleClientSelect} value={selectedClientId || ''}>
+            <Select onValueChange={handleClientSelect} value={selectedClientId || undefined}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar cliente existente" />
               </SelectTrigger>
