@@ -16,6 +16,7 @@ export interface Order {
   price: number;
   orderType: string;
   paymentTerms: string;
+  pdfUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

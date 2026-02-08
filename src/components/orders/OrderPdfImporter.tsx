@@ -14,7 +14,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 interface Props {
   clients: Client[];
-  onImport: (orders: { order: OrderFormData; clientId?: string | null }[]) => Promise<number>;
+  onImport: (orders: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null }[]) => Promise<number>;
   onAddClient: (client: ClientData) => Promise<Client | null>;
   onComplete: () => void;
 }
@@ -51,6 +51,10 @@ interface ExtractedData {
   }[];
 }
 
+interface ExtractedDataWithFile extends ExtractedData {
+  file: File;
+}
+
 async function extractTextFromPdf(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
@@ -65,7 +69,7 @@ async function extractTextFromPdf(file: File): Promise<string> {
 
 export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }: Props) {
   const [step, setStep] = useState<'upload' | 'extracting' | 'preview' | 'importing'>('upload');
-  const [extractedList, setExtractedList] = useState<ExtractedData[]>([]);
+  const [extractedList, setExtractedList] = useState<ExtractedDataWithFile[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +85,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
 
     setStep('extracting');
     setProgress({ current: 0, total: pdfFiles.length, currentFile: '' });
-    const results: ExtractedData[] = [];
+    const results: ExtractedDataWithFile[] = [];
 
     for (let i = 0; i < pdfFiles.length; i++) {
       const file = pdfFiles[i];
@@ -103,7 +107,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
           continue;
         }
 
-        results.push({ ...data, fileName: file.name } as ExtractedData);
+        results.push({ ...data, fileName: file.name, file } as ExtractedDataWithFile);
       } catch (err) {
         console.error(`Error processing ${file.name}:`, err);
         toast.error(`Erro ao processar ${file.name}`);
@@ -139,10 +143,10 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
       const clientMap = new Map<string, string>();
       clients.forEach(c => clientMap.set(c.company.toLowerCase(), c.id));
 
-      const allOrders: { order: OrderFormData; clientId: string | null }[] = [];
+      const allOrders: { order: OrderFormData; clientId: string | null; pdfUrl: string | null }[] = [];
 
       for (const extracted of extractedList) {
-        const { cliente, pedido, itens } = extracted;
+        const { cliente, pedido, itens, file } = extracted;
         const clientName = cliente.nomeFantasia;
         let clientId = clientMap.get(clientName.toLowerCase()) || null;
 
@@ -171,6 +175,26 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
           }
         }
 
+        // Upload PDF to storage
+        let pdfUrl: string | null = null;
+        try {
+          const timestamp = Date.now();
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const filePath = `${pedido.numeroPedido || timestamp}/${safeName}`;
+          const { error: uploadError } = await supabase.storage
+            .from('pedidos')
+            .upload(filePath, file, { upsert: true });
+
+          if (!uploadError) {
+            // Store the path, not the public URL (bucket is private)
+            pdfUrl = filePath;
+          } else {
+            console.warn('PDF upload failed:', uploadError);
+          }
+        } catch (err) {
+          console.warn('PDF upload error:', err);
+        }
+
         for (const item of itens) {
           allOrders.push({
             order: {
@@ -191,6 +215,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
               paymentTerms: pedido.condicaoPagamento || '',
             },
             clientId,
+            pdfUrl,
           });
         }
       }

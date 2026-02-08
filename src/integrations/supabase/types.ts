@@ -386,6 +386,7 @@ export type Database = {
           order_number: string | null
           order_type: string | null
           payment_terms: string | null
+          pdf_url: string | null
           price: number | null
           product: string | null
           quantity: number | null
@@ -407,6 +408,7 @@ export type Database = {
           order_number?: string | null
           order_type?: string | null
           payment_terms?: string | null
+          pdf_url?: string | null
           price?: number | null
           product?: string | null
           quantity?: number | null
@@ -428,6 +430,7 @@ export type Database = {
           order_number?: string | null
           order_type?: string | null
           payment_terms?: string | null
+          pdf_url?: string | null
           price?: number | null
           product?: string | null
           quantity?: number | null

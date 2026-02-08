@@ -21,11 +21,12 @@ const dbToOrder = (row: any): Order => ({
   price: row.price || 0,
   orderType: row.order_type || 'ENCOMENDA',
   paymentTerms: row.payment_terms || '',
+  pdfUrl: row.pdf_url || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
-const orderToDb = (order: OrderFormData, clientId?: string | null) => ({
+const orderToDb = (order: OrderFormData, clientId?: string | null, pdfUrl?: string | null) => ({
   client_id: clientId || null,
   issue_date: order.issueDate,
   client_name: order.clientName,
@@ -42,6 +43,7 @@ const orderToDb = (order: OrderFormData, clientId?: string | null) => ({
   price: order.price || 0,
   order_type: order.orderType || 'ENCOMENDA',
   payment_terms: order.paymentTerms || null,
+  pdf_url: pdfUrl || null,
 });
 
 export function useOrders() {
@@ -70,11 +72,11 @@ export function useOrders() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const addOrder = async (order: OrderFormData, clientId?: string | null): Promise<Order | null> => {
+  const addOrder = async (order: OrderFormData, clientId?: string | null, pdfUrl?: string | null): Promise<Order | null> => {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .insert(orderToDb(order, clientId))
+        .insert(orderToDb(order, clientId, pdfUrl))
         .select()
         .single();
 
@@ -89,9 +91,9 @@ export function useOrders() {
     }
   };
 
-  const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null }[]): Promise<number> => {
+  const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null }[]): Promise<number> => {
     try {
-      const rows = ordersData.map(d => orderToDb(d.order, d.clientId));
+      const rows = ordersData.map(d => orderToDb(d.order, d.clientId, d.pdfUrl));
       const { data, error } = await supabase
         .from('orders')
         .insert(rows)
