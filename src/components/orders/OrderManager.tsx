@@ -4,8 +4,9 @@ import { useClients } from '@/hooks/useClients';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
+import { OrderPdfImporter } from './OrderPdfImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { List, Plus, Upload } from 'lucide-react';
+import { List, Plus, Upload, FileText } from 'lucide-react';
 
 export function OrderManager() {
   const { orders, loading, addOrder, addOrders, updateOrder, deleteOrder } = useOrders();
@@ -28,7 +29,11 @@ export function OrderManager() {
           </TabsTrigger>
           <TabsTrigger value="import">
             <Upload className="h-4 w-4 mr-2" />
-            Importar
+            Importar Excel
+          </TabsTrigger>
+          <TabsTrigger value="pdf">
+            <FileText className="h-4 w-4 mr-2" />
+            Importar PDF
           </TabsTrigger>
         </TabsList>
 
@@ -55,6 +60,15 @@ export function OrderManager() {
 
         <TabsContent value="import" className="mt-4">
           <OrderImporter
+            clients={clients}
+            onImport={addOrders}
+            onAddClient={addClient}
+            onComplete={() => setActiveTab('list')}
+          />
+        </TabsContent>
+
+        <TabsContent value="pdf" className="mt-4">
+          <OrderPdfImporter
             clients={clients}
             onImport={addOrders}
             onAddClient={addClient}

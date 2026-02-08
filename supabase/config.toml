@@ -2,3 +2,6 @@ project_id = "pjdyaeprvtwoltynoqri"
 
 [functions.rdstation-sync]
 verify_jwt = false
+
+[functions.parse-order-pdf]
+verify_jwt = false
