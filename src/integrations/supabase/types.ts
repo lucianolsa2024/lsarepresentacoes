@@ -371,6 +371,80 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          client_id: string | null
+          client_name: string
+          created_at: string
+          delivery_date: string | null
+          dimensions: string | null
+          fabric: string | null
+          fabric_provided: string | null
+          id: string
+          issue_date: string
+          oc: string | null
+          order_number: string | null
+          order_type: string | null
+          payment_terms: string | null
+          price: number | null
+          product: string | null
+          quantity: number | null
+          representative: string | null
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_name: string
+          created_at?: string
+          delivery_date?: string | null
+          dimensions?: string | null
+          fabric?: string | null
+          fabric_provided?: string | null
+          id?: string
+          issue_date: string
+          oc?: string | null
+          order_number?: string | null
+          order_type?: string | null
+          payment_terms?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          representative?: string | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string
+          created_at?: string
+          delivery_date?: string | null
+          dimensions?: string | null
+          fabric?: string | null
+          fabric_provided?: string | null
+          id?: string
+          issue_date?: string
+          oc?: string | null
+          order_number?: string | null
+          order_type?: string | null
+          payment_terms?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          representative?: string | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_modulations: {
         Row: {
           created_at: string | null

@@ -26,7 +26,8 @@ import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
 import { ClientManager } from '@/components/quote/ClientManager';
 import { RouteManager } from '@/components/routes/RouteManager';
 import { ActivityManager } from '@/components/activities/ActivityManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList } from 'lucide-react';
+import { OrderManager } from '@/components/orders/OrderManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -234,7 +235,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-7 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-8 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -276,6 +277,13 @@ const Index = () => {
               >
                 <Package className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="orders"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Pedidos</span>
               </TabsTrigger>
               <TabsTrigger
                 value="routes"
@@ -441,6 +449,10 @@ const Index = () => {
                   onDelete={deleteProduct}
                   onRefresh={refetchProducts}
                 />
+              </TabsContent>
+
+              <TabsContent value="orders" className="mt-0">
+                <OrderManager />
               </TabsContent>
 
               <TabsContent value="routes" className="mt-0">
