@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Order, OrderFormData } from '@/types/order';
 import { Client } from '@/hooks/useClients';
 import { Input } from '@/components/ui/input';
@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Search, Loader2 } from 'lucide-react';
+import { Trash2, Search, Loader2, FileDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Props {
   orders: Order[];
@@ -20,6 +22,18 @@ interface Props {
 export function OrderList({ orders, loading, onDelete, clients }: Props) {
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
+
+  const handleDownloadPdf = useCallback(async (pdfPath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('pedidos')
+        .createSignedUrl(pdfPath, 300);
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch {
+      toast.error('Erro ao gerar link do PDF');
+    }
+  }, []);
 
   const uniqueClients = useMemo(() => {
     const names = [...new Set(orders.map(o => o.clientName))].sort();
@@ -110,13 +124,14 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
               <TableHead className="text-right">Preço</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Pagamento</TableHead>
+              <TableHead>PDF</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                   Nenhum pedido encontrado
                 </TableCell>
               </TableRow>
@@ -137,6 +152,15 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                     <Badge variant="outline">{order.orderType}</Badge>
                   </TableCell>
                   <TableCell>{order.paymentTerms || '-'}</TableCell>
+                  <TableCell>
+                    {order.pdfUrl ? (
+                      <Button variant="ghost" size="icon" title="Baixar PDF" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
+                        <FileDown className="h-4 w-4 text-primary" />
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => onDelete(order.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
