@@ -626,6 +626,74 @@ export type Database = {
           },
         ]
       }
+      sales_opportunities: {
+        Row: {
+          client_id: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          expected_close_date: string | null
+          funnel_type: string
+          id: string
+          lost_at: string | null
+          lost_reason: string | null
+          notes: string | null
+          stage: string
+          title: string
+          updated_at: string
+          value: number | null
+          won_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          expected_close_date?: string | null
+          funnel_type?: string
+          id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          stage?: string
+          title: string
+          updated_at?: string
+          value?: number | null
+          won_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          expected_close_date?: string | null
+          funnel_type?: string
+          id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          stage?: string
+          title?: string
+          updated_at?: string
+          value?: number | null
+          won_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

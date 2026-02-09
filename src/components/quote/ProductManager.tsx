@@ -49,6 +49,7 @@ interface NewSize {
 // Helper to create empty prices
 const createEmptyPrices = (): Record<FabricTier, string> => ({
   'SEM TEC': '',
+  'FORNECIDO': '',
   'FX B': '',
   'FX C': '',
   'FX D': '',

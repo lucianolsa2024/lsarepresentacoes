@@ -140,14 +140,36 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
     setStep('importing');
 
     try {
+      // Fetch existing orders for dedup (by order_number + client_name)
+      const { data: existingOrders } = await supabase
+        .from('orders')
+        .select('order_number, client_name');
+
+      const existingSet = new Set(
+        (existingOrders || [])
+          .filter(o => o.order_number)
+          .map(o => `${(o.order_number || '').trim().toLowerCase()}|${(o.client_name || '').trim().toLowerCase()}`)
+      );
       const clientMap = new Map<string, string>();
       clients.forEach(c => clientMap.set(c.company.toLowerCase(), c.id));
 
       const allOrders: { order: OrderFormData; clientId: string | null; pdfUrl: string | null }[] = [];
 
+      let skippedDuplicates = 0;
+
       for (const extracted of extractedList) {
         const { cliente, pedido, itens, file } = extracted;
         const clientName = cliente.nomeFantasia;
+        const orderNum = (pedido.numeroPedido || '').trim().toLowerCase();
+        const dedupKey = `${orderNum}|${clientName.trim().toLowerCase()}`;
+
+        // Skip if this order already exists (by order_number + client_name)
+        if (orderNum && existingSet.has(dedupKey)) {
+          skippedDuplicates++;
+          toast.info(`Pedido #${pedido.numeroPedido} de "${clientName}" já existe — ignorado`);
+          continue;
+        }
+
         let clientId = clientMap.get(clientName.toLowerCase()) || null;
 
         if (!clientId) {
@@ -221,7 +243,10 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
       }
 
       const count = await onImport(allOrders);
-      toast.success(`${count} pedido(s) importado(s) de ${extractedList.length} PDF(s)!`);
+      const msg = skippedDuplicates > 0
+        ? `${count} pedido(s) importado(s), ${skippedDuplicates} duplicado(s) ignorado(s)`
+        : `${count} pedido(s) importado(s) de ${extractedList.length} PDF(s)!`;
+      toast.success(msg);
       setExtractedList([]);
       setStep('upload');
       onComplete();
