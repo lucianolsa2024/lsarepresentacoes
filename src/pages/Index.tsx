@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
-import { generateQuotePDF } from '@/utils/pdfGenerator';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ClientForm } from '@/components/quote/ClientForm';
@@ -147,7 +147,6 @@ const Index = () => {
       toast.success('Orçamento gerado e salvo com sucesso!');
     }
     
-    await generateQuotePDF(quote);
     syncQuoteToRDStation(quote);
 
     if (clearAfterSave) {
