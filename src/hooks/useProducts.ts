@@ -41,6 +41,7 @@ const dbSizeToApp = (size: {
   fabricQuantity: size.fabric_quantity || 0,
   prices: {
     'SEM TEC': size.price_sem_tec || 0,
+    'FORNECIDO': size.price_fx_b || 0,
     'FX B': size.price_fx_b || 0,
     'FX C': size.price_fx_c || 0,
     'FX D': size.price_fx_d || 0,

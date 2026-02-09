@@ -1,3 +1,5 @@
+import { getAcabamentoCategories } from './acabamentos';
+
 // Product categories
 export const PRODUCT_CATEGORIES = [
   'Sofás',
@@ -13,15 +15,8 @@ export const PRODUCT_CATEGORIES = [
   'Outros',
 ];
 
-// Base/finish options
-export const BASE_OPTIONS = [
-  'FOSCA/METALIZADO',
-  'MTX',
-  'MADEIRA NATURAL',
-  'MADEIRA ESCURA',
-  'INOX',
-  'DOURADO',
-];
+// Base/finish options - now from acabamentos 2026
+export const BASE_OPTIONS = getAcabamentoCategories();
 
 // Empty array - all products come from the database now
 export const DEFAULT_PRODUCTS = [];

@@ -1,5 +1,5 @@
 // Fabric price tiers for upholstered furniture
-export const FABRIC_TIERS = ['SEM TEC', 'FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J', 'FX 3D', 'FX COURO'] as const;
+export const FABRIC_TIERS = ['SEM TEC', 'FORNECIDO', 'FX B', 'FX C', 'FX D', 'FX E', 'FX F', 'FX G', 'FX H', 'FX I', 'FX J', 'FX 3D', 'FX COURO'] as const;
 export type FabricTier = typeof FABRIC_TIERS[number];
 
 // Table finish tiers (mapped to existing price columns)

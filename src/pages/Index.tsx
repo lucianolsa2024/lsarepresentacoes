@@ -28,7 +28,8 @@ import { ClientManager } from '@/components/quote/ClientManager';
 import { RouteManager } from '@/components/routes/RouteManager';
 import { ActivityManager } from '@/components/activities/ActivityManager';
 import { OrderManager } from '@/components/orders/OrderManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, ShoppingCart } from 'lucide-react';
+import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, ShoppingCart, Briefcase, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formatWhatsAppMessage = (quote: Quote) => {
@@ -63,6 +64,7 @@ const Index = () => {
   };
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [comercialTab, setComercialTab] = useState('quote');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -128,7 +130,7 @@ const Index = () => {
 
     const quote: Quote = {
       id: editingQuoteId || crypto.randomUUID(),
-      createdAt: editingQuoteId ? new Date().toISOString() : new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       client,
       items,
       payment,
@@ -146,8 +148,6 @@ const Index = () => {
     }
     
     await generateQuotePDF(quote);
-
-    // Sync with RD Station CRM (non-blocking)
     syncQuoteToRDStation(quote);
 
     if (clearAfterSave) {
@@ -172,7 +172,8 @@ const Index = () => {
     setPayment(quote.payment);
     setEditingQuoteId(quote.id);
     setSelectedClientId(null);
-    setActiveTab('quote');
+    setActiveTab('comercial');
+    setComercialTab('quote');
   };
 
   const handleSendWhatsApp = () => {
@@ -206,6 +207,24 @@ const Index = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleNavigateToQuote = (clientId: string) => {
+    const selectedClient = clients.find(c => c.id === clientId);
+    if (selectedClient) {
+      setClient({
+        name: selectedClient.name,
+        company: selectedClient.company,
+        document: selectedClient.document,
+        phone: selectedClient.phone,
+        email: selectedClient.email,
+        isNewClient: selectedClient.isNewClient,
+        address: selectedClient.address,
+      });
+      setSelectedClientId(clientId);
+      setActiveTab('comercial');
+      setComercialTab('quote');
+    }
+  };
+
   const subtotal = calculateSubtotal();
 
   return (
@@ -237,7 +256,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-8 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-7 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -246,25 +265,11 @@ const Index = () => {
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               <TabsTrigger
-                value="quote"
+                value="comercial"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{editingQuoteId ? 'Editar' : 'Novo'}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="history"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <History className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Histórico</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="clients"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Clientes</span>
+                <Briefcase className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Comercial</span>
               </TabsTrigger>
               <TabsTrigger
                 value="activities"
@@ -272,6 +277,13 @@ const Index = () => {
               >
                 <ClipboardList className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Atividades</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="funnels"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Funis</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
@@ -306,142 +318,140 @@ const Index = () => {
                 />
               </TabsContent>
 
-              <TabsContent value="quote" className="mt-0">
-                {editingQuoteId && (
-                  <div className="mb-4 p-3 bg-warning/20 border border-warning rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-warning-foreground">
-                      📝 Editando orçamento existente
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={handleReset}>
-                      Cancelar edição
-                    </Button>
-                  </div>
-                )}
-                <div className="grid lg:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-6">
-                    <ClientForm 
-                      client={client} 
-                      onChange={setClient}
-                      clients={clients}
-                      onSaveClient={handleSaveClient}
-                      selectedClientId={selectedClientId}
-                      onSelectClient={handleSelectClient}
-                    />
-                    <ProductSelector
-                      products={products}
-                      onAddItem={handleAddItem}
-                    />
-                  </div>
+              {/* COMERCIAL - Sub-tabs */}
+              <TabsContent value="comercial" className="mt-0">
+                <Tabs value={comercialTab} onValueChange={setComercialTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="quote">
+                      <FileText className="h-4 w-4 mr-2" />
+                      {editingQuoteId ? 'Editar Orçamento' : 'Novo Orçamento'}
+                    </TabsTrigger>
+                    <TabsTrigger value="history">
+                      <History className="h-4 w-4 mr-2" />
+                      Histórico
+                    </TabsTrigger>
+                    <TabsTrigger value="clients">
+                      <Users className="h-4 w-4 mr-2" />
+                      Clientes
+                    </TabsTrigger>
+                  </TabsList>
 
-                  {/* Right Column */}
-                  <div className="space-y-6">
-                    <QuoteCart
-                      items={items}
-                      onUpdateQuantity={handleUpdateQuantity}
-                      onUpdateObservations={handleUpdateObservations}
-                      onRemoveItem={handleRemoveItem}
-                    />
-                    <PaymentForm
-                      payment={payment}
-                      onChange={setPayment}
-                      subtotal={subtotal}
-                    />
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-3">
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={handleReset}
-                          className="flex-1"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Limpar
-                        </Button>
-                        <Button
-                          onClick={() => handleGenerateQuote(false)}
-                          className="flex-1"
-                          disabled={!client.company || items.length === 0 || isSyncing}
-                        >
-                          {isSyncing ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : editingQuoteId ? (
-                            <Save className="h-4 w-4 mr-2" />
-                          ) : (
-                            <Download className="h-4 w-4 mr-2" />
-                          )}
-                          {editingQuoteId ? 'Salvar Alterações' : 'Gerar Orçamento'}
+                  <TabsContent value="quote" className="mt-0">
+                    {editingQuoteId && (
+                      <div className="mb-4 p-3 bg-warning/20 border border-warning rounded-lg flex items-center justify-between">
+                        <span className="text-sm text-warning-foreground">
+                          📝 Editando orçamento existente
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={handleReset}>
+                          Cancelar edição
                         </Button>
                       </div>
-                      {!editingQuoteId && (
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={() => handleGenerateQuote(true)}
-                            variant="secondary"
-                            className="flex-1"
-                            disabled={!client.company || items.length === 0 || isSyncing}
-                          >
-                            {isSyncing ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Download className="h-4 w-4 mr-2" />
-                            )}
-                            Gerar e Limpar
-                          </Button>
-                          <Button
-                            onClick={handleSendWhatsApp}
-                            className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
-                            disabled={!client.company || items.length === 0}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            WhatsApp
-                          </Button>
+                    )}
+                    <div className="grid lg:grid-cols-2 gap-6">
+                      <div className="space-y-6">
+                        <ClientForm 
+                          client={client} 
+                          onChange={setClient}
+                          clients={clients}
+                          onSaveClient={handleSaveClient}
+                          selectedClientId={selectedClientId}
+                          onSelectClient={handleSelectClient}
+                        />
+                        <ProductSelector
+                          products={products}
+                          onAddItem={handleAddItem}
+                        />
+                      </div>
+                      <div className="space-y-6">
+                        <QuoteCart
+                          items={items}
+                          onUpdateQuantity={handleUpdateQuantity}
+                          onUpdateObservations={handleUpdateObservations}
+                          onRemoveItem={handleRemoveItem}
+                        />
+                        <PaymentForm
+                          payment={payment}
+                          onChange={setPayment}
+                          subtotal={subtotal}
+                        />
+                        <div className="flex flex-col gap-3">
+                          <div className="flex gap-3">
+                            <Button variant="outline" onClick={handleReset} className="flex-1">
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Limpar
+                            </Button>
+                            <Button
+                              onClick={() => handleGenerateQuote(false)}
+                              className="flex-1"
+                              disabled={!client.company || items.length === 0 || isSyncing}
+                            >
+                              {isSyncing ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : editingQuoteId ? (
+                                <Save className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Download className="h-4 w-4 mr-2" />
+                              )}
+                              {editingQuoteId ? 'Salvar Alterações' : 'Gerar Orçamento'}
+                            </Button>
+                          </div>
+                          {!editingQuoteId && (
+                            <div className="flex gap-3">
+                              <Button
+                                onClick={() => handleGenerateQuote(true)}
+                                variant="secondary"
+                                className="flex-1"
+                                disabled={!client.company || items.length === 0 || isSyncing}
+                              >
+                                {isSyncing ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 mr-2" />
+                                )}
+                                Gerar e Limpar
+                              </Button>
+                              <Button
+                                onClick={handleSendWhatsApp}
+                                className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground border-whatsapp"
+                                disabled={!client.company || items.length === 0}
+                              >
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                WhatsApp
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </TabsContent>
+                  </TabsContent>
 
-              <TabsContent value="history" className="mt-0">
-                <QuoteHistory
-                  quotes={quotes}
-                  onDelete={deleteQuote}
-                  onDuplicate={duplicateQuote}
-                  onEdit={handleEditQuote}
-                />
+                  <TabsContent value="history" className="mt-0">
+                    <QuoteHistory
+                      quotes={quotes}
+                      onDelete={deleteQuote}
+                      onDuplicate={duplicateQuote}
+                      onEdit={handleEditQuote}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="clients" className="mt-0">
+                    <ClientManager
+                      clients={clients}
+                      loading={clientsLoading}
+                      onAdd={addClient}
+                      onUpdate={updateClient}
+                      onDelete={deleteClient}
+                    />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
 
               <TabsContent value="activities" className="mt-0">
-                <ActivityManager
-                  onCreateQuote={(clientId) => {
-                    const selectedClient = clients.find(c => c.id === clientId);
-                    if (selectedClient) {
-                      setClient({
-                        name: selectedClient.name,
-                        company: selectedClient.company,
-                        document: selectedClient.document,
-                        phone: selectedClient.phone,
-                        email: selectedClient.email,
-                        isNewClient: selectedClient.isNewClient,
-                        address: selectedClient.address,
-                      });
-                      setSelectedClientId(clientId);
-                      setActiveTab('quote');
-                    }
-                  }}
-                />
+                <ActivityManager onCreateQuote={handleNavigateToQuote} />
               </TabsContent>
 
-              <TabsContent value="clients" className="mt-0">
-                <ClientManager
-                  clients={clients}
-                  loading={clientsLoading}
-                  onAdd={addClient}
-                  onUpdate={updateClient}
-                  onDelete={deleteClient}
-                />
+              <TabsContent value="funnels" className="mt-0">
+                <SalesFunnelManager />
               </TabsContent>
 
               <TabsContent value="products" className="mt-0">
@@ -459,25 +469,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="routes" className="mt-0">
-                <RouteManager 
-                  onCreateQuote={(clientId) => {
-                    // Find the client and populate the form
-                    const selectedClient = clients.find(c => c.id === clientId);
-                    if (selectedClient) {
-                      setClient({
-                        name: selectedClient.name,
-                        company: selectedClient.company,
-                        document: selectedClient.document,
-                        phone: selectedClient.phone,
-                        email: selectedClient.email,
-                        isNewClient: selectedClient.isNewClient,
-                        address: selectedClient.address,
-                      });
-                      setSelectedClientId(clientId);
-                      setActiveTab('quote');
-                    }
-                  }}
-                />
+                <RouteManager onCreateQuote={handleNavigateToQuote} />
               </TabsContent>
             </div>
           </Tabs>

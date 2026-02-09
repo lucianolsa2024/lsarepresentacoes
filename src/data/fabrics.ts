@@ -6,9 +6,12 @@ export interface Fabric {
   notes?: string;
 }
 
-// Fabric collection 2025 - organized by tier
+// Fabric collection 2026 - organized by tier
 export const FABRICS: Fabric[] = [
-  // FX B - Codes starting with B2
+  // FORNECIDO - Tecido fornecido pelo cliente
+  { code: 'FORNECIDO', tier: 'FORNECIDO' },
+
+  // FX B
   { code: 'B2206', tier: 'FX B' },
   { code: 'B2262', tier: 'FX B' },
   { code: 'B2266', tier: 'FX B' },
@@ -24,15 +27,15 @@ export const FABRICS: Fabric[] = [
   { code: 'B2309', tier: 'FX B' },
   { code: 'B2310', tier: 'FX B' },
   { code: 'B2311', tier: 'FX B' },
-  { code: 'B2312', tier: 'FX B', notes: 'REF. ANTIGA D4219' },
+  { code: 'B2312', tier: 'FX B' },
   { code: 'B2313', tier: 'FX B' },
   { code: 'B2315', tier: 'FX B' },
-  
-  // FX C - Codes starting with C3
+  { code: 'B2325', tier: 'FX B' },
+  { code: 'B2326', tier: 'FX B' },
+
+  // FX C
   { code: 'C3078', tier: 'FX C' },
   { code: 'C3079', tier: 'FX C' },
-  { code: 'C3083', tier: 'FX C', notes: 'CAPA' },
-  { code: 'C3085', tier: 'FX C', notes: 'CAPA' },
   { code: 'C3090', tier: 'FX C' },
   { code: 'C3091', tier: 'FX C' },
   { code: 'C3092', tier: 'FX C' },
@@ -42,9 +45,9 @@ export const FABRICS: Fabric[] = [
   { code: 'C3154', tier: 'FX C' },
   { code: 'C3157', tier: 'FX C' },
   { code: 'C3179', tier: 'FX C' },
-  { code: 'C3180', tier: 'FX C' },
-  { code: 'C3181', tier: 'FX C' },
-  { code: 'C3182', tier: 'FX C' },
+  { code: 'C3180', tier: 'FX C', notes: 'REF. ANTIGA E5159' },
+  { code: 'C3181', tier: 'FX C', notes: 'REF. ANTIGA E5157' },
+  { code: 'C3182', tier: 'FX C', notes: 'REF. ANTIGA E5158' },
   { code: 'C3183', tier: 'FX C' },
   { code: 'C3189', tier: 'FX C' },
   { code: 'C3190', tier: 'FX C' },
@@ -54,8 +57,22 @@ export const FABRICS: Fabric[] = [
   { code: 'C3194', tier: 'FX C' },
   { code: 'C3195', tier: 'FX C' },
   { code: 'C3196', tier: 'FX C' },
-  
-  // FX D - Codes starting with D4
+  { code: 'C3201', tier: 'FX C' },
+  { code: 'C3202', tier: 'FX C' },
+  { code: 'C3203', tier: 'FX C' },
+  { code: 'C3204', tier: 'FX C' },
+  { code: 'C3205', tier: 'FX C' },
+  { code: 'C3206', tier: 'FX C' },
+  { code: 'C3207', tier: 'FX C' },
+  { code: 'C3208', tier: 'FX C' },
+  { code: 'C3209', tier: 'FX C' },
+  { code: 'C3210', tier: 'FX C' },
+
+  // FX C - CAPA
+  { code: 'C3083', tier: 'FX C', notes: 'CAPA' },
+  { code: 'C3085', tier: 'FX C', notes: 'CAPA' },
+
+  // FX D
   { code: 'D4116', tier: 'FX D' },
   { code: 'D4117', tier: 'FX D' },
   { code: 'D4119', tier: 'FX D' },
@@ -81,8 +98,19 @@ export const FABRICS: Fabric[] = [
   { code: 'D4249', tier: 'FX D' },
   { code: 'D4256', tier: 'FX D' },
   { code: 'D4257', tier: 'FX D' },
-  
-  // FX E - Codes starting with E5
+  { code: 'D4262', tier: 'FX D', notes: 'REF. ANTIGA E5170' },
+  { code: 'D4263', tier: 'FX D', notes: 'REF. ANTIGA E5172' },
+  { code: 'D4264', tier: 'FX D', notes: 'REF. ANTIGA E5169' },
+  { code: 'D4265', tier: 'FX D', notes: 'REF. ANTIGA E5171' },
+  { code: 'D4266', tier: 'FX D' },
+  { code: 'D4267', tier: 'FX D' },
+  { code: 'D4268', tier: 'FX D' },
+  { code: 'D4269', tier: 'FX D' },
+  { code: 'D4270', tier: 'FX D' },
+  { code: 'D4271', tier: 'FX D' },
+  { code: 'D4272', tier: 'FX D' },
+
+  // FX E
   { code: 'E5116', tier: 'FX E' },
   { code: 'E5117', tier: 'FX E' },
   { code: 'E5133', tier: 'FX E' },
@@ -93,9 +121,6 @@ export const FABRICS: Fabric[] = [
   { code: 'E5154', tier: 'FX E' },
   { code: 'E5155', tier: 'FX E' },
   { code: 'E5156', tier: 'FX E' },
-  { code: 'E5157', tier: 'FX E' },
-  { code: 'E5158', tier: 'FX E' },
-  { code: 'E5159', tier: 'FX E' },
   { code: 'E5160', tier: 'FX E' },
   { code: 'E5161', tier: 'FX E' },
   { code: 'E5162', tier: 'FX E' },
@@ -105,17 +130,22 @@ export const FABRICS: Fabric[] = [
   { code: 'E5166', tier: 'FX E' },
   { code: 'E5167', tier: 'FX E' },
   { code: 'E5168', tier: 'FX E' },
-  { code: 'E5169', tier: 'FX E' },
-  { code: 'E5170', tier: 'FX E' },
-  { code: 'E5171', tier: 'FX E' },
-  { code: 'E5172', tier: 'FX E' },
   { code: 'E5173', tier: 'FX E' },
   { code: 'E5174', tier: 'FX E' },
   { code: 'E5175', tier: 'FX E' },
   { code: 'E5176', tier: 'FX E' },
-  { code: 'E5177', tier: 'FX E', notes: 'REF. ANTIGA D4258' },
-  
-  // FX F - Codes starting with F6
+  { code: 'E5177', tier: 'FX E' },
+  { code: 'E7178', tier: 'FX E' },
+  { code: 'E7179', tier: 'FX E' },
+  { code: 'E7180', tier: 'FX E' },
+  { code: 'E7181', tier: 'FX E' },
+  { code: 'E7182', tier: 'FX E' },
+  { code: 'E7183', tier: 'FX E' },
+  { code: 'E7184', tier: 'FX E' },
+  { code: 'E7185', tier: 'FX E' },
+  { code: 'E7186', tier: 'FX E' },
+
+  // FX F
   { code: 'F6211', tier: 'FX F' },
   { code: 'F6212', tier: 'FX F' },
   { code: 'F6213', tier: 'FX F' },
@@ -130,18 +160,20 @@ export const FABRICS: Fabric[] = [
   { code: 'F6252', tier: 'FX F' },
   { code: 'F6253', tier: 'FX F' },
   { code: 'F6254', tier: 'FX F' },
-  { code: 'F6255', tier: 'FX F', notes: 'REF. ANTIGA H8110' },
-  { code: 'F6256', tier: 'FX F', notes: 'REF. ANTIGA E5151' },
-  { code: 'F6257', tier: 'FX F', notes: 'REF. ANTIGA E5153' },
-  { code: 'F6258', tier: 'FX F', notes: 'CAPA' },
+  { code: 'F6255', tier: 'FX F' },
+  { code: 'F6256', tier: 'FX F' },
+  { code: 'F6257', tier: 'FX F' },
   { code: 'F6259', tier: 'FX F' },
-  { code: 'F6260', tier: 'FX F', notes: 'CAPA' },
   { code: 'F6261', tier: 'FX F' },
-  { code: 'F6262', tier: 'FX F', notes: 'CAPA' },
   { code: 'F6263', tier: 'FX F' },
   { code: 'F6264', tier: 'FX F' },
-  
-  // FX G - Codes starting with G7
+
+  // FX F - CAPA
+  { code: 'F6258', tier: 'FX F', notes: 'CAPA' },
+  { code: 'F6260', tier: 'FX F', notes: 'CAPA' },
+  { code: 'F6262', tier: 'FX F', notes: 'CAPA' },
+
+  // FX G
   { code: 'G7085', tier: 'FX G' },
   { code: 'G7090', tier: 'FX G' },
   { code: 'G7125', tier: 'FX G' },
@@ -153,13 +185,20 @@ export const FABRICS: Fabric[] = [
   { code: 'G7139', tier: 'FX G' },
   { code: 'G7141', tier: 'FX G' },
   { code: 'G7142', tier: 'FX G' },
-  { code: 'G7143', tier: 'FX G', notes: 'REF. ANTIGA I9074' },
-  { code: 'G7144', tier: 'FX G', notes: 'REF. ANTIGA F6228' },
-  { code: 'G7145', tier: 'FX G', notes: 'REF. ANTIGA F6226' },
-  { code: 'G7146', tier: 'FX G', notes: 'REF. ANTIGA F6225' },
-  { code: 'G7147', tier: 'FX G', notes: 'REF. ANTIGA F6227' },
-  
-  // FX H - Codes starting with H8
+  { code: 'G7143', tier: 'FX G' },
+  { code: 'G7144', tier: 'FX G' },
+  { code: 'G7145', tier: 'FX G' },
+  { code: 'G7146', tier: 'FX G' },
+  { code: 'G7147', tier: 'FX G' },
+  { code: 'G7148', tier: 'FX G' },
+  { code: 'G7149', tier: 'FX G' },
+  { code: 'G7150', tier: 'FX G' },
+  { code: 'G7151', tier: 'FX G' },
+  { code: 'G7152', tier: 'FX G' },
+  { code: 'G7153', tier: 'FX G' },
+  { code: 'G7154', tier: 'FX G' },
+
+  // FX H
   { code: 'H8078', tier: 'FX H' },
   { code: 'H8109', tier: 'FX H' },
   { code: 'H8113', tier: 'FX H' },
@@ -169,11 +208,16 @@ export const FABRICS: Fabric[] = [
   { code: 'H8119', tier: 'FX H' },
   { code: 'H8120', tier: 'FX H' },
   { code: 'H8122', tier: 'FX H' },
-  
-  // FX I - Codes starting with I9
+
+  // FX I
   { code: 'I9101', tier: 'FX I' },
-  
-  // FX J - Codes starting with J10
+  { code: 'I9106', tier: 'FX I' },
+  { code: 'I9107', tier: 'FX I' },
+  { code: 'I9108', tier: 'FX I' },
+  { code: 'I9109', tier: 'FX I' },
+  { code: 'I9110', tier: 'FX I' },
+
+  // FX J
   { code: 'J10001', tier: 'FX J' },
   { code: 'J10003', tier: 'FX J' },
   { code: 'J10004', tier: 'FX J' },
@@ -182,19 +226,19 @@ export const FABRICS: Fabric[] = [
   { code: 'J10010', tier: 'FX J' },
   { code: 'J10011', tier: 'FX J' },
   { code: 'J10012', tier: 'FX J' },
-  { code: 'J10014', tier: 'FX J', notes: 'REF. ANTIGA I9103' },
+  { code: 'J10014', tier: 'FX J' },
   { code: 'J10015', tier: 'FX J' },
   { code: 'J10016', tier: 'FX J' },
-  { code: 'J10017', tier: 'FX J', notes: 'REF. ANTIGA I9104' },
-  { code: 'J10018', tier: 'FX J', notes: 'REF. ANTIGA I9105' },
+  { code: 'J10017', tier: 'FX J' },
+  { code: 'J10018', tier: 'FX J' },
   { code: 'J10019', tier: 'FX J' },
   { code: 'J10020', tier: 'FX J' },
   { code: 'J10021', tier: 'FX J' },
   { code: 'J10022', tier: 'FX J' },
   { code: 'J10023', tier: 'FX J' },
   { code: 'J10024', tier: 'FX J' },
-  
-  // FX COURO - Leather options
+
+  // FX COURO
   { code: 'CAMURÇA COR WHISKY', tier: 'FX COURO' },
   { code: 'CAMURÇA COR MUSGO', tier: 'FX COURO' },
   { code: 'CAMURÇA COR CANELA', tier: 'FX COURO' },
