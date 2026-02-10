@@ -37,6 +37,7 @@ import {
   CalendarPlus,
   User,
   Edit2,
+  MessageCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -95,6 +96,20 @@ export function QuoteHistory({
       onEdit(quote);
       toast.info('Orçamento carregado para edição');
     }
+  };
+
+  const handleWhatsApp = (quote: Quote) => {
+    if (!quote.client.phone) {
+      toast.error('Cliente sem telefone cadastrado');
+      return;
+    }
+    const phone = quote.client.phone.replace(/\D/g, '');
+    const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    const itemsSummary = quote.items
+      .map((item, i) => `${i + 1}. ${item.productName} - ${item.modulation} (${item.quantity}x ${formatCurrency(item.price)})`)
+      .join('\n');
+    const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu orçamento #${quote.id.slice(0, 8).toUpperCase()}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleAddToOutlook = (quote: Quote) => {
@@ -221,6 +236,15 @@ export function QuoteHistory({
                         title="Baixar PDF"
                       >
                         <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleWhatsApp(quote)}
+                        title="Enviar por WhatsApp"
+                        disabled={!quote.client.phone}
+                      >
+                        <MessageCircle className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
