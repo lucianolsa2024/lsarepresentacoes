@@ -7,6 +7,8 @@ import { ActivityFilters } from './ActivityFilters';
 import { ActivityForm } from './ActivityForm';
 import { ActivityReport } from './ActivityReport';
 import { ActivityCalendarView } from './ActivityCalendarView';
+import { StoreChecklistForm } from './StoreChecklistForm';
+import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2 } from 'lucide-react';
@@ -53,6 +55,8 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
   const [completeDialog, setCompleteDialog] = useState<string | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -126,6 +130,19 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
     }
   };
 
+  const handleOpenChecklist = (activity: Activity) => {
+    setChecklistActivity(activity);
+    setChecklistOpen(true);
+  };
+
+  const handleSaveChecklist = async (data: StoreChecklistData) => {
+    if (!checklistActivity) return;
+    await updateActivity(checklistActivity.id, {
+      description: JSON.stringify(data),
+    });
+    setChecklistActivity(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -188,6 +205,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           onEdit={handleEdit}
           onDelete={(id) => setDeleteConfirm(id)}
           onCreateQuote={onCreateQuote}
+          onOpenChecklist={handleOpenChecklist}
           showCompleted={statusFilter === 'concluida' || statusFilter === 'all'}
         />
       )}
@@ -201,6 +219,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           onEdit={handleEdit}
           onDelete={(id) => setDeleteConfirm(id)}
           onCreateQuote={onCreateQuote}
+          onOpenChecklist={handleOpenChecklist}
         />
       )}
 
@@ -281,6 +300,24 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Store Checklist Form */}
+      <StoreChecklistForm
+        open={checklistOpen}
+        onOpenChange={(open) => {
+          setChecklistOpen(open);
+          if (!open) setChecklistActivity(null);
+        }}
+        onSave={handleSaveChecklist}
+        initialData={
+          checklistActivity?.description
+            ? (() => { try { return JSON.parse(checklistActivity.description); } catch { return undefined; } })()
+            : undefined
+        }
+        clientName={checklistActivity?.client?.company}
+        clientCity={undefined}
+        readOnly={checklistActivity?.status === 'concluida' || checklistActivity?.status === 'cancelada'}
+      />
     </div>
   );
 }
