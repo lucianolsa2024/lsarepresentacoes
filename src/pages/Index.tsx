@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
+import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -25,12 +26,19 @@ import { ProductManager } from '@/components/quote/ProductManager';
 import { QuoteHistory } from '@/components/quote/QuoteHistory';
 import { QuoteDashboard } from '@/components/quote/QuoteDashboard';
 import { ClientManager } from '@/components/quote/ClientManager';
+import { ClientDetailPanel } from '@/components/quote/ClientDetailPanel';
 import { RouteManager } from '@/components/routes/RouteManager';
 import { ActivityManager } from '@/components/activities/ActivityManager';
-import { OrderManager } from '@/components/orders/OrderManager';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, ShoppingCart, Briefcase, TrendingUp } from 'lucide-react';
+import { OperationManager } from '@/components/operations/OperationManager';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const formatWhatsAppMessage = (quote: Quote) => {
   const items = quote.items
@@ -55,6 +63,7 @@ const Index = () => {
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { activities, addActivity } = useActivities();
   const { orders } = useOrders();
+  const { opportunities } = useSalesOpportunities();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
@@ -70,6 +79,7 @@ const Index = () => {
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [payment, setPayment] = useState<PaymentConditions>(INITIAL_PAYMENT);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [clientDetailId, setClientDetailId] = useState<string | null>(null);
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
@@ -243,7 +253,12 @@ const Index = () => {
     }
   };
 
+  const handleViewClientDetail = (clientId: string) => {
+    setClientDetailId(clientId);
+  };
+
   const subtotal = calculateSubtotal();
+  const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
@@ -274,7 +289,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-7 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-6 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -304,25 +319,18 @@ const Index = () => {
                 <span className="hidden sm:inline">Funis</span>
               </TabsTrigger>
               <TabsTrigger
+                value="operations"
+                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Operação</span>
+              </TabsTrigger>
+              <TabsTrigger
                 value="products"
                 className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <Package className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="orders"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Pedidos</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="routes"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Map className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Rotas</span>
               </TabsTrigger>
             </TabsList>
 
@@ -351,6 +359,10 @@ const Index = () => {
                     <TabsTrigger value="clients">
                       <Users className="h-4 w-4 mr-2" />
                       Clientes
+                    </TabsTrigger>
+                    <TabsTrigger value="routes">
+                      <Map className="h-4 w-4 mr-2" />
+                      Rotas
                     </TabsTrigger>
                   </TabsList>
 
@@ -460,7 +472,12 @@ const Index = () => {
                       onAdd={addClient}
                       onUpdate={updateClient}
                       onDelete={deleteClient}
+                      onViewDetail={handleViewClientDetail}
                     />
+                  </TabsContent>
+
+                  <TabsContent value="routes" className="mt-0">
+                    <RouteManager onCreateQuote={handleNavigateToQuote} />
                   </TabsContent>
                 </Tabs>
               </TabsContent>
@@ -473,6 +490,10 @@ const Index = () => {
                 <SalesFunnelManager />
               </TabsContent>
 
+              <TabsContent value="operations" className="mt-0">
+                <OperationManager />
+              </TabsContent>
+
               <TabsContent value="products" className="mt-0">
                 <ProductManager
                   products={products}
@@ -482,18 +503,32 @@ const Index = () => {
                   onRefresh={refetchProducts}
                 />
               </TabsContent>
-
-              <TabsContent value="orders" className="mt-0">
-                <OrderManager />
-              </TabsContent>
-
-              <TabsContent value="routes" className="mt-0">
-                <RouteManager onCreateQuote={handleNavigateToQuote} />
-              </TabsContent>
             </div>
           </Tabs>
         </div>
       </div>
+
+      {/* Client Detail Dialog */}
+      <Dialog open={!!clientDetailId} onOpenChange={(open) => { if (!open) setClientDetailId(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{clientForDetail?.company || 'Cliente'}</DialogTitle>
+          </DialogHeader>
+          {clientDetailId && (
+            <ClientDetailPanel
+              clientId={clientDetailId}
+              clientName={clientForDetail?.company || ''}
+              activities={activities}
+              opportunities={opportunities}
+              orders={orders}
+              onNewActivity={() => {
+                setClientDetailId(null);
+                setActiveTab('activities');
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

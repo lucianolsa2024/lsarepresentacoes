@@ -2,7 +2,7 @@ import { Activity, ACTIVITY_TYPE_CONFIG } from '@/types/activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Clock, CalendarDays, ArrowRight, Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, GraduationCap, Wrench, Heart, MoreHorizontal } from 'lucide-react';
+import { AlertTriangle, Clock, CalendarDays, ArrowRight, Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, GraduationCap, Wrench, Heart, MoreHorizontal, ClipboardCheck } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   treinamento: GraduationCap,
   assistencia: Wrench,
   relacionamento: Heart,
+  checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
 };
 

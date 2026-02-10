@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, 
   Check, X, MessageCircle, Calendar, MoreHorizontal, Clock,
-  Building2, Play, GraduationCap, Wrench, Heart
+  Building2, Play, GraduationCap, Wrench, Heart, ClipboardCheck
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -41,6 +41,7 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   treinamento: GraduationCap,
   assistencia: Wrench,
   relacionamento: Heart,
+  checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
 };
 

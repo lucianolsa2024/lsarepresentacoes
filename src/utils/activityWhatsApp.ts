@@ -27,6 +27,8 @@ const messageTemplates: Record<ActivityType, (clientName: string, activityDate?:
     `Olá ${clientName}! Estou entrando em contato sobre a assistência técnica solicitada. Podemos alinhar os detalhes?`,
   relacionamento: (clientName, _date) => 
     `Olá ${clientName}! Tudo bem? Estou passando para saber como estão as coisas!`,
+  checklist_loja: (clientName, _date) => 
+    `Olá ${clientName}! Tudo bem? Estou entrando em contato sobre o checklist da loja.`,
   outros: (clientName, _date) => 
     `Olá ${clientName}! Tudo bem?`,
 };

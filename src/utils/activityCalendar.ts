@@ -76,6 +76,7 @@ function getTypeEmoji(type: Activity['type']): string {
     treinamento: '🎓',
     assistencia: '🔧',
     relacionamento: '💝',
+    checklist_loja: '✅',
     outros: '📌',
   };
   return emojis[type];

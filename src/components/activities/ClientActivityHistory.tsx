@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, Plus, CheckCircle, Clock, XCircle, GraduationCap, Wrench, Heart, MoreHorizontal } from 'lucide-react';
+import { Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, Plus, CheckCircle, Clock, XCircle, GraduationCap, Wrench, Heart, MoreHorizontal, ClipboardCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   treinamento: GraduationCap,
   assistencia: Wrench,
   relacionamento: Heart,
+  checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
 };
 

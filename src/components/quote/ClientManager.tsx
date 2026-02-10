@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Client, useClients } from '@/hooks/useClients';
+import { Client } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,8 @@ import {
   Building2, 
   Phone, 
   Mail,
-  MapPin
+  MapPin,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +42,7 @@ interface ClientManagerProps {
   onAdd: (client: ClientData) => Promise<Client | null>;
   onUpdate: (id: string, client: ClientData) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onViewDetail?: (clientId: string) => void;
 }
 
 export function ClientManager({
@@ -49,6 +51,7 @@ export function ClientManager({
   onAdd,
   onUpdate,
   onDelete,
+  onViewDetail,
 }: ClientManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -324,6 +327,16 @@ export function ClientManager({
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    {onViewDetail && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onViewDetail(client.id)}
+                        title="Ver histórico"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
