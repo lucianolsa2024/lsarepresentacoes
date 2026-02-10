@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Quote } from '@/types/quote';
+import { Activity } from '@/types/activity';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { openQuoteReminder } from '@/utils/outlookCalendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -38,11 +40,14 @@ import {
   User,
   Edit2,
   MessageCircle,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QuoteHistoryProps {
   quotes: Quote[];
+  activities?: Activity[];
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onEdit?: (quote: Quote) => void;
@@ -50,6 +55,7 @@ interface QuoteHistoryProps {
 
 export function QuoteHistory({
   quotes,
+  activities = [],
   onDelete,
   onDuplicate,
   onEdit,
@@ -57,6 +63,14 @@ export function QuoteHistory({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const getFollowUpStatus = (quoteId: string) => {
+    const followUps = activities.filter(a => a.quote_id === quoteId && a.type === 'followup');
+    if (followUps.length === 0) return null;
+    if (followUps.some(a => a.status === 'concluida')) return 'concluida';
+    if (followUps.some(a => a.status === 'pendente' || a.status === 'em_andamento')) return 'pendente';
+    return 'cancelada';
+  };
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -189,8 +203,22 @@ export function QuoteHistory({
                         <span className="text-sm text-muted-foreground truncate">
                           ({quote.client.name})
                         </span>
-                      )}
-                    </div>
+                        )}
+                        {(() => {
+                          const status = getFollowUpStatus(quote.id);
+                          if (status === 'concluida') return (
+                            <Badge variant="outline" className="text-xs gap-1 border-green-300 text-green-700 bg-green-50">
+                              <CheckCircle2 className="h-3 w-3" /> Follow-up concluído
+                            </Badge>
+                          );
+                          if (status === 'pendente') return (
+                            <Badge variant="outline" className="text-xs gap-1 border-yellow-300 text-yellow-700 bg-yellow-50">
+                              <Clock className="h-3 w-3" /> Follow-up pendente
+                            </Badge>
+                          );
+                          return null;
+                        })()}
+                      </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />

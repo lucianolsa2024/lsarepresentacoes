@@ -446,6 +446,7 @@ const Index = () => {
                   <TabsContent value="history" className="mt-0">
                     <QuoteHistory
                       quotes={quotes}
+                      activities={activities}
                       onDelete={deleteQuote}
                       onDuplicate={duplicateQuote}
                       onEdit={handleEditQuote}
