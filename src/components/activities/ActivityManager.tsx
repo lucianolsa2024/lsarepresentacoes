@@ -6,9 +6,10 @@ import { ActivityKanban } from './ActivityKanban';
 import { ActivityFilters } from './ActivityFilters';
 import { ActivityForm } from './ActivityForm';
 import { ActivityReport } from './ActivityReport';
+import { ActivityCalendarView } from './ActivityCalendarView';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, Loader2 } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +46,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
     startActivity,
   } = useActivities();
 
-  const [view, setView] = useState<'list' | 'kanban' | 'report'>('list');
+  const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -146,6 +147,9 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
               <TabsTrigger value="kanban">
                 <LayoutGrid className="h-4 w-4" />
               </TabsTrigger>
+              <TabsTrigger value="calendar">
+                <CalendarDays className="h-4 w-4" />
+              </TabsTrigger>
               <TabsTrigger value="report">
                 <BarChart3 className="h-4 w-4" />
               </TabsTrigger>
@@ -159,7 +163,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
       </div>
 
       {/* Filters */}
-      {view !== 'report' && (
+      {view !== 'report' && view !== 'calendar' && (
         <ActivityFilters
           search={search}
           onSearchChange={setSearch}
@@ -196,6 +200,14 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           onEdit={handleEdit}
           onDelete={(id) => setDeleteConfirm(id)}
           onCreateQuote={onCreateQuote}
+        />
+      )}
+
+      {view === 'calendar' && (
+        <ActivityCalendarView
+          activities={filteredActivities}
+          onEdit={handleEdit}
+          onComplete={handleComplete}
         />
       )}
 
