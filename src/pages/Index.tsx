@@ -53,7 +53,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
-  const { activities } = useActivities();
+  const { activities, addActivity } = useActivities();
   const { orders } = useOrders();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
@@ -148,6 +148,20 @@ const Index = () => {
     }
     
     syncQuoteToRDStation(quote);
+
+    // Auto-create follow-up activity D+5
+    const followUpDate = new Date();
+    followUpDate.setDate(followUpDate.getDate() + 5);
+    const clientLabel = quote.client.company || quote.client.name;
+    await addActivity({
+      type: 'followup',
+      title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
+      description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      due_date: followUpDate.toISOString().split('T')[0],
+      priority: 'media',
+      client_id: selectedClientId || undefined,
+      quote_id: quote.id,
+    });
 
     if (clearAfterSave) {
       handleReset();
