@@ -28,6 +28,7 @@ interface ActivityCardProps {
   onEdit: (activity: Activity) => void;
   onDelete: (id: string) => void;
   onCreateQuote?: (clientId: string) => void;
+  onOpenChecklist?: (activity: Activity) => void;
   compact?: boolean;
 }
 
@@ -53,6 +54,7 @@ export function ActivityCard({
   onEdit,
   onDelete,
   onCreateQuote,
+  onOpenChecklist,
   compact = false,
 }: ActivityCardProps) {
   const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type];
@@ -265,6 +267,12 @@ export function ActivityCard({
         {/* Quick Actions */}
         {(activity.status === 'pendente' || activity.status === 'em_andamento') && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+            {activity.type === 'checklist_loja' && onOpenChecklist && (
+              <Button size="sm" variant="outline" onClick={() => onOpenChecklist(activity)}>
+                <ClipboardCheck className="h-4 w-4 mr-1" />
+                Preencher Checklist
+              </Button>
+            )}
             <Button size="sm" onClick={() => onComplete(activity.id)}>
               <Check className="h-4 w-4 mr-1" />
               Concluir
@@ -278,6 +286,15 @@ export function ActivityCard({
             <Button size="sm" variant="outline" onClick={handleOutlook}>
               <Calendar className="h-4 w-4 mr-1" />
               Outlook
+            </Button>
+          </div>
+        )}
+        {/* Show checklist button for completed checklist activities */}
+        {activity.type === 'checklist_loja' && activity.status === 'concluida' && onOpenChecklist && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+            <Button size="sm" variant="outline" onClick={() => onOpenChecklist(activity)}>
+              <ClipboardCheck className="h-4 w-4 mr-1" />
+              Ver Checklist
             </Button>
           </div>
         )}
