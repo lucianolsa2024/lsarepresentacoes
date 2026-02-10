@@ -1,4 +1,4 @@
-export type ActivityType = 'followup' | 'ligacao' | 'email' | 'visita' | 'reuniao' | 'tarefa' | 'treinamento' | 'assistencia' | 'relacionamento' | 'outros';
+export type ActivityType = 'followup' | 'ligacao' | 'email' | 'visita' | 'reuniao' | 'tarefa' | 'treinamento' | 'assistencia' | 'relacionamento' | 'checklist_loja' | 'outros';
 export type ActivityPriority = 'baixa' | 'media' | 'alta' | 'urgente';
 export type ActivityStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
 export type ReminderType = 'email' | 'push' | 'both';
@@ -105,6 +105,7 @@ export const ACTIVITY_TYPE_CONFIG: Record<ActivityType, { label: string; icon: s
   treinamento: { label: 'Treinamento', icon: 'GraduationCap', color: 'cyan' },
   assistencia: { label: 'Assistência', icon: 'Wrench', color: 'amber' },
   relacionamento: { label: 'Relacionamento', icon: 'Heart', color: 'pink' },
+  checklist_loja: { label: 'Checklist Loja', icon: 'ClipboardCheck', color: 'teal' },
   outros: { label: 'Outros', icon: 'MoreHorizontal', color: 'slate' },
 };
 

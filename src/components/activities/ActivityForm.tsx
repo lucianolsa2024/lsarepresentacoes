@@ -27,6 +27,7 @@ interface ActivityFormProps {
   onSubmit: (data: CreateActivityInput) => Promise<void>;
   defaultClientId?: string;
   defaultQuoteId?: string;
+  defaultDate?: string;
 }
 
 export function ActivityForm({
@@ -36,6 +37,7 @@ export function ActivityForm({
   onSubmit,
   defaultClientId,
   defaultQuoteId,
+  defaultDate,
 }: ActivityFormProps) {
   const { clients } = useClients();
   const { templates, applyTemplate } = useActivityTemplates();
@@ -68,7 +70,7 @@ export function ActivityForm({
         setType('tarefa');
         setTitle('');
         setDescription('');
-        setDueDate(new Date().toISOString().split('T')[0]);
+        setDueDate(defaultDate || new Date().toISOString().split('T')[0]);
         setDueTime('');
         setPriority('media');
         setClientId(defaultClientId || '');
@@ -77,7 +79,7 @@ export function ActivityForm({
       setClientSearch('');
       setShowClientSearch(false);
     }
-  }, [open, activity, defaultClientId]);
+  }, [open, activity, defaultClientId, defaultDate]);
 
   const filteredClients = clients.filter(c =>
     c.company.toLowerCase().includes(clientSearch.toLowerCase()) ||

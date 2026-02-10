@@ -1,17 +1,38 @@
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useClients } from '@/hooks/useClients';
+import { useActivities } from '@/hooks/useActivities';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { List, Plus, Upload, FileText } from 'lucide-react';
+import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
   const { orders, loading, addOrder, addOrders, updateOrder, deleteOrder } = useOrders();
   const { clients, addClient } = useClients();
+  const { addActivity, activities } = useActivities();
   const [activeTab, setActiveTab] = useState('list');
+
+  const createDeliveryActivity = async (order: { clientName: string; deliveryDate?: string | null; product?: string; orderNumber?: string; id?: string }, clientId?: string | null) => {
+    if (!order.deliveryDate) return;
+    // Check if activity already exists for this order
+    const exists = activities.find(a =>
+      a.title.includes(order.orderNumber || '') && a.type === 'tarefa' && a.title.includes('Entrega')
+    );
+    if (exists) return;
+
+    await addActivity({
+      type: 'tarefa',
+      title: `Entrega pedido ${order.orderNumber ? `#${order.orderNumber}` : ''} - ${order.clientName}`,
+      description: `Acompanhamento de entrega${order.product ? ` do produto: ${order.product}` : ''}`,
+      due_date: order.deliveryDate,
+      priority: 'media',
+      client_id: clientId || undefined,
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -52,7 +73,10 @@ export function OrderManager() {
             clients={clients}
             onSave={async (order, clientId) => {
               const result = await addOrder(order, clientId);
-              if (result) setActiveTab('list');
+              if (result) {
+                await createDeliveryActivity({ ...order, id: result.id, orderNumber: order.orderNumber }, clientId);
+                setActiveTab('list');
+              }
             }}
             onAddClient={addClient}
           />
@@ -61,7 +85,16 @@ export function OrderManager() {
         <TabsContent value="import" className="mt-4">
           <OrderImporter
             clients={clients}
-            onImport={addOrders}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
+              // Create activities for orders with delivery dates
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
             onAddClient={addClient}
             onComplete={() => setActiveTab('list')}
           />
@@ -70,7 +103,15 @@ export function OrderManager() {
         <TabsContent value="pdf" className="mt-4">
           <OrderPdfImporter
             clients={clients}
-            onImport={addOrders}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
             onAddClient={addClient}
             onComplete={() => setActiveTab('list')}
           />

@@ -52,6 +52,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [completeDialog, setCompleteDialog] = useState<string | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
+  const [defaultDate, setDefaultDate] = useState<string | undefined>();
 
   // Filters
   const [search, setSearch] = useState('');
@@ -155,7 +156,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => { setEditingActivity(undefined); setFormOpen(true); }}>
+          <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Atividade
           </Button>
@@ -208,6 +209,11 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           activities={filteredActivities}
           onEdit={handleEdit}
           onComplete={handleComplete}
+          onCreateOnDate={(date) => {
+            setEditingActivity(undefined);
+            setDefaultDate(date);
+            setFormOpen(true);
+          }}
         />
       )}
 
@@ -220,10 +226,14 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open);
-          if (!open) setEditingActivity(undefined);
+          if (!open) {
+            setEditingActivity(undefined);
+            setDefaultDate(undefined);
+          }
         }}
         activity={editingActivity}
         onSubmit={handleFormSubmit}
+        defaultDate={defaultDate}
       />
 
       {/* Complete Dialog */}

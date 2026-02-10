@@ -27,15 +27,18 @@ const STAGE_COLORS: Record<string, string> = {
 
 function OpportunityCard({
   opp,
+  clients,
   onMove,
   onEdit,
   onDelete,
 }: {
   opp: SalesOpportunity;
+  clients: Client[];
   onMove: (id: string, stage: string) => void;
   onEdit: (opp: SalesOpportunity) => void;
   onDelete: (id: string) => void;
 }) {
+  const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
@@ -43,6 +46,11 @@ function OpportunityCard({
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{opp.title}</p>
+          {client && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Building2 className="h-3 w-3" /> {client.company}
+            </p>
+          )}
           {opp.contactName && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <User className="h-3 w-3" /> {opp.contactName}
@@ -298,6 +306,7 @@ export function SalesFunnelManager() {
                   <OpportunityCard
                     key={opp.id}
                     opp={opp}
+                    clients={clients}
                     onMove={moveStage}
                     onEdit={handleEdit}
                     onDelete={deleteOpportunity}
