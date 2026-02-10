@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ClientData,
   QuoteItem,
@@ -149,19 +149,24 @@ const Index = () => {
     
     syncQuoteToRDStation(quote);
 
-    // Auto-create follow-up activity D+5
-    const followUpDate = new Date();
-    followUpDate.setDate(followUpDate.getDate() + 5);
-    const clientLabel = quote.client.company || quote.client.name;
-    await addActivity({
-      type: 'followup',
-      title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
-      description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      due_date: followUpDate.toISOString().split('T')[0],
-      priority: 'media',
-      client_id: selectedClientId || undefined,
-      quote_id: quote.id,
-    });
+    // Auto-create follow-up activity D+5 only if no pending one exists for this quote
+    const existingFollowUp = activities.find(
+      (a) => a.quote_id === quote.id && a.type === 'followup' && a.status !== 'concluida'
+    );
+    if (!existingFollowUp) {
+      const followUpDate = new Date();
+      followUpDate.setDate(followUpDate.getDate() + 5);
+      const clientLabel = quote.client.company || quote.client.name;
+      await addActivity({
+        type: 'followup',
+        title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
+        description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        due_date: followUpDate.toISOString().split('T')[0],
+        priority: 'media',
+        client_id: selectedClientId || undefined,
+        quote_id: quote.id,
+      });
+    }
 
     if (clearAfterSave) {
       handleReset();

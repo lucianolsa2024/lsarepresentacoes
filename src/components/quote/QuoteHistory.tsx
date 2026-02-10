@@ -98,11 +98,15 @@ export function QuoteHistory({
     }
   };
 
-  const handleWhatsApp = (quote: Quote) => {
+  const handleWhatsApp = async (quote: Quote) => {
     if (!quote.client.phone) {
       toast.error('Cliente sem telefone cadastrado');
       return;
     }
+    // Generate and download PDF first so user can attach it
+    toast.info('Gerando PDF para envio...');
+    await generateQuotePDF(quote);
+    
     const phone = quote.client.phone.replace(/\D/g, '');
     const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
     const itemsSummary = quote.items
@@ -110,6 +114,7 @@ export function QuoteHistory({
       .join('\n');
     const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu orçamento #${quote.id.slice(0, 8).toUpperCase()}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    toast.success('PDF baixado! Anexe-o na conversa do WhatsApp.');
   };
 
   const handleAddToOutlook = (quote: Quote) => {
