@@ -17,6 +17,7 @@ export interface Order {
   orderType: string;
   paymentTerms: string;
   pdfUrl: string | null;
+  rescheduleDate: string | null;
   createdAt: string;
   updatedAt: string;
 }

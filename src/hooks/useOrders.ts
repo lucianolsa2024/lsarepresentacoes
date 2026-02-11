@@ -22,6 +22,7 @@ const dbToOrder = (row: any): Order => ({
   orderType: row.order_type || 'ENCOMENDA',
   paymentTerms: row.payment_terms || '',
   pdfUrl: row.pdf_url || null,
+  rescheduleDate: row.reschedule_date || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });

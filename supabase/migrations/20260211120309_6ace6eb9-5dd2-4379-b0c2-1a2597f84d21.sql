@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN reschedule_date date DEFAULT NULL;
