@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, GripVertical, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 const ACTIVE_STAGES = FUNNEL_STAGES.filter(s => !['ganho', 'perdido'].includes(s.key));
 
@@ -28,13 +29,11 @@ const STAGE_COLORS: Record<string, string> = {
 function OpportunityCard({
   opp,
   clients,
-  onMove,
   onEdit,
   onDelete,
 }: {
   opp: SalesOpportunity;
   clients: Client[];
-  onMove: (id: string, stage: string) => void;
   onEdit: (opp: SalesOpportunity) => void;
   onDelete: (id: string) => void;
 }) {
@@ -58,10 +57,10 @@ function OpportunityCard({
           )}
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(opp)}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(opp); }}>
             <Edit2 className="h-3 w-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onDelete(opp.id)}>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(opp.id); }}>
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
@@ -79,18 +78,6 @@ function OpportunityCard({
       {opp.description && (
         <p className="text-xs text-muted-foreground line-clamp-2">{opp.description}</p>
       )}
-      <div className="flex gap-1 pt-1">
-        {opp.stage !== 'ganho' && (
-          <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => onMove(opp.id, 'ganho')}>
-            ✅ Ganho
-          </Button>
-        )}
-        {opp.stage !== 'perdido' && (
-          <Button variant="outline" size="sm" className="h-6 text-xs text-destructive" onClick={() => onMove(opp.id, 'perdido')}>
-            ❌ Perdido
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
@@ -231,11 +218,13 @@ export function SalesFunnelManager() {
     setShowForm(true);
   };
 
-  const handleMoveNext = (id: string, currentStage: string) => {
-    const idx = ACTIVE_STAGES.findIndex(s => s.key === currentStage);
-    if (idx >= 0 && idx < ACTIVE_STAGES.length - 1) {
-      moveStage(id, ACTIVE_STAGES[idx + 1].key);
-    }
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    const oppId = result.draggableId;
+    const newStage = result.destination.droppableId;
+    const currentStage = result.source.droppableId;
+    if (newStage === currentStage) return;
+    await moveStage(oppId, newStage);
   };
 
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -285,41 +274,62 @@ export function SalesFunnelManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Kanban board */}
-      <div className="grid grid-cols-5 gap-3 overflow-x-auto">
-        {ACTIVE_STAGES.map(stage => {
-          const stageOpps = stageGroups[stage.key] || [];
-          const stageValue = stageOpps.reduce((s, o) => s + o.value, 0);
-          return (
-            <div key={stage.key} className="min-w-[200px]">
-              <div className={`rounded-t-lg p-2 border ${STAGE_COLORS[stage.key] || 'bg-muted'}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold">{stage.label}</span>
-                  <Badge variant="secondary" className="text-xs h-5">{stageOpps.length}</Badge>
+      {/* Kanban board with drag-and-drop */}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-5 gap-3 overflow-x-auto">
+          {ACTIVE_STAGES.map(stage => {
+            const stageOpps = stageGroups[stage.key] || [];
+            const stageValue = stageOpps.reduce((s, o) => s + o.value, 0);
+            return (
+              <div key={stage.key} className="min-w-[200px]">
+                <div className={`rounded-t-lg p-2 border ${STAGE_COLORS[stage.key] || 'bg-muted'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold">{stage.label}</span>
+                    <Badge variant="secondary" className="text-xs h-5">{stageOpps.length}</Badge>
+                  </div>
+                  {stageValue > 0 && (
+                    <p className="text-xs mt-0.5 opacity-75">{formatCurrency(stageValue)}</p>
+                  )}
                 </div>
-                {stageValue > 0 && (
-                  <p className="text-xs mt-0.5 opacity-75">{formatCurrency(stageValue)}</p>
-                )}
+                <Droppable droppableId={stage.key}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`border border-t-0 rounded-b-lg p-2 space-y-2 min-h-[200px] transition-colors ${
+                        snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-muted/30'
+                      }`}
+                    >
+                      {stageOpps.map((opp, index) => (
+                        <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <OpportunityCard
+                                opp={opp}
+                                clients={clients}
+                                onEdit={handleEdit}
+                                onDelete={deleteOpportunity}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {stageOpps.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhuma oportunidade</p>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
               </div>
-              <div className="border border-t-0 rounded-b-lg p-2 space-y-2 min-h-[200px] bg-muted/30">
-                {stageOpps.map(opp => (
-                  <OpportunityCard
-                    key={opp.id}
-                    opp={opp}
-                    clients={clients}
-                    onMove={moveStage}
-                    onEdit={handleEdit}
-                    onDelete={deleteOpportunity}
-                  />
-                ))}
-                {stageOpps.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Nenhuma oportunidade</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
     </div>
   );
 }
