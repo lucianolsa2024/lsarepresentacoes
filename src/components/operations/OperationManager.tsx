@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { OrderManager } from '@/components/orders/OrderManager';
+import { OrderDeliveryKanban } from '@/components/orders/OrderDeliveryKanban';
 import { AssistanceManager } from './AssistanceManager';
+import { useOrders } from '@/hooks/useOrders';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Wrench } from 'lucide-react';
+import { ShoppingCart, Wrench, Kanban } from 'lucide-react';
 
 export function OperationManager() {
-  const [tab, setTab] = useState('orders');
+  const [tab, setTab] = useState('kanban');
+  const { orders, updateOrder } = useOrders();
 
   return (
     <div className="space-y-4">
@@ -13,15 +16,23 @@ export function OperationManager() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="kanban">
+            <Kanban className="h-4 w-4 mr-2" />
+            Acompanhamento de Entregas
+          </TabsTrigger>
           <TabsTrigger value="orders">
             <ShoppingCart className="h-4 w-4 mr-2" />
-            Acompanhamento de Pedidos
+            Pedidos
           </TabsTrigger>
           <TabsTrigger value="assistance">
             <Wrench className="h-4 w-4 mr-2" />
             Assistências
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="kanban" className="mt-4">
+          <OrderDeliveryKanban orders={orders} onUpdate={updateOrder} />
+        </TabsContent>
 
         <TabsContent value="orders" className="mt-4">
           <OrderManager />

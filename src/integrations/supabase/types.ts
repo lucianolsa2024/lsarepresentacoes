@@ -391,6 +391,7 @@ export type Database = {
           product: string | null
           quantity: number | null
           representative: string | null
+          reschedule_date: string | null
           supplier: string | null
           updated_at: string
         }
@@ -413,6 +414,7 @@ export type Database = {
           product?: string | null
           quantity?: number | null
           representative?: string | null
+          reschedule_date?: string | null
           supplier?: string | null
           updated_at?: string
         }
@@ -435,6 +437,7 @@ export type Database = {
           product?: string | null
           quantity?: number | null
           representative?: string | null
+          reschedule_date?: string | null
           supplier?: string | null
           updated_at?: string
         }

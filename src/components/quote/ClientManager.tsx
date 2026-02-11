@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Client } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +33,11 @@ import {
   Phone, 
   Mail,
   MapPin,
-  Eye
+  Eye,
+  List,
+  Map,
 } from 'lucide-react';
+import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
 
 interface ClientManagerProps {
@@ -277,112 +281,133 @@ export function ClientManager({
             </DialogContent>
           </Dialog>
         </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por empresa, nome, CNPJ ou email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          {filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''} cadastrado{filteredClients.length !== 1 ? 's' : ''}
-        </div>
       </div>
 
-      {loading ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <p>Carregando clientes...</p>
-          </CardContent>
-        </Card>
-      ) : filteredClients.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum cliente cadastrado</p>
-            <p className="text-sm">Clique em "Novo Cliente" para começar</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold truncate">{client.company}</h3>
-                      {client.name && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {client.name}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    {onViewDetail && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onViewDetail(client.id)}
-                        title="Ver histórico"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditDialog(client)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => setDeleteId(client.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+      <Tabs defaultValue="list">
+        <TabsList>
+          <TabsTrigger value="list">
+            <List className="h-4 w-4 mr-2" />
+            Lista
+          </TabsTrigger>
+          <TabsTrigger value="map">
+            <Map className="h-4 w-4 mr-2" />
+            Mapa
+          </TabsTrigger>
+        </TabsList>
 
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  {client.document && (
-                    <p className="truncate">{client.document}</p>
-                  )}
-                  {client.phone && (
-                    <p className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {client.phone}
-                    </p>
-                  )}
-                  {client.email && (
-                    <p className="flex items-center gap-1 truncate">
-                      <Mail className="h-3 w-3" />
-                      {client.email}
-                    </p>
-                  )}
-                  {client.address.city && client.address.state && (
-                    <p className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {client.address.city} - {client.address.state}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        <TabsContent value="list" className="mt-4">
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por empresa, nome, CNPJ ou email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              {filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''} cadastrado{filteredClients.length !== 1 ? 's' : ''}
+            </div>
+
+            {loading ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <p>Carregando clientes...</p>
+                </CardContent>
+              </Card>
+            ) : filteredClients.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum cliente cadastrado</p>
+                  <p className="text-sm">Clique em "Novo Cliente" para começar</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredClients.map((client) => (
+                  <Card key={client.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold truncate">{client.company}</h3>
+                            {client.name && (
+                              <p className="text-sm text-muted-foreground truncate">
+                                {client.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          {onViewDetail && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onViewDetail(client.id)}
+                              title="Ver histórico"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(client)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => setDeleteId(client.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        {client.document && (
+                          <p className="truncate">{client.document}</p>
+                        )}
+                        {client.phone && (
+                          <p className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {client.phone}
+                          </p>
+                        )}
+                        {client.email && (
+                          <p className="flex items-center gap-1 truncate">
+                            <Mail className="h-3 w-3" />
+                            {client.email}
+                          </p>
+                        )}
+                        {client.address.city && client.address.state && (
+                          <p className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {client.address.city} - {client.address.state}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="map" className="mt-4">
+          <ClientMap clients={clients} />
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
