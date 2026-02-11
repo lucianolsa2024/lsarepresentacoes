@@ -22,6 +22,7 @@ interface Props {
 export function OrderList({ orders, loading, onDelete, clients }: Props) {
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
+  const [repFilter, setRepFilter] = useState('all');
 
   const handleDownloadPdf = useCallback(async (pdfPath: string) => {
     try {
@@ -40,10 +41,18 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
     return names;
   }, [orders]);
 
+  const uniqueReps = useMemo(() => {
+    const names = [...new Set(orders.map(o => o.representative).filter(Boolean))].sort();
+    return names;
+  }, [orders]);
+
   const filtered = useMemo(() => {
     let result = orders;
     if (clientFilter !== 'all') {
       result = result.filter(o => o.clientName === clientFilter);
+    }
+    if (repFilter !== 'all') {
+      result = result.filter(o => o.representative === repFilter);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -55,7 +64,7 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
       );
     }
     return result;
-  }, [orders, search, clientFilter]);
+  }, [orders, search, clientFilter, repFilter]);
 
   const totalValue = useMemo(() => filtered.reduce((s, o) => s + o.price, 0), [filtered]);
 
@@ -95,6 +104,17 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
           <SelectContent>
             <SelectItem value="all">Todos os clientes</SelectItem>
             {uniqueClients.map(name => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={repFilter} onValueChange={setRepFilter}>
+          <SelectTrigger className="w-full sm:w-[220px]">
+            <SelectValue placeholder="Todos os representantes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os representantes</SelectItem>
+            {uniqueReps.map(name => (
               <SelectItem key={name} value={name}>{name}</SelectItem>
             ))}
           </SelectContent>
