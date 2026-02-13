@@ -262,25 +262,25 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
         {/* Header */}
-        <div className="bg-card rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary mb-2">
-                Sistema de Orçamentos - LSA
+        <div className="bg-card rounded-lg shadow-lg p-3 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-3xl font-bold text-primary mb-0.5 sm:mb-2 truncate">
+                Sistema LSA
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                 Gestão completa de produtos com modulações e acabamentos
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground hidden sm:block">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+              <span className="text-xs text-muted-foreground hidden md:block">
                 {user?.email}
               </span>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
+              <Button variant="outline" size="sm" onClick={handleSignOut} className="h-8 px-2 sm:px-3">
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>
@@ -289,52 +289,52 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-6 h-auto p-0 bg-muted rounded-none">
+            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto p-0 bg-muted rounded-none">
               <TabsTrigger
                 value="dashboard"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <LayoutDashboard className="h-4 w-4 mr-2" />
+                <LayoutDashboard className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               <TabsTrigger
                 value="comercial"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <Briefcase className="h-4 w-4 mr-2" />
+                <Briefcase className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Comercial</span>
               </TabsTrigger>
               <TabsTrigger
                 value="activities"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <ClipboardList className="h-4 w-4 mr-2" />
+                <ClipboardList className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Atividades</span>
               </TabsTrigger>
               <TabsTrigger
                 value="funnels"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <TrendingUp className="h-4 w-4 mr-2" />
+                <TrendingUp className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Funis</span>
               </TabsTrigger>
               <TabsTrigger
                 value="operations"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Operação</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
-                className="py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
               >
-                <Package className="h-4 w-4 mr-2" />
+                <Package className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
               </TabsTrigger>
             </TabsList>
 
-            <div className="p-6">
+            <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
                 <QuoteDashboard 
                   quotes={quotes} 

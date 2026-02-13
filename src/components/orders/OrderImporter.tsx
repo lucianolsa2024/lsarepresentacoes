@@ -4,7 +4,7 @@ import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Loader2, CheckCircle, FileSpreadsheet } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
 
@@ -15,20 +15,44 @@ interface Props {
   onComplete: () => void;
 }
 
+// Keywords for each field — first match wins
+const COLUMN_PATTERNS: Record<string, RegExp> = {
+  issueDate: /^(dt\s*emiss[aã]o|data\s*emiss[aã]o|emiss[aã]o|dt\s*ped)/i,
+  clientName: /^(cliente|client|razao|raz[aã]o\s*social|empresa)/i,
+  orderNumber: /^(n[uú]mero\s*pedido|num\s*ped|pedido|numero|n[°º]?\s*ped)/i,
+  oc: /^(oc|ordem\s*comp|o\.?c\.?)/i,
+  product: /^(produto|prod|modelo|descri[cç][aã]o\s*prod)/i,
+  fabric: /^(tecido|tec|revestimento)/i,
+  supplier: /^(fornecedor|forn|f[aá]brica|marca)/i,
+  deliveryDate: /^(dt\s*entrega|data\s*entrega|entrega|prev\s*entrega|previs[aã]o)/i,
+  paymentTerms: /^(cond\s*pg|cond\s*pagto|cond\.\s*pag|condi[cç][oõ]es|prazo\s*pag|pagamento)/i,
+  representative: /^(representante|rep|vendedor|consultor)/i,
+  quantity: /^(qtd|quantidade|quant|qtde)/i,
+  price: /^(valor|pre[cç]o|vlr|total|vl)/i,
+  fabricProvided: /^(tecido\s*forn|tec\s*forn|fornece\s*tec)/i,
+  dimensions: /^(dimens[aã]o|dim|medida|tamanho)/i,
+  orderType: /^(tipo\s*ped|tipo|order\s*type)/i,
+};
+
 function parseExcelDate(value: any): string {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString().split('T')[0];
   if (typeof value === 'number') {
-    // Excel serial date
     const date = new Date((value - 25569) * 86400 * 1000);
     return date.toISOString().split('T')[0];
   }
-  // Try parsing DD/MM/YYYY
-  const str = String(value);
-  const parts = str.split('/');
-  if (parts.length === 3) {
-    const [d, m, y] = parts;
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  const str = String(value).trim();
+  // Try M/D/YY or MM/DD/YY
+  const slashParts = str.split('/');
+  if (slashParts.length === 3) {
+    let [a, b, c] = slashParts;
+    let year = c.length === 2 ? `20${c}` : c;
+    // If first number > 12, it's DD/MM/YYYY
+    if (parseInt(a) > 12) {
+      return `${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
+    }
+    // Otherwise MM/DD/YYYY (Excel US format)
+    return `${year}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
   }
   return str;
 }
@@ -36,13 +60,44 @@ function parseExcelDate(value: any): string {
 function parsePrice(value: any): number {
   if (!value) return 0;
   if (typeof value === 'number') return value;
-  const str = String(value).replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.');
+  const str = String(value).replace(/[^\d.,]/g, '');
+  // Handle Brazilian format: 1.234,56 -> 1234.56
+  if (str.includes(',')) {
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  }
   return parseFloat(str) || 0;
+}
+
+function normalizeHeader(header: string): string {
+  return String(header || '')
+    .trim()
+    .replace(/[\n\r]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[()#$%]/g, '')
+    .trim();
+}
+
+function detectColumnMapping(headers: string[]): Record<string, number> {
+  const mapping: Record<string, number> = {};
+  const normalized = headers.map(normalizeHeader);
+
+  for (const [field, pattern] of Object.entries(COLUMN_PATTERNS)) {
+    for (let i = 0; i < normalized.length; i++) {
+      if (normalized[i] && pattern.test(normalized[i])) {
+        mapping[field] = i;
+        break;
+      }
+    }
+  }
+
+  return mapping;
 }
 
 export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Props) {
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<OrderFormData[]>([]);
+  const [detectedColumns, setDetectedColumns] = useState<Record<string, number>>({});
+  const [headerNames, setHeaderNames] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,38 +112,56 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       const sheet = workbook.worksheets[0];
       if (!sheet) { toast.error('Planilha vazia'); return; }
 
-      const rows: OrderFormData[] = [];
+      // Read header row
       const headerRow = sheet.getRow(1);
-      const headers = headerRow.values as any[];
+      const headers: string[] = [];
+      headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        headers[colNumber] = String(cell.value || '');
+      });
+
+      const mapping = detectColumnMapping(headers);
+      setDetectedColumns(mapping);
+      setHeaderNames(headers);
+
+      // Check required fields
+      if (!mapping.clientName) {
+        toast.error('Coluna de cliente não encontrada na planilha');
+        return;
+      }
+
+      const rows: OrderFormData[] = [];
 
       sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // skip header
-
+        if (rowNumber === 1) return;
         const vals = row.values as any[];
-        const clientName = String(vals[2] || '').trim();
+
+        const clientName = String(vals[mapping.clientName] || '').trim();
         if (!clientName) return;
 
         rows.push({
-          issueDate: parseExcelDate(vals[1]),
+          issueDate: mapping.issueDate != null ? parseExcelDate(vals[mapping.issueDate]) : new Date().toISOString().split('T')[0],
           clientName,
-          supplier: String(vals[3] || 'CENTURY').trim(),
-          representative: String(vals[4] || '').trim(),
-          orderNumber: String(vals[5] || '').trim(),
-          oc: String(vals[6] || '').trim(),
-          product: String(vals[7] || '').trim(),
-          fabricProvided: String(vals[8] || 'NAO').trim().toUpperCase(),
-          fabric: String(vals[9] || '').trim(),
-          dimensions: String(vals[10] || '').trim(),
-          deliveryDate: parseExcelDate(vals[11]),
-          quantity: parseInt(String(vals[12] || '1')) || 1,
-          price: parsePrice(vals[13]),
-          orderType: String(vals[15] || 'ENCOMENDA').trim(),
-          paymentTerms: String(vals[16] || '').trim(),
+          supplier: mapping.supplier != null ? String(vals[mapping.supplier] || 'SOHOME').trim() : 'SOHOME',
+          representative: mapping.representative != null ? String(vals[mapping.representative] || '').trim() : '',
+          orderNumber: mapping.orderNumber != null ? String(vals[mapping.orderNumber] || '').trim() : '',
+          oc: mapping.oc != null ? String(vals[mapping.oc] || '').trim() : '',
+          product: mapping.product != null ? String(vals[mapping.product] || '').trim() : '',
+          fabricProvided: mapping.fabricProvided != null ? String(vals[mapping.fabricProvided] || 'NAO').trim().toUpperCase() : 'NAO',
+          fabric: mapping.fabric != null ? String(vals[mapping.fabric] || '').trim() : '',
+          dimensions: mapping.dimensions != null ? String(vals[mapping.dimensions] || '').trim() : '',
+          deliveryDate: mapping.deliveryDate != null ? parseExcelDate(vals[mapping.deliveryDate]) : '',
+          quantity: mapping.quantity != null ? (parseInt(String(vals[mapping.quantity] || '1')) || 1) : 1,
+          price: mapping.price != null ? parsePrice(vals[mapping.price]) : 0,
+          orderType: mapping.orderType != null ? String(vals[mapping.orderType] || 'ENCOMENDA').trim() : 'ENCOMENDA',
+          paymentTerms: mapping.paymentTerms != null ? String(vals[mapping.paymentTerms] || '').trim() : '',
         });
       });
 
       setPreview(rows);
-      toast.success(`${rows.length} pedidos encontrados na planilha`);
+
+      const mappedFields = Object.keys(mapping).length;
+      const totalFields = Object.keys(COLUMN_PATTERNS).length;
+      toast.success(`${rows.length} pedidos encontrados. ${mappedFields}/${totalFields} colunas mapeadas automaticamente.`);
     } catch (error) {
       console.error('Error parsing Excel:', error);
       toast.error('Erro ao ler a planilha');
@@ -100,18 +173,15 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
     setImporting(true);
 
     try {
-      // Build client map
       const clientMap = new Map<string, string>();
       clients.forEach(c => clientMap.set(c.company.toLowerCase(), c.id));
 
-      // Find unique new clients
       const newClientNames = [...new Set(
         preview
           .map(o => o.clientName)
           .filter(name => !clientMap.has(name.toLowerCase()))
       )];
 
-      // Create missing clients
       for (const name of newClientNames) {
         const newClient = await onAddClient({
           name: '',
@@ -127,7 +197,6 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         }
       }
 
-      // Map orders to client IDs
       const ordersWithClients = preview.map(order => ({
         order,
         clientId: clientMap.get(order.clientName.toLowerCase()) || null,
@@ -139,6 +208,8 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         toast.info(`${newClientNames.length} novo(s) cliente(s) criado(s)`);
       }
       setPreview([]);
+      setDetectedColumns({});
+      setHeaderNames([]);
       onComplete();
     } catch (error) {
       console.error('Import error:', error);
@@ -146,6 +217,25 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
     } finally {
       setImporting(false);
     }
+  };
+
+  const mappedFields = Object.entries(detectedColumns);
+  const fieldLabels: Record<string, string> = {
+    issueDate: 'Data Emissão',
+    clientName: 'Cliente',
+    orderNumber: 'Nº Pedido',
+    oc: 'OC',
+    product: 'Produto',
+    fabric: 'Tecido',
+    supplier: 'Fornecedor',
+    deliveryDate: 'Data Entrega',
+    paymentTerms: 'Cond. Pagamento',
+    representative: 'Representante',
+    quantity: 'Quantidade',
+    price: 'Valor',
+    fabricProvided: 'Tecido Fornecido',
+    dimensions: 'Dimensão',
+    orderType: 'Tipo Pedido',
   };
 
   return (
@@ -158,7 +248,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Selecione um arquivo Excel com a mesma estrutura da planilha de pedidos (colunas: data de emissão, cliente, fornecedor, representante, pedido, oc, produto, tecido fornecido, tecido, dimensão, data de entrega, quantidade, preço, tipo de pedido, prazo de pagamento).
+          O sistema detecta automaticamente as colunas da planilha. Basta que os cabeçalhos contenham termos como "Cliente", "Pedido", "Produto", "Tecido", "Entrega", etc.
         </p>
 
         <input
@@ -173,6 +263,30 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
           <Upload className="h-4 w-4 mr-2" />
           Selecionar Arquivo
         </Button>
+
+        {/* Column mapping feedback */}
+        {mappedFields.length > 0 && (
+          <div className="p-3 bg-muted rounded-lg space-y-2">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Colunas detectadas automaticamente:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {mappedFields.map(([field, colIndex]) => (
+                <span key={field} className="inline-flex items-center gap-1 text-xs bg-background border rounded-md px-2 py-1">
+                  <span className="font-medium">{fieldLabels[field] || field}</span>
+                  <span className="text-muted-foreground">← {normalizeHeader(headerNames[colIndex] || '')}</span>
+                </span>
+              ))}
+            </div>
+            {Object.keys(COLUMN_PATTERNS).filter(f => !(f in detectedColumns)).length > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Não encontradas: {Object.keys(COLUMN_PATTERNS).filter(f => !(f in detectedColumns)).map(f => fieldLabels[f] || f).join(', ')}
+              </p>
+            )}
+          </div>
+        )}
 
         {preview.length > 0 && (
           <div className="space-y-3">
@@ -190,6 +304,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
                   <tr>
                     <th className="p-2 text-left">Data</th>
                     <th className="p-2 text-left">Cliente</th>
+                    <th className="p-2 text-left">Pedido</th>
                     <th className="p-2 text-left">Produto</th>
                     <th className="p-2 text-left">Tecido</th>
                     <th className="p-2 text-right">Qtd</th>
@@ -199,12 +314,13 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
                 <tbody>
                   {preview.slice(0, 50).map((o, i) => (
                     <tr key={i} className="border-t">
-                      <td className="p-2">{o.issueDate}</td>
-                      <td className="p-2">{o.clientName}</td>
+                      <td className="p-2 whitespace-nowrap">{o.issueDate}</td>
+                      <td className="p-2 max-w-[150px] truncate">{o.clientName}</td>
+                      <td className="p-2">{o.orderNumber || '-'}</td>
                       <td className="p-2">{o.product}</td>
                       <td className="p-2">{o.fabric}</td>
                       <td className="p-2 text-right">{o.quantity}</td>
-                      <td className="p-2 text-right">{o.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                      <td className="p-2 text-right whitespace-nowrap">{o.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     </tr>
                   ))}
                 </tbody>

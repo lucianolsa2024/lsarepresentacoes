@@ -228,12 +228,12 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 overflow-x-auto">
+        <div className="flex md:grid md:grid-cols-5 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
           {COLUMN_ORDER.map(status => {
             const config = STATUS_CONFIG[status];
             const columnOrders = columns[status];
             return (
-              <div key={status} className="min-w-[220px]">
+              <div key={status} className="min-w-[260px] sm:min-w-[220px] snap-start">
                 <div className={`flex items-center gap-2 p-2 rounded-t-lg border ${config.color}`}>
                   {config.icon}
                   <span className="text-sm font-semibold">{config.label}</span>
