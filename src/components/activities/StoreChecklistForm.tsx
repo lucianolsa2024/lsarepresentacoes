@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Save } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ClipboardCheck, Save, Search, X, AlertTriangle } from 'lucide-react';
 import {
   StoreChecklistData,
   EMPTY_STORE_CHECKLIST,
   CHECKLIST_SECTIONS,
   FIELD_LABELS,
 } from '@/types/storeChecklist';
+import { useProducts } from '@/hooks/useProducts';
 
 interface StoreChecklistFormProps {
   open: boolean;
@@ -38,15 +40,19 @@ export function StoreChecklistForm({
 }: StoreChecklistFormProps) {
   const [data, setData] = useState<StoreChecklistData>(EMPTY_STORE_CHECKLIST);
   const [saving, setSaving] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const { products } = useProducts();
 
   useEffect(() => {
     if (open) {
       setData({
         ...EMPTY_STORE_CHECKLIST,
         ...initialData,
+        produtosExpostos: initialData?.produtosExpostos || [],
         cliente: clientName || initialData?.cliente || '',
         cidade: clientCity || initialData?.cidade || '',
       });
+      setProductSearch('');
     }
   }, [open, initialData, clientName, clientCity]);
 
@@ -64,6 +70,32 @@ export function StoreChecklistForm({
       setSaving(false);
     }
   };
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch) return products.slice(0, 20);
+    const s = productSearch.toLowerCase();
+    return products.filter(p =>
+      p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s)
+    ).slice(0, 20);
+  }, [products, productSearch]);
+
+  const toggleProduct = (productName: string) => {
+    if (readOnly) return;
+    setData(prev => ({
+      ...prev,
+      produtosExpostos: prev.produtosExpostos.includes(productName)
+        ? prev.produtosExpostos.filter(p => p !== productName)
+        : [...prev.produtosExpostos, productName],
+    }));
+  };
+
+  const shareNosso = useMemo(() => {
+    const nossos = data.qtdProdutosNossos || 0;
+    const concorrentes = data.qtdProdutosConcorrentes || 0;
+    const total = nossos + concorrentes;
+    if (total === 0) return null;
+    return Math.round((nossos / total) * 100);
+  }, [data.qtdProdutosNossos, data.qtdProdutosConcorrentes]);
 
   const BooleanField = ({ field }: { field: keyof StoreChecklistData }) => (
     <RadioGroup
@@ -85,6 +117,130 @@ export function StoreChecklistForm({
 
   const renderField = (field: string) => {
     const label = FIELD_LABELS[field] || field;
+
+    // Special handling for new fields
+    if (field === 'produtosExpostos') {
+      return (
+        <div className="space-y-2 col-span-full" key={field}>
+          <Label className="text-sm font-medium">{label}</Label>
+          {/* Selected products */}
+          {data.produtosExpostos.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {data.produtosExpostos.map(name => (
+                <Badge key={name} variant="secondary" className="gap-1">
+                  {name}
+                  {!readOnly && (
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => toggleProduct(name)} />
+                  )}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {/* Product search */}
+          {!readOnly && (
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                  placeholder="Buscar produto..."
+                  className="pl-9"
+                />
+              </div>
+              <ScrollArea className="h-32 border rounded-md">
+                {filteredProducts.map(p => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted cursor-pointer text-sm"
+                  >
+                    <Checkbox
+                      checked={data.produtosExpostos.includes(p.name)}
+                      onCheckedChange={() => toggleProduct(p.name)}
+                    />
+                    <span>{p.name}</span>
+                    <span className="text-muted-foreground text-xs">({p.code})</span>
+                  </label>
+                ))}
+                {filteredProducts.length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground py-4">Nenhum produto encontrado</p>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (field === 'qtdProdutosNossos' || field === 'qtdProdutosConcorrentes') {
+      return (
+        <div className="space-y-1.5" key={field}>
+          <Label className="text-sm font-medium">{label}</Label>
+          <Input
+            type="number"
+            value={data[field] ?? ''}
+            onChange={(e) => update(field, e.target.value ? parseInt(e.target.value) : null)}
+            placeholder="Quantidade"
+            readOnly={readOnly}
+          />
+          {field === 'qtdProdutosConcorrentes' && shareNosso !== null && (
+            <p className="text-xs font-medium text-primary">
+              📊 Share nosso: {shareNosso}%
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    if (field === 'assistenciaIdentificada') {
+      return (
+        <div className="space-y-1.5 col-span-full" key={field}>
+          <Label className="text-sm font-medium">{label}</Label>
+          <BooleanField field={field} />
+          {data.assistenciaIdentificada === true && (
+            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-amber-600">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Um card de assistência será criado automaticamente ao salvar</span>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{FIELD_LABELS['assistenciaProduto']}</Label>
+                <Input
+                  value={data.assistenciaProduto}
+                  onChange={(e) => update('assistenciaProduto', e.target.value)}
+                  placeholder="Nome/modelo do produto"
+                  readOnly={readOnly}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{FIELD_LABELS['assistenciaDefeito']}</Label>
+                <Input
+                  value={data.assistenciaDefeito}
+                  onChange={(e) => update('assistenciaDefeito', e.target.value)}
+                  placeholder="Descreva o defeito"
+                  readOnly={readOnly}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{FIELD_LABELS['assistenciaDescricao']}</Label>
+                <Textarea
+                  value={data.assistenciaDescricao}
+                  onChange={(e) => update('assistenciaDescricao', e.target.value)}
+                  placeholder="Detalhes adicionais..."
+                  rows={2}
+                  readOnly={readOnly}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Skip sub-fields of assistance (rendered inline above)
+    if (field === 'assistenciaProduto' || field === 'assistenciaDefeito' || field === 'assistenciaDescricao') {
+      return null;
+    }
 
     switch (field) {
       case 'fluxoLoja':
@@ -111,19 +267,6 @@ export function StoreChecklistForm({
                 <SelectItem value="subiu">Subiu</SelectItem>
                 <SelectItem value="caiu">Caiu</SelectItem>
                 <SelectItem value="estavel">Estável</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        );
-      case 'posicaoShowroom':
-        return (
-          <div className="space-y-1.5" key={field}>
-            <Label className="text-sm font-medium">{label}</Label>
-            <Select value={data.posicaoShowroom} onValueChange={(v) => update('posicaoShowroom', v as StoreChecklistData['posicaoShowroom'])} disabled={readOnly}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="quente">Quente</SelectItem>
-                <SelectItem value="fria">Fria</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -156,20 +299,6 @@ export function StoreChecklistForm({
             </Select>
           </div>
         );
-      case 'qtdProdutosShowroom':
-        return (
-          <div className="space-y-1.5" key={field}>
-            <Label className="text-sm font-medium">{label}</Label>
-            <Input
-              type="number"
-              value={data.qtdProdutosShowroom ?? ''}
-              onChange={(e) => update('qtdProdutosShowroom', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="Quantidade"
-              readOnly={readOnly}
-            />
-          </div>
-        );
-      case 'produtoPrecisaAtualizacao':
       case 'lojistaEntendeuMargem':
       case 'comparouConcorrentes':
       case 'dandoDesconto':
@@ -192,13 +321,16 @@ export function StoreChecklistForm({
           </div>
         );
       case 'observacoes':
+      case 'acoesAndamento':
+      case 'necessidadeAtualizacao':
+      case 'concorrentesExpostos':
         return (
-          <div className="space-y-1.5" key={field}>
+          <div className={`space-y-1.5 ${field === 'acoesAndamento' || field === 'concorrentesExpostos' ? 'col-span-full' : ''}`} key={field}>
             <Label className="text-sm font-medium">{label}</Label>
             <Textarea
-              value={data.observacoes}
-              onChange={(e) => update('observacoes', e.target.value)}
-              placeholder="Observações gerais..."
+              value={(data as unknown as Record<string, string>)[field] || ''}
+              onChange={(e) => update(field as keyof StoreChecklistData, e.target.value)}
+              placeholder={label}
               rows={3}
               readOnly={readOnly}
             />
@@ -233,13 +365,16 @@ export function StoreChecklistForm({
                 Score {data.scoreLoja}
               </Badge>
             )}
+            {shareNosso !== null && (
+              <Badge variant="outline">Share {shareNosso}%</Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="max-h-[70vh] px-6 pb-6">
           <div className="space-y-6 pt-4">
             {/* Header fields */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Cliente</Label>
                 <Input value={data.cliente} onChange={(e) => update('cliente', e.target.value)} readOnly={readOnly || !!clientName} />

@@ -140,6 +140,20 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
     await updateActivity(checklistActivity.id, {
       description: JSON.stringify(data),
     });
+
+    // Auto-create assistance card if flagged
+    if (data.assistenciaIdentificada && data.assistenciaProduto) {
+      const clientName = checklistActivity.client?.company || data.cliente || '';
+      await addActivity({
+        type: 'assistencia',
+        title: `Assistência - ${clientName} - ${data.assistenciaProduto}`,
+        description: `Produto: ${data.assistenciaProduto}\nDefeito: ${data.assistenciaDefeito}\n${data.assistenciaDescricao ? `Detalhes: ${data.assistenciaDescricao}` : ''}\n\nIdentificado no checklist de visita em ${data.dataVisita}`,
+        due_date: new Date().toISOString().split('T')[0],
+        priority: 'media',
+        client_id: checklistActivity.client_id,
+      });
+    }
+
     setChecklistActivity(null);
   };
 
