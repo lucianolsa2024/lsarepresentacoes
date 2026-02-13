@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Search, Loader2, FileDown } from 'lucide-react';
+import { Trash2, Search, Loader2, FileDown, Package, Calendar, User, Hash } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Props {
   orders: Order[];
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function OrderList({ orders, loading, onDelete, clients }: Props) {
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
   const [repFilter, setRepFilter] = useState('all');
@@ -127,71 +130,127 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
         <span>Total: <strong className="text-foreground">{formatCurrency(totalValue)}</strong></span>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-auto max-h-[600px]">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Pedido</TableHead>
-              <TableHead>OC</TableHead>
-              <TableHead>Produto</TableHead>
-              <TableHead>Tecido</TableHead>
-              <TableHead>Dimensão</TableHead>
-              <TableHead>Entrega</TableHead>
-              <TableHead className="text-right">Qtd</TableHead>
-              <TableHead className="text-right">Preço</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Pagamento</TableHead>
-              <TableHead>PDF</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
-                  Nenhum pedido encontrado
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map(order => (
-                <TableRow key={order.id}>
-                  <TableCell className="whitespace-nowrap">{formatDate(order.issueDate)}</TableCell>
-                  <TableCell className="font-medium">{order.clientName}</TableCell>
-                  <TableCell>{order.orderNumber || '-'}</TableCell>
-                  <TableCell>{order.oc || '-'}</TableCell>
-                  <TableCell>{order.product}</TableCell>
-                  <TableCell>{order.fabric || '-'}</TableCell>
-                  <TableCell>{order.dimensions || '-'}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatDate(order.deliveryDate)}</TableCell>
-                  <TableCell className="text-right">{order.quantity}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">{formatCurrency(order.price)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{order.orderType}</Badge>
-                  </TableCell>
-                  <TableCell>{order.paymentTerms || '-'}</TableCell>
-                  <TableCell>
-                    {order.pdfUrl ? (
-                      <Button variant="ghost" size="icon" title="Baixar PDF" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
-                        <FileDown className="h-4 w-4 text-primary" />
+      {/* Mobile Cards */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {filtered.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</p>
+          ) : (
+            filtered.map(order => (
+              <Card key={order.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-3 w-3 text-primary" />
+                      <span className="text-xs font-bold text-primary">{order.orderNumber || '—'}</span>
+                      {order.oc && <span className="text-xs text-muted-foreground">OC: {order.oc}</span>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {order.pdfUrl && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
+                          <FileDown className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(order.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(order.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm font-medium truncate">{order.clientName}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Package className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs truncate">{order.product || '—'}</span>
+                    {order.fabric && <span className="text-xs text-muted-foreground">• {order.fabric}</span>}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(order.issueDate)}
+                    </span>
+                    <span>Entrega: {formatDate(order.deliveryDate)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">{order.orderType}</Badge>
+                      <span className="text-xs text-muted-foreground">Qtd: {order.quantity}</span>
+                    </div>
+                    <span className="text-sm font-bold text-primary">{formatCurrency(order.price)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop Table */
+        <div className="border rounded-lg overflow-auto max-h-[600px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Pedido</TableHead>
+                <TableHead>OC</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Tecido</TableHead>
+                <TableHead>Dimensão</TableHead>
+                <TableHead>Entrega</TableHead>
+                <TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Preço</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Pagamento</TableHead>
+                <TableHead>PDF</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                    Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filtered.map(order => (
+                  <TableRow key={order.id}>
+                    <TableCell className="whitespace-nowrap">{formatDate(order.issueDate)}</TableCell>
+                    <TableCell className="font-medium">{order.clientName}</TableCell>
+                    <TableCell>{order.orderNumber || '-'}</TableCell>
+                    <TableCell>{order.oc || '-'}</TableCell>
+                    <TableCell>{order.product}</TableCell>
+                    <TableCell>{order.fabric || '-'}</TableCell>
+                    <TableCell>{order.dimensions || '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDate(order.deliveryDate)}</TableCell>
+                    <TableCell className="text-right">{order.quantity}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatCurrency(order.price)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{order.orderType}</Badge>
+                    </TableCell>
+                    <TableCell>{order.paymentTerms || '-'}</TableCell>
+                    <TableCell>
+                      {order.pdfUrl ? (
+                        <Button variant="ghost" size="icon" title="Baixar PDF" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
+                          <FileDown className="h-4 w-4 text-primary" />
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(order.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
