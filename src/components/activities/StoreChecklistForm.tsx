@@ -45,6 +45,7 @@ export function StoreChecklistForm({
   const [productSearch, setProductSearch] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { products } = useProducts();
 
   useEffect(() => {
@@ -191,7 +192,15 @@ export function StoreChecklistForm({
           )}
           {/* Upload button */}
           {!readOnly && (
-            <div>
+            <div className="flex gap-2 flex-wrap">
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -200,6 +209,20 @@ export function StoreChecklistForm({
                 className="hidden"
                 onChange={handlePhotoUpload}
               />
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 mr-1" />
+                )}
+                Tirar Foto
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -212,7 +235,7 @@ export function StoreChecklistForm({
                 ) : (
                   <Camera className="h-4 w-4 mr-1" />
                 )}
-                {uploadingPhoto ? 'Enviando...' : 'Adicionar Fotos'}
+                Galeria
               </Button>
             </div>
           )}
