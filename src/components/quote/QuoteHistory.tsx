@@ -232,8 +232,8 @@ export function QuoteHistory({
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-primary">
+                    <div className="text-right sm:text-right">
+                      <div className="text-lg sm:text-xl font-bold text-primary">
                         {formatCurrency(quote.total)}
                       </div>
                       {quote.discount > 0 && (
@@ -243,59 +243,27 @@ export function QuoteHistory({
                       )}
                     </div>
 
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedQuote(quote)}
-                        title="Ver detalhes"
-                      >
+                    <div className="flex flex-wrap gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedQuote(quote)} title="Ver detalhes">
                         <Eye className="h-4 w-4" />
                       </Button>
                       {onEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(quote)}
-                          title="Editar orçamento"
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(quote)} title="Editar orçamento">
                           <Edit2 className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(quote)}
-                        title="Baixar PDF"
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(quote)} title="Baixar PDF">
                         <Download className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleWhatsApp(quote)}
-                        title="Enviar por WhatsApp"
-                        disabled={!quote.client.phone}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleWhatsApp(quote)} title="Enviar por WhatsApp" disabled={!quote.client.phone}>
                         <MessageCircle className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDuplicate(quote.id)}
-                        title="Duplicar"
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(quote.id)} title="Duplicar">
                         <Copy className="h-4 w-4" />
                       </Button>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleAddToOutlook(quote)}
-                            disabled={!quote.payment.estimatedClosingDate}
-                            title="Adicionar lembrete ao Outlook"
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleAddToOutlook(quote)} disabled={!quote.payment.estimatedClosingDate} title="Adicionar lembrete ao Outlook">
                             <CalendarPlus className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
@@ -305,13 +273,7 @@ export function QuoteHistory({
                             : 'Sem data de fechamento definida'}
                         </TooltipContent>
                       </Tooltip>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => setDeleteId(quote.id)}
-                        title="Excluir"
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(quote.id)} title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
