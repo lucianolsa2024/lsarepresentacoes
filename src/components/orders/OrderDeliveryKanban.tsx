@@ -6,17 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Calendar, Package, Truck, AlertTriangle, CheckCircle2, Clock, Search, Bell } from 'lucide-react';
-import { format, parseISO, startOfWeek, endOfWeek, addWeeks, isBefore, isWithinInterval } from 'date-fns';
+import { Calendar, Package, Truck, AlertTriangle, CheckCircle2, Clock, Search, Bell, CalendarIcon, X } from 'lucide-react';
+import { format, parseISO, startOfWeek, endOfWeek, addWeeks, isBefore, isWithinInterval, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type DeliveryStatus = 'embarque_semana' | 'embarque_proxima' | 'embarque_futuro' | 'atrasado' | 'faturado';
 
@@ -82,6 +85,10 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
   const [repFilter, setRepFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
+  const [issueDateFrom, setIssueDateFrom] = useState<Date | undefined>();
+  const [issueDateTo, setIssueDateTo] = useState<Date | undefined>();
+  const [deliveryDateFrom, setDeliveryDateFrom] = useState<Date | undefined>();
+  const [deliveryDateTo, setDeliveryDateTo] = useState<Date | undefined>();
 
   // Overdue alert on mount
   useEffect(() => {
@@ -94,10 +101,51 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
     }
   }, [orders]);
 
+  const hasDateFilters = issueDateFrom || issueDateTo || deliveryDateFrom || deliveryDateTo;
+
+  const clearDateFilters = () => {
+    setIssueDateFrom(undefined);
+    setIssueDateTo(undefined);
+    setDeliveryDateFrom(undefined);
+    setDeliveryDateTo(undefined);
+  };
+
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (repFilter !== 'all') {
       result = result.filter(o => o.representative === repFilter);
+    }
+    // Issue date filters
+    if (issueDateFrom) {
+      result = result.filter(o => {
+        if (!o.issueDate) return false;
+        const d = parseISO(o.issueDate);
+        return !isBefore(d, issueDateFrom);
+      });
+    }
+    if (issueDateTo) {
+      result = result.filter(o => {
+        if (!o.issueDate) return false;
+        const d = parseISO(o.issueDate);
+        return !isAfter(d, issueDateTo);
+      });
+    }
+    // Delivery date filters
+    if (deliveryDateFrom) {
+      result = result.filter(o => {
+        const dateStr = (o as any).rescheduleDate || o.deliveryDate;
+        if (!dateStr) return false;
+        const d = parseISO(dateStr);
+        return !isBefore(d, deliveryDateFrom);
+      });
+    }
+    if (deliveryDateTo) {
+      result = result.filter(o => {
+        const dateStr = (o as any).rescheduleDate || o.deliveryDate;
+        if (!dateStr) return false;
+        const d = parseISO(dateStr);
+        return !isAfter(d, deliveryDateTo);
+      });
     }
     if (!search.trim()) return result;
     const q = search.toLowerCase();
@@ -107,7 +155,7 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
       o.orderNumber.toLowerCase().includes(q) ||
       o.oc.toLowerCase().includes(q)
     );
-  }, [orders, search, repFilter]);
+  }, [orders, search, repFilter, issueDateFrom, issueDateTo, deliveryDateFrom, deliveryDateTo]);
 
   const columns = useMemo(() => {
     const result: Record<DeliveryStatus, Order[]> = {
@@ -198,33 +246,100 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar pedido, cliente, produto..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-10"
-          />
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar pedido, cliente, produto..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={repFilter} onValueChange={setRepFilter}>
+            <SelectTrigger className="w-full sm:w-[220px]">
+              <SelectValue placeholder="Todos os representantes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os representantes</SelectItem>
+              {REPRESENTATIVES.map(name => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">{filteredOrders.length} pedido(s)</span>
+          {overdueCount > 0 && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <Bell className="h-3 w-3" /> {overdueCount} atrasado(s)
+            </Badge>
+          )}
         </div>
-        <Select value={repFilter} onValueChange={setRepFilter}>
-          <SelectTrigger className="w-full sm:w-[220px]">
-            <SelectValue placeholder="Todos os representantes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os representantes</SelectItem>
-            {REPRESENTATIVES.map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className="text-sm text-muted-foreground">{filteredOrders.length} pedido(s)</span>
-        {overdueCount > 0 && (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <Bell className="h-3 w-3" /> {overdueCount} atrasado(s)
-          </Badge>
-        )}
+
+        {/* Date Filters */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Emissão de</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !issueDateFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {issueDateFrom ? format(issueDateFrom, "dd/MM/yyyy") : "Início"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent mode="single" selected={issueDateFrom} onSelect={setIssueDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Emissão até</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !issueDateTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {issueDateTo ? format(issueDateTo, "dd/MM/yyyy") : "Fim"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent mode="single" selected={issueDateTo} onSelect={setIssueDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Entrega de</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !deliveryDateFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {deliveryDateFrom ? format(deliveryDateFrom, "dd/MM/yyyy") : "Início"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent mode="single" selected={deliveryDateFrom} onSelect={setDeliveryDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Entrega até</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !deliveryDateTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {deliveryDateTo ? format(deliveryDateTo, "dd/MM/yyyy") : "Fim"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent mode="single" selected={deliveryDateTo} onSelect={setDeliveryDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          {hasDateFilters && (
+            <Button variant="ghost" size="sm" onClick={clearDateFilters} className="text-muted-foreground">
+              <X className="h-3 w-3 mr-1" /> Limpar datas
+            </Button>
+          )}
+        </div>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
