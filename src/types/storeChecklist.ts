@@ -5,16 +5,21 @@ export interface StoreChecklistData {
   dataVisita: string;
   representante: string;
 
+  // Produtos Expostos
+  produtosExpostos: string[]; // product names from DB
+  concorrentesExpostos: string;
+  qtdProdutosNossos: number | null;
+  qtdProdutosConcorrentes: number | null;
+  necessidadeAtualizacao: string;
+
+  // Ações
+  acoesAndamento: string;
+
   // Performance
   fluxoLoja: 'alto' | 'medio' | 'baixo' | '';
   ticketMedio: 'subiu' | 'caiu' | 'estavel' | '';
   categoriaMaisVende: string;
   produtoTravado: string;
-
-  // Showroom
-  qtdProdutosShowroom: number | null;
-  posicaoShowroom: 'quente' | 'fria' | '';
-  produtoPrecisaAtualizacao: boolean | null;
 
   // Comercial
   lojistaEntendeuMargem: boolean | null;
@@ -36,6 +41,12 @@ export interface StoreChecklistData {
   dataProximoFollowup: string;
   scoreLoja: 'A' | 'B' | 'C' | '';
   observacoes: string;
+
+  // Assistência
+  assistenciaIdentificada: boolean | null;
+  assistenciaProduto: string;
+  assistenciaDefeito: string;
+  assistenciaDescricao: string;
 }
 
 export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
@@ -43,13 +54,16 @@ export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
   cidade: '',
   dataVisita: new Date().toISOString().split('T')[0],
   representante: '',
+  produtosExpostos: [],
+  concorrentesExpostos: '',
+  qtdProdutosNossos: null,
+  qtdProdutosConcorrentes: null,
+  necessidadeAtualizacao: '',
+  acoesAndamento: '',
   fluxoLoja: '',
   ticketMedio: '',
   categoriaMaisVende: '',
   produtoTravado: '',
-  qtdProdutosShowroom: null,
-  posicaoShowroom: '',
-  produtoPrecisaAtualizacao: null,
   lojistaEntendeuMargem: null,
   comparouConcorrentes: null,
   dandoDesconto: null,
@@ -65,16 +79,24 @@ export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
   dataProximoFollowup: '',
   scoreLoja: '',
   observacoes: '',
+  assistenciaIdentificada: null,
+  assistenciaProduto: '',
+  assistenciaDefeito: '',
+  assistenciaDescricao: '',
 };
 
 export const CHECKLIST_SECTIONS = [
   {
-    title: '📊 Performance da Loja',
-    fields: ['fluxoLoja', 'ticketMedio', 'categoriaMaisVende', 'produtoTravado'] as const,
+    title: '🛋️ Produtos Expostos & Share',
+    fields: ['produtosExpostos', 'concorrentesExpostos', 'qtdProdutosNossos', 'qtdProdutosConcorrentes', 'necessidadeAtualizacao'] as const,
   },
   {
-    title: '🏪 Showroom',
-    fields: ['qtdProdutosShowroom', 'posicaoShowroom', 'produtoPrecisaAtualizacao'] as const,
+    title: '📋 Ações em Andamento / Futuras',
+    fields: ['acoesAndamento'] as const,
+  },
+  {
+    title: '📊 Performance da Loja',
+    fields: ['fluxoLoja', 'ticketMedio', 'categoriaMaisVende', 'produtoTravado'] as const,
   },
   {
     title: '💼 Comercial',
@@ -88,16 +110,23 @@ export const CHECKLIST_SECTIONS = [
     title: '📋 Próximos Passos',
     fields: ['existeProjetoAndamento', 'chanceExpandirShowroom', 'proximoPasso', 'dataProximoFollowup', 'scoreLoja', 'observacoes'] as const,
   },
+  {
+    title: '🔧 Assistência Técnica',
+    fields: ['assistenciaIdentificada', 'assistenciaProduto', 'assistenciaDefeito', 'assistenciaDescricao'] as const,
+  },
 ];
 
 export const FIELD_LABELS: Record<string, string> = {
+  produtosExpostos: 'Produtos Expostos (nossos)',
+  concorrentesExpostos: 'Concorrentes Expostos',
+  qtdProdutosNossos: 'Qtd Produtos Nossos',
+  qtdProdutosConcorrentes: 'Qtd Produtos Concorrentes',
+  necessidadeAtualizacao: 'Necessidade de Atualização',
+  acoesAndamento: 'Ações em Andamento / Futuras',
   fluxoLoja: 'Fluxo da Loja',
   ticketMedio: 'Ticket Médio',
   categoriaMaisVende: 'Categoria que Mais Vende',
   produtoTravado: 'Produto Travado',
-  qtdProdutosShowroom: 'Qtd Produtos em Showroom',
-  posicaoShowroom: 'Posição do Showroom',
-  produtoPrecisaAtualizacao: 'Produto Precisa Atualização?',
   lojistaEntendeuMargem: 'Lojista Entendeu Nova Margem?',
   comparouConcorrentes: 'Comparou com Concorrentes?',
   dandoDesconto: 'Está Dando Desconto ao Cliente?',
@@ -113,4 +142,8 @@ export const FIELD_LABELS: Record<string, string> = {
   dataProximoFollowup: 'Data do Próximo Follow-up',
   scoreLoja: 'Score da Loja',
   observacoes: 'Observações',
+  assistenciaIdentificada: 'Assistência Identificada?',
+  assistenciaProduto: 'Produto com Defeito',
+  assistenciaDefeito: 'Defeito Identificado',
+  assistenciaDescricao: 'Detalhes da Assistência',
 };
