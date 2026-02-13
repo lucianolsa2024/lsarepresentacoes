@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ClipboardCheck, Save, Search, X, AlertTriangle } from 'lucide-react';
+import { ClipboardCheck, Save, Search, X, AlertTriangle, Camera, Trash2, Loader2 } from 'lucide-react';
 import {
   StoreChecklistData,
   EMPTY_STORE_CHECKLIST,
@@ -18,6 +18,8 @@ import {
   FIELD_LABELS,
 } from '@/types/storeChecklist';
 import { useProducts } from '@/hooks/useProducts';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface StoreChecklistFormProps {
   open: boolean;
@@ -41,6 +43,8 @@ export function StoreChecklistForm({
   const [data, setData] = useState<StoreChecklistData>(EMPTY_STORE_CHECKLIST);
   const [saving, setSaving] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { products } = useProducts();
 
   useEffect(() => {
@@ -89,6 +93,49 @@ export function StoreChecklistForm({
     }));
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingPhoto(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} excede 5MB`);
+          continue;
+        }
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+        const { error } = await supabase.storage
+          .from('checklist-photos')
+          .upload(fileName, file);
+        if (error) {
+          toast.error(`Erro ao enviar ${file.name}`);
+          continue;
+        }
+        const { data: urlData } = supabase.storage
+          .from('checklist-photos')
+          .getPublicUrl(fileName);
+        newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        setData(prev => ({ ...prev, fotos: [...prev.fotos, ...newUrls] }));
+        toast.success(`${newUrls.length} foto(s) adicionada(s)`);
+      }
+    } catch {
+      toast.error('Erro ao enviar fotos');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = (url: string) => {
+    if (readOnly) return;
+    setData(prev => ({ ...prev, fotos: prev.fotos.filter(f => f !== url) }));
+  };
+
   const shareNosso = useMemo(() => {
     const nossos = data.qtdProdutosNossos || 0;
     const concorrentes = data.qtdProdutosConcorrentes || 0;
@@ -117,6 +164,64 @@ export function StoreChecklistForm({
 
   const renderField = (field: string) => {
     const label = FIELD_LABELS[field] || field;
+
+    // Fotos field
+    if (field === 'fotos') {
+      return (
+        <div className="space-y-2 col-span-full" key={field}>
+          <Label className="text-sm font-medium">📸 Fotos / Evidências</Label>
+          {/* Photo grid */}
+          {data.fotos.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {data.fotos.map((url, i) => (
+                <div key={i} className="relative group aspect-square rounded-md overflow-hidden border">
+                  <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(url)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Upload button */}
+          {!readOnly && (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 mr-1" />
+                )}
+                {uploadingPhoto ? 'Enviando...' : 'Adicionar Fotos'}
+              </Button>
+            </div>
+          )}
+          {data.fotos.length === 0 && readOnly && (
+            <p className="text-sm text-muted-foreground">Nenhuma foto registrada</p>
+          )}
+        </div>
+      );
+    }
 
     // Special handling for new fields
     if (field === 'produtosExpostos') {

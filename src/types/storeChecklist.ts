@@ -42,6 +42,9 @@ export interface StoreChecklistData {
   scoreLoja: 'A' | 'B' | 'C' | '';
   observacoes: string;
 
+  // Fotos / Evidências
+  fotos: string[];
+
   // Assistência
   assistenciaIdentificada: boolean | null;
   assistenciaProduto: string;
@@ -79,6 +82,7 @@ export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
   dataProximoFollowup: '',
   scoreLoja: '',
   observacoes: '',
+  fotos: [],
   assistenciaIdentificada: null,
   assistenciaProduto: '',
   assistenciaDefeito: '',
@@ -89,6 +93,10 @@ export const CHECKLIST_SECTIONS = [
   {
     title: '🛋️ Produtos Expostos & Share',
     fields: ['produtosExpostos', 'concorrentesExpostos', 'qtdProdutosNossos', 'qtdProdutosConcorrentes', 'necessidadeAtualizacao'] as const,
+  },
+  {
+    title: '📸 Fotos / Evidências',
+    fields: ['fotos'] as const,
   },
   {
     title: '📋 Ações em Andamento / Futuras',
@@ -117,6 +125,7 @@ export const CHECKLIST_SECTIONS = [
 ];
 
 export const FIELD_LABELS: Record<string, string> = {
+  fotos: 'Fotos / Evidências',
   produtosExpostos: 'Produtos Expostos (nossos)',
   concorrentesExpostos: 'Concorrentes Expostos',
   qtdProdutosNossos: 'Qtd Produtos Nossos',
