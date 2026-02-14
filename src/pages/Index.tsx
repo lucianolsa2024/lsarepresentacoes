@@ -494,10 +494,7 @@ const Index = () => {
                   <TabsContent value="import-excel" className="mt-0">
                     <OrderImporter
                       onImport={async (importedOrders) => {
-                        // Save as orders AND create quotes so they appear in history
-                        const orderCount = await addOrders(importedOrders);
-                        
-                        // Also create quotes from imported data
+                        // Import as quotes ONLY (not orders)
                         let quoteCount = 0;
                         for (const item of importedOrders) {
                           const quoteItem: QuoteItem = {
@@ -514,7 +511,7 @@ const Index = () => {
                             fabricDescription: item.order.fabric || '',
                             price: item.order.price || 0,
                             quantity: item.order.quantity || 1,
-                            observations: `Pedido: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                            observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
                           };
                           const total = quoteItem.price * quoteItem.quantity;
                           const quote: Quote = {
@@ -539,8 +536,8 @@ const Index = () => {
                           if (result) quoteCount++;
                         }
                         
-                        toast.success(`${quoteCount} orçamentos criados no histórico`);
-                        return orderCount;
+                        toast.success(`${quoteCount} orçamentos importados`);
+                        return quoteCount;
                       }}
                       clients={clients}
                       onAddClient={addClient}
@@ -551,8 +548,7 @@ const Index = () => {
                   <TabsContent value="import-pdf" className="mt-0">
                     <OrderPdfImporter
                       onImport={async (importedOrders) => {
-                        const orderCount = await addOrders(importedOrders);
-                        
+                        // Import as quotes ONLY (not orders)
                         let quoteCount = 0;
                         for (const item of importedOrders) {
                           const quoteItem: QuoteItem = {
@@ -569,7 +565,7 @@ const Index = () => {
                             fabricDescription: item.order.fabric || '',
                             price: item.order.price || 0,
                             quantity: item.order.quantity || 1,
-                            observations: `Pedido: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                            observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
                           };
                           const total = quoteItem.price * quoteItem.quantity;
                           const quote: Quote = {
@@ -594,8 +590,8 @@ const Index = () => {
                           if (result) quoteCount++;
                         }
                         
-                        toast.success(`${quoteCount} orçamentos criados no histórico`);
-                        return orderCount;
+                        toast.success(`${quoteCount} orçamentos importados`);
+                        return quoteCount;
                       }}
                       clients={clients}
                       onAddClient={addClient}
