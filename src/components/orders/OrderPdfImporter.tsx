@@ -232,10 +232,12 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
               dimensions: item.dimensoes || '',
               deliveryDate: pedido.previsaoFaturamento || '',
               quantity: item.quantidade || 1,
-              price: item.precoTotal || item.precoUnitario * (item.quantidade || 1),
+              price: item.precoUnitario || 0,
               orderType: 'ENCOMENDA',
               paymentTerms: pedido.condicaoPagamento || '',
-            },
+              // Pass description for richer quote items
+              description: item.descricaoCompleta || '',
+            } as OrderFormData & { description?: string },
             clientId,
             pdfUrl,
           });
