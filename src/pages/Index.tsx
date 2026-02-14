@@ -555,22 +555,25 @@ const Index = () => {
                       onImport={async (importedOrders) => {
                         if (importedOrders.length === 0) return 0;
                         
-                        const allItems: QuoteItem[] = importedOrders.map(item => ({
-                          id: crypto.randomUUID(),
-                          productId: '',
-                          productName: item.order.product || 'Produto importado',
-                          factory: item.order.supplier || '',
-                          modulation: item.order.dimensions || '',
-                          modulationId: '',
-                          sizeId: '',
-                          sizeDescription: item.order.dimensions || '',
-                          base: '',
-                          fabricTier: 'SEM TEC' as const,
-                          fabricDescription: item.order.fabric || '',
-                          price: item.order.price || 0,
-                          quantity: item.order.quantity || 1,
-                          observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
-                        }));
+                        const allItems: QuoteItem[] = importedOrders.map(item => {
+                          const orderAny = item.order as any;
+                          return {
+                            id: crypto.randomUUID(),
+                            productId: '',
+                            productName: item.order.product || 'Produto importado',
+                            factory: item.order.supplier || '',
+                            modulation: item.order.dimensions || '',
+                            modulationId: '',
+                            sizeId: '',
+                            sizeDescription: item.order.dimensions || '',
+                            base: '',
+                            fabricTier: 'SEM TEC' as const,
+                            fabricDescription: item.order.fabric || '',
+                            price: item.order.price || 0,
+                            quantity: item.order.quantity || 1,
+                            observations: orderAny.description || '',
+                          };
+                        });
 
                         const subtotal = allItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
                         const first = importedOrders[0];
@@ -589,7 +592,7 @@ const Index = () => {
                             address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
                           },
                           items: allItems,
-                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '' },
+                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '', paymentTerms: first.order.paymentTerms || '' } as any,
                           subtotal,
                           discount: 0,
                           total: subtotal,
@@ -597,7 +600,7 @@ const Index = () => {
 
                         const result = await addQuote(quote, first.clientId || undefined);
                         if (result) {
-                          toast.success(`Orçamento importado com ${allItems.length} itens`);
+                          toast.success(`Orçamento importado com ${allItems.length} itens — Total: ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
                           return 1;
                         }
                         return 0;
