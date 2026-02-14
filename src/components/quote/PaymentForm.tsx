@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, Percent, Calendar, User, Truck, CalendarCheck } from 'lucide-react';
+import { CreditCard, Percent, Calendar, User, Truck, CalendarCheck, DollarSign } from 'lucide-react';
 
 const CARRIER_OPTIONS = [
   'A combinar',
@@ -238,6 +238,24 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
           />
           <p className="text-xs text-muted-foreground">
             Esta data será usada para criar lembrete e calcular previsão de entrega
+          </p>
+        </div>
+
+        {/* Estimated Price */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3" />
+            Preço Estimado
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            value={payment.estimatedPrice || ''}
+            onChange={(e) => updateField('estimatedPrice', parseFloat(e.target.value) || 0)}
+            placeholder="R$ 0,00"
+          />
+          <p className="text-xs text-muted-foreground">
+            Valor estimado para previsão de receita (não afeta o cálculo do orçamento)
           </p>
         </div>
 

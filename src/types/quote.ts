@@ -68,6 +68,15 @@ export interface QuoteItem {
   imageUrl?: string | null;
 }
 
+export type ClientType = 'lojista_alto' | 'lojista_medio' | 'corporativo' | 'escritorio_arquitetura';
+
+export const CLIENT_TYPE_OPTIONS: { value: ClientType; label: string }[] = [
+  { value: 'lojista_alto', label: 'Lojista Alto Padrão' },
+  { value: 'lojista_medio', label: 'Lojista Médio Padrão' },
+  { value: 'corporativo', label: 'Corporativo' },
+  { value: 'escritorio_arquitetura', label: 'Escritório de Arquitetura' },
+];
+
 export interface ClientData {
   name: string;
   company: string;
@@ -75,6 +84,7 @@ export interface ClientData {
   phone: string;
   email: string;
   isNewClient: boolean;
+  clientType?: ClientType;
   address: {
     street: string;
     number: string;
@@ -101,6 +111,7 @@ export interface PaymentConditions {
   observations: string;
   representativeName: string; // Name of the sales representative
   estimatedClosingDate: string; // Data no formato ISO (YYYY-MM-DD)
+  estimatedPrice: number; // Preço estimado do orçamento
 }
 
 export interface Quote {
@@ -121,6 +132,7 @@ export const INITIAL_CLIENT: ClientData = {
   phone: '',
   email: '',
   isNewClient: false,
+  clientType: undefined,
   address: {
     street: '',
     number: '',
@@ -145,4 +157,5 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   observations: '',
   representativeName: 'Luciano Abreu',
   estimatedClosingDate: '',
+  estimatedPrice: 0,
 };

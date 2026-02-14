@@ -1,11 +1,12 @@
-import { ClientData } from '@/types/quote';
+import { ClientData, CLIENT_TYPE_OPTIONS, ClientType } from '@/types/quote';
 import { Client } from '@/hooks/useClients';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { User, Building, Phone, Mail, MapPin, UserPlus, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { User, Building, Phone, Mail, MapPin, UserPlus, Save, Tag } from 'lucide-react';
 import { ClientSelector } from './ClientSelector';
 
 interface ClientFormProps {
@@ -44,6 +45,7 @@ export function ClientForm({
       phone: selectedClient.phone,
       email: selectedClient.email,
       isNewClient: selectedClient.isNewClient,
+      clientType: selectedClient.clientType,
       address: selectedClient.address,
     });
     onSelectClient?.(selectedClient);
@@ -149,6 +151,30 @@ export function ClientForm({
               onChange={(e) => updateField('name', e.target.value)}
             />
           </div>
+        </div>
+
+        {/* Client Type */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            <Tag className="h-3 w-3" />
+            Tipo de Cliente
+          </Label>
+          <Select
+            value={client.clientType || 'none'}
+            onValueChange={(value) => updateField('clientType', value === 'none' ? undefined as any : value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não definido</SelectItem>
+              {CLIENT_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -29,10 +29,13 @@ import { ClientManager } from '@/components/quote/ClientManager';
 import { ClientDetailPanel } from '@/components/quote/ClientDetailPanel';
 import { RouteManager } from '@/components/routes/RouteManager';
 import { ActivityManager } from '@/components/activities/ActivityManager';
+import { OrderImporter } from '@/components/orders/OrderImporter';
+import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { Order, OrderFormData } from '@/types/order';
 import {
   Dialog,
   DialogContent,
@@ -62,7 +65,7 @@ const Index = () => {
   const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { activities, addActivity } = useActivities();
-  const { orders } = useOrders();
+  const { orders, addOrders } = useOrders();
   const { opportunities } = useSalesOpportunities();
   const { user, signOut } = useAuth();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
@@ -364,6 +367,14 @@ const Index = () => {
                       <Map className="h-4 w-4 mr-2" />
                       Rotas
                     </TabsTrigger>
+                    <TabsTrigger value="import-excel">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importar Excel
+                    </TabsTrigger>
+                    <TabsTrigger value="import-pdf">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Importar PDF
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="quote" className="mt-0">
@@ -478,6 +489,30 @@ const Index = () => {
 
                   <TabsContent value="routes" className="mt-0">
                     <RouteManager onCreateQuote={handleNavigateToQuote} />
+                  </TabsContent>
+
+                  <TabsContent value="import-excel" className="mt-0">
+                    <OrderImporter
+                      onImport={async (importedOrders) => {
+                        const count = await addOrders(importedOrders);
+                        return count;
+                      }}
+                      clients={clients}
+                      onAddClient={addClient}
+                      onComplete={() => setComercialTab('history')}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="import-pdf" className="mt-0">
+                    <OrderPdfImporter
+                      onImport={async (importedOrders) => {
+                        const count = await addOrders(importedOrders);
+                        return count;
+                      }}
+                      clients={clients}
+                      onAddClient={addClient}
+                      onComplete={() => setComercialTab('history')}
+                    />
                   </TabsContent>
                 </Tabs>
               </TabsContent>
