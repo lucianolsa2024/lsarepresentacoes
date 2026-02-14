@@ -494,8 +494,53 @@ const Index = () => {
                   <TabsContent value="import-excel" className="mt-0">
                     <OrderImporter
                       onImport={async (importedOrders) => {
-                        const count = await addOrders(importedOrders);
-                        return count;
+                        // Save as orders AND create quotes so they appear in history
+                        const orderCount = await addOrders(importedOrders);
+                        
+                        // Also create quotes from imported data
+                        let quoteCount = 0;
+                        for (const item of importedOrders) {
+                          const quoteItem: QuoteItem = {
+                            id: crypto.randomUUID(),
+                            productId: '',
+                            productName: item.order.product || 'Produto importado',
+                            factory: item.order.supplier || '',
+                            modulation: item.order.dimensions || '',
+                            modulationId: '',
+                            sizeId: '',
+                            sizeDescription: item.order.dimensions || '',
+                            base: '',
+                            fabricTier: 'SEM TEC',
+                            fabricDescription: item.order.fabric || '',
+                            price: item.order.price || 0,
+                            quantity: item.order.quantity || 1,
+                            observations: `Pedido: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                          };
+                          const total = quoteItem.price * quoteItem.quantity;
+                          const quote: Quote = {
+                            id: crypto.randomUUID(),
+                            createdAt: item.order.issueDate ? new Date(item.order.issueDate).toISOString() : new Date().toISOString(),
+                            client: {
+                              name: '',
+                              company: item.order.clientName,
+                              document: '',
+                              phone: '',
+                              email: '',
+                              isNewClient: false,
+                              address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
+                            },
+                            items: [quoteItem],
+                            payment: { ...INITIAL_PAYMENT, representativeName: item.order.representative || '' },
+                            subtotal: total,
+                            discount: 0,
+                            total,
+                          };
+                          const result = await addQuote(quote, item.clientId || undefined);
+                          if (result) quoteCount++;
+                        }
+                        
+                        toast.success(`${quoteCount} orçamentos criados no histórico`);
+                        return orderCount;
                       }}
                       clients={clients}
                       onAddClient={addClient}
@@ -506,8 +551,51 @@ const Index = () => {
                   <TabsContent value="import-pdf" className="mt-0">
                     <OrderPdfImporter
                       onImport={async (importedOrders) => {
-                        const count = await addOrders(importedOrders);
-                        return count;
+                        const orderCount = await addOrders(importedOrders);
+                        
+                        let quoteCount = 0;
+                        for (const item of importedOrders) {
+                          const quoteItem: QuoteItem = {
+                            id: crypto.randomUUID(),
+                            productId: '',
+                            productName: item.order.product || 'Produto importado',
+                            factory: item.order.supplier || '',
+                            modulation: item.order.dimensions || '',
+                            modulationId: '',
+                            sizeId: '',
+                            sizeDescription: item.order.dimensions || '',
+                            base: '',
+                            fabricTier: 'SEM TEC',
+                            fabricDescription: item.order.fabric || '',
+                            price: item.order.price || 0,
+                            quantity: item.order.quantity || 1,
+                            observations: `Pedido: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                          };
+                          const total = quoteItem.price * quoteItem.quantity;
+                          const quote: Quote = {
+                            id: crypto.randomUUID(),
+                            createdAt: item.order.issueDate ? new Date(item.order.issueDate).toISOString() : new Date().toISOString(),
+                            client: {
+                              name: '',
+                              company: item.order.clientName,
+                              document: '',
+                              phone: '',
+                              email: '',
+                              isNewClient: false,
+                              address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
+                            },
+                            items: [quoteItem],
+                            payment: { ...INITIAL_PAYMENT, representativeName: item.order.representative || '' },
+                            subtotal: total,
+                            discount: 0,
+                            total,
+                          };
+                          const result = await addQuote(quote, item.clientId || undefined);
+                          if (result) quoteCount++;
+                        }
+                        
+                        toast.success(`${quoteCount} orçamentos criados no histórico`);
+                        return orderCount;
                       }}
                       clients={clients}
                       onAddClient={addClient}
