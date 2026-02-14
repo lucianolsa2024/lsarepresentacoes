@@ -494,50 +494,55 @@ const Index = () => {
                   <TabsContent value="import-excel" className="mt-0">
                     <OrderImporter
                       onImport={async (importedOrders) => {
-                        // Import as quotes ONLY (not orders)
-                        let quoteCount = 0;
-                        for (const item of importedOrders) {
-                          const quoteItem: QuoteItem = {
-                            id: crypto.randomUUID(),
-                            productId: '',
-                            productName: item.order.product || 'Produto importado',
-                            factory: item.order.supplier || '',
-                            modulation: item.order.dimensions || '',
-                            modulationId: '',
-                            sizeId: '',
-                            sizeDescription: item.order.dimensions || '',
-                            base: '',
-                            fabricTier: 'SEM TEC',
-                            fabricDescription: item.order.fabric || '',
-                            price: item.order.price || 0,
-                            quantity: item.order.quantity || 1,
-                            observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
-                          };
-                          const total = quoteItem.price * quoteItem.quantity;
-                          const quote: Quote = {
-                            id: crypto.randomUUID(),
-                            createdAt: item.order.issueDate ? new Date(item.order.issueDate).toISOString() : new Date().toISOString(),
-                            client: {
-                              name: '',
-                              company: item.order.clientName,
-                              document: '',
-                              phone: '',
-                              email: '',
-                              isNewClient: false,
-                              address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
-                            },
-                            items: [quoteItem],
-                            payment: { ...INITIAL_PAYMENT, representativeName: item.order.representative || '' },
-                            subtotal: total,
-                            discount: 0,
-                            total,
-                          };
-                          const result = await addQuote(quote, item.clientId || undefined);
-                          if (result) quoteCount++;
-                        }
+                        if (importedOrders.length === 0) return 0;
                         
-                        toast.success(`${quoteCount} orçamentos importados`);
-                        return quoteCount;
+                        // Build all items into a SINGLE quote
+                        const allItems: QuoteItem[] = importedOrders.map(item => ({
+                          id: crypto.randomUUID(),
+                          productId: '',
+                          productName: item.order.product || 'Produto importado',
+                          factory: item.order.supplier || '',
+                          modulation: item.order.dimensions || '',
+                          modulationId: '',
+                          sizeId: '',
+                          sizeDescription: item.order.dimensions || '',
+                          base: '',
+                          fabricTier: 'SEM TEC' as const,
+                          fabricDescription: item.order.fabric || '',
+                          price: item.order.price || 0,
+                          quantity: item.order.quantity || 1,
+                          observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                        }));
+
+                        const subtotal = allItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                        const first = importedOrders[0];
+                        const clientName = first.order.clientName || 'Importação';
+
+                        const quote: Quote = {
+                          id: crypto.randomUUID(),
+                          createdAt: first.order.issueDate ? new Date(first.order.issueDate).toISOString() : new Date().toISOString(),
+                          client: {
+                            name: '',
+                            company: clientName,
+                            document: '',
+                            phone: '',
+                            email: '',
+                            isNewClient: false,
+                            address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
+                          },
+                          items: allItems,
+                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '' },
+                          subtotal,
+                          discount: 0,
+                          total: subtotal,
+                        };
+
+                        const result = await addQuote(quote, first.clientId || undefined);
+                        if (result) {
+                          toast.success(`Orçamento importado com ${allItems.length} itens`);
+                          return 1;
+                        }
+                        return 0;
                       }}
                       clients={clients}
                       onAddClient={addClient}
@@ -548,50 +553,54 @@ const Index = () => {
                   <TabsContent value="import-pdf" className="mt-0">
                     <OrderPdfImporter
                       onImport={async (importedOrders) => {
-                        // Import as quotes ONLY (not orders)
-                        let quoteCount = 0;
-                        for (const item of importedOrders) {
-                          const quoteItem: QuoteItem = {
-                            id: crypto.randomUUID(),
-                            productId: '',
-                            productName: item.order.product || 'Produto importado',
-                            factory: item.order.supplier || '',
-                            modulation: item.order.dimensions || '',
-                            modulationId: '',
-                            sizeId: '',
-                            sizeDescription: item.order.dimensions || '',
-                            base: '',
-                            fabricTier: 'SEM TEC',
-                            fabricDescription: item.order.fabric || '',
-                            price: item.order.price || 0,
-                            quantity: item.order.quantity || 1,
-                            observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
-                          };
-                          const total = quoteItem.price * quoteItem.quantity;
-                          const quote: Quote = {
-                            id: crypto.randomUUID(),
-                            createdAt: item.order.issueDate ? new Date(item.order.issueDate).toISOString() : new Date().toISOString(),
-                            client: {
-                              name: '',
-                              company: item.order.clientName,
-                              document: '',
-                              phone: '',
-                              email: '',
-                              isNewClient: false,
-                              address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
-                            },
-                            items: [quoteItem],
-                            payment: { ...INITIAL_PAYMENT, representativeName: item.order.representative || '' },
-                            subtotal: total,
-                            discount: 0,
-                            total,
-                          };
-                          const result = await addQuote(quote, item.clientId || undefined);
-                          if (result) quoteCount++;
-                        }
+                        if (importedOrders.length === 0) return 0;
                         
-                        toast.success(`${quoteCount} orçamentos importados`);
-                        return quoteCount;
+                        const allItems: QuoteItem[] = importedOrders.map(item => ({
+                          id: crypto.randomUUID(),
+                          productId: '',
+                          productName: item.order.product || 'Produto importado',
+                          factory: item.order.supplier || '',
+                          modulation: item.order.dimensions || '',
+                          modulationId: '',
+                          sizeId: '',
+                          sizeDescription: item.order.dimensions || '',
+                          base: '',
+                          fabricTier: 'SEM TEC' as const,
+                          fabricDescription: item.order.fabric || '',
+                          price: item.order.price || 0,
+                          quantity: item.order.quantity || 1,
+                          observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
+                        }));
+
+                        const subtotal = allItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+                        const first = importedOrders[0];
+                        const clientName = first.order.clientName || 'Importação';
+
+                        const quote: Quote = {
+                          id: crypto.randomUUID(),
+                          createdAt: first.order.issueDate ? new Date(first.order.issueDate).toISOString() : new Date().toISOString(),
+                          client: {
+                            name: '',
+                            company: clientName,
+                            document: '',
+                            phone: '',
+                            email: '',
+                            isNewClient: false,
+                            address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
+                          },
+                          items: allItems,
+                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '' },
+                          subtotal,
+                          discount: 0,
+                          total: subtotal,
+                        };
+
+                        const result = await addQuote(quote, first.clientId || undefined);
+                        if (result) {
+                          toast.success(`Orçamento importado com ${allItems.length} itens`);
+                          return 1;
+                        }
+                        return 0;
                       }}
                       clients={clients}
                       onAddClient={addClient}
