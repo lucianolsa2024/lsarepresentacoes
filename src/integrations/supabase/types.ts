@@ -237,6 +237,7 @@ export type Database = {
       clients: {
         Row: {
           city: string | null
+          client_type: string | null
           company: string
           complement: string | null
           created_at: string
@@ -255,6 +256,7 @@ export type Database = {
         }
         Insert: {
           city?: string | null
+          client_type?: string | null
           company: string
           complement?: string | null
           created_at?: string
@@ -273,6 +275,7 @@ export type Database = {
         }
         Update: {
           city?: string | null
+          client_type?: string | null
           company?: string
           complement?: string | null
           created_at?: string

@@ -9,6 +9,8 @@ export interface Client extends ClientData {
   updatedAt: string;
 }
 
+import { ClientType } from '@/types/quote';
+
 // Convert DB row to Client
 const dbToClient = (row: {
   id: string;
@@ -18,6 +20,7 @@ const dbToClient = (row: {
   phone: string | null;
   email: string | null;
   is_new_client: boolean | null;
+  client_type: string | null;
   street: string | null;
   number: string | null;
   complement: string | null;
@@ -35,6 +38,7 @@ const dbToClient = (row: {
   phone: row.phone || '',
   email: row.email || '',
   isNewClient: row.is_new_client || false,
+  clientType: (row.client_type as ClientType) || undefined,
   address: {
     street: row.street || '',
     number: row.number || '',
@@ -56,6 +60,7 @@ const clientToDb = (client: ClientData) => ({
   phone: client.phone || null,
   email: client.email || null,
   is_new_client: client.isNewClient,
+  client_type: client.clientType || null,
   street: client.address.street || null,
   number: client.address.number || null,
   complement: client.address.complement || null,
