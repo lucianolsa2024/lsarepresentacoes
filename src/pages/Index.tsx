@@ -34,6 +34,7 @@ import { OrderImporter } from '@/components/orders/OrderImporter';
 import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
+import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
@@ -343,12 +344,16 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                <QuoteDashboard 
-                  quotes={quotes} 
-                  activities={activities}
-                  orders={orders}
-                  onViewActivities={() => setActiveTab('activities')}
-                />
+                {isRep === true ? (
+                  <RepHomeDashboard />
+                ) : (
+                  <QuoteDashboard 
+                    quotes={quotes} 
+                    activities={activities}
+                    orders={orders}
+                    onViewActivities={() => setActiveTab('activities')}
+                  />
+                )}
               </TabsContent>
 
               {/* COMERCIAL - Sub-tabs */}
