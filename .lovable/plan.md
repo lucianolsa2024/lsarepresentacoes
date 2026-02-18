@@ -1,65 +1,83 @@
 
+# Plano: Relatorio de Vendas + Painel Administrativo
 
-## Plan: Isolamento de Pedidos por Representante
+## Resumo
 
-### Objetivo
-Implementar controle de acesso nos pedidos para que cada representante veja apenas seus proprios pedidos, enquanto admins veem tudo. Inclui criacao da tabela de mapeamento representante-email e atualizacao das politicas de seguranca.
+Criar 3 funcionalidades novas:
+1. **Relatorio de Vendas** agrupado por fornecedor, vendedor e periodo
+2. **Painel de Administracao** (somente para seu login admin) com cadastro de metas, gerenciamento de usuarios e reset de senha
+3. Nova aba "Admin" visivel apenas para admins
 
-### Etapas
+---
 
-#### 1. Migracao do banco de dados
+## 1. Relatorio de Vendas por Fornecedor/Vendedor
 
-Executar uma unica migracao SQL que:
+Criar um componente `SalesReport` que permite filtrar pedidos por periodo e exibe:
 
-- Adiciona coluna `owner_email` (text, nullable) na tabela `orders`
-- Cria tabela `representatives_map` com colunas `representative_name` (PK), `email` (unique), `active` (boolean)
-- Habilita RLS na tabela `representatives_map` com politica de leitura para autenticados
-- Remove as politicas antigas de SELECT e UPDATE da tabela `orders`
-- Cria novas politicas de SELECT e UPDATE baseadas em `owner_email = auth.jwt()->>'email'` OU admin via `has_role()`
-- Mantem as politicas existentes de INSERT e DELETE inalteradas
+- **Tabela resumo por fornecedor**: faturamento, volume, qtd pedidos, ticket medio
+- **Tabela resumo por vendedor**: mesmos indicadores
+- **Tabela cruzada fornecedor x vendedor**: para ver qual vendedor vende mais de cada marca
+- Filtros de data (de/ate) no topo
+- Graficos de barras (Recharts) para visualizacao rapida
 
-#### 2. Inserir dados de mapeamento
+Dados virao diretamente da tabela `orders` filtrada por periodo no frontend (ja carregada), ou das views existentes (`v_rep_suppliers_month`, `v_rep_supplier_90d_compare`) para dados pre-calculados.
 
-Usar ferramenta de insert para popular `representatives_map` com os 5 representantes:
-- LUCIANO ABREU -> luciano@lsarepresentacoes.com.br
-- MARCIA MORELLI -> marcia.morelli@lsarepresentacoes.com.br
-- JULIANA CECONI -> comercial2@lsarepresentacoes.com.br
-- LIVIA MORELLI -> livia.morelli@lsarepresentacoes.com.br
-- LUCIANO MORETTI -> lucianoabreu@lsarepresentacoes.com.br
+---
 
-#### 3. Backfill de owner_email nos pedidos existentes
+## 2. Painel de Administracao
 
-Executar UPDATE via insert tool para preencher `owner_email` nos pedidos existentes fazendo match normalizado (UPPER/TRIM) entre `orders.representative` e `representatives_map.representative_name`.
+### 2a. Cadastro de Metas
+- Formulario para selecionar representante (lista de `representatives_map`), mes e valor da meta
+- CRUD na tabela `rep_goals` (ja existente com RLS admin-only para insert/update/delete)
+- Tabela listando metas cadastradas com opcao de editar/excluir
 
-#### 4. Atualizar o tipo Order e o hook useOrders
+### 2b. Gerenciamento de Usuarios
+- Listar usuarios do `representatives_map` + backoffice
+- Criar novos usuarios via edge function (usando `supabase.auth.admin.createUser`)
+- A edge function tera acesso ao `SUPABASE_SERVICE_ROLE_KEY` (ja configurado)
 
-- Adicionar `ownerEmail` ao interface `Order` em `src/types/order.ts`
-- Atualizar `dbToOrder` para mapear `row.owner_email`
-- Atualizar `orderToDb` para incluir `owner_email` baseado no representante selecionado (fazendo lookup na tabela `representatives_map` ou usando o email do usuario logado)
+### 2c. Reset de Senha
+- Botao para resetar senha de qualquer usuario via edge function (`supabase.auth.admin.updateUserById`)
+- Input para nova senha, confirmacao, e execucao
 
-#### 5. Atualizar a lista de REPRESENTATIVES
+---
 
-Atualizar a constante `REPRESENTATIVES` em `src/types/order.ts` para incluir os 5 nomes atualizados:
-- LUCIANO ABREU, MARCIA MORELLI, JULIANA CECONI, LIVIA MORELLI, LUCIANO MORETTI
+## 3. Nova Aba "Admin"
 
-#### 6. Auto-preencher owner_email ao criar pedidos
+- Visivel apenas quando `has_role(uid, 'admin')` for true
+- Usar hook `useIsAdmin` que consulta `user_roles`
+- Contera sub-abas: Relatorio de Vendas | Metas | Usuarios
 
-No `orderToDb`, ao inserir um novo pedido, resolver o `owner_email` a partir do campo `representative` usando a tabela de mapeamento, ou usar o email do usuario autenticado como fallback.
+---
 
-### Detalhes Tecnicos
+## Detalhes Tecnicos
 
-**Politicas RLS finais na tabela orders:**
+### Arquivos novos:
+- `src/hooks/useIsAdmin.ts` - hook para verificar role admin
+- `src/components/admin/AdminPanel.tsx` - container com sub-abas
+- `src/components/admin/SalesReport.tsx` - relatorio de vendas
+- `src/components/admin/GoalManager.tsx` - CRUD de metas
+- `src/components/admin/UserManager.tsx` - gestao de usuarios + reset senha
+- `supabase/functions/admin-users/index.ts` - edge function para criar usuario e resetar senha
 
-```text
-SELECT: admin via has_role() OU owner_email = jwt email
-UPDATE: admin via has_role() OU owner_email = jwt email  
-INSERT: qualquer autenticado (mantido)
-DELETE: somente admin (mantido)
+### Arquivos modificados:
+- `src/pages/Index.tsx` - adicionar aba Admin condicional
+
+### Edge Function `admin-users`:
 ```
+POST /admin-users
+Body: { action: "create", email, password, name }
+      { action: "reset-password", userId, newPassword }
+      { action: "list" }
+```
+- Valida que o chamador eh admin (via JWT + `has_role`)
+- Usa service role key para operacoes admin do auth
 
-**Arquivos modificados:**
-- `src/types/order.ts` - adicionar ownerEmail, atualizar REPRESENTATIVES
-- `src/hooks/useOrders.ts` - mapear owner_email no dbToOrder e orderToDb
-- Nova migracao SQL
-- Insert de dados na representatives_map + backfill
+### Banco de dados:
+- Nenhuma migracao necessaria - `rep_goals` e `user_roles` ja existem
+- Views de fornecedor (`v_rep_suppliers_month`, `v_rep_supplier_90d_compare`) ja existem
 
+### Seguranca:
+- Aba Admin so renderiza se `useIsAdmin()` retornar true
+- Edge function valida role admin server-side antes de executar
+- Reset de senha e criacao de usuario sao operacoes server-side apenas
