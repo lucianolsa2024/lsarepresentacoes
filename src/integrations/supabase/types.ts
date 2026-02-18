@@ -388,6 +388,7 @@ export type Database = {
           oc: string | null
           order_number: string | null
           order_type: string | null
+          owner_email: string | null
           payment_terms: string | null
           pdf_url: string | null
           price: number | null
@@ -411,6 +412,7 @@ export type Database = {
           oc?: string | null
           order_number?: string | null
           order_type?: string | null
+          owner_email?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           price?: number | null
@@ -434,6 +436,7 @@ export type Database = {
           oc?: string | null
           order_number?: string | null
           order_type?: string | null
+          owner_email?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           price?: number | null
@@ -577,6 +580,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      representatives_map: {
+        Row: {
+          active: boolean
+          email: string
+          representative_name: string
+        }
+        Insert: {
+          active?: boolean
+          email: string
+          representative_name: string
+        }
+        Update: {
+          active?: boolean
+          email?: string
+          representative_name?: string
+        }
+        Relationships: []
       }
       route_visits: {
         Row: {
