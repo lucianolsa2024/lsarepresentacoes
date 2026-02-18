@@ -344,16 +344,17 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                {isRep === true ? (
-                  <RepHomeDashboard />
-                ) : (
-                  <QuoteDashboard 
-                    quotes={quotes} 
-                    activities={activities}
-                    orders={orders}
-                    onViewActivities={() => setActiveTab('activities')}
-                  />
+                {isRep === true && (
+                  <div className="mb-6">
+                    <RepHomeDashboard />
+                  </div>
                 )}
+                <QuoteDashboard 
+                  quotes={quotes} 
+                  activities={activities}
+                  orders={orders}
+                  onViewActivities={() => setActiveTab('activities')}
+                />
               </TabsContent>
 
               {/* COMERCIAL - Sub-tabs */}
