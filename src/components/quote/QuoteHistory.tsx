@@ -334,6 +334,9 @@ export function QuoteHistory({
                         <div>
                           <p className="font-medium">
                             {index + 1}. {item.productName}
+                            {item.factory && (
+                              <span className="ml-2 text-xs font-normal text-muted-foreground">({item.factory})</span>
+                            )}
                           </p>
                           <p className="text-muted-foreground">
                             {item.modulation}

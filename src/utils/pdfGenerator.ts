@@ -341,6 +341,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     // Product details with size description - adjusted for image
     const details = [
       item.productName,
+      item.factory ? `Fábrica: ${item.factory}` : '',
       `Mod: ${item.modulation}`,
       item.sizeDescription ? `Tam: ${item.sizeDescription}` : '',
       item.base ? `Base: ${item.base}` : '',

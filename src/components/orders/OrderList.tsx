@@ -163,6 +163,7 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                   <div className="flex items-center gap-1.5">
                     <Package className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs truncate">{order.product || '—'}</span>
+                    {order.supplier && <Badge variant="secondary" className="text-[10px]">{order.supplier}</Badge>}
                     {order.fabric && <span className="text-xs text-muted-foreground">• {order.fabric}</span>}
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -192,6 +193,7 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Fornecedor</TableHead>
                 <TableHead>Pedido</TableHead>
                 <TableHead>OC</TableHead>
                 <TableHead>Produto</TableHead>
@@ -209,7 +211,7 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                     Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
@@ -218,6 +220,11 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                   <TableRow key={order.id}>
                     <TableCell className="whitespace-nowrap">{formatDate(order.issueDate)}</TableCell>
                     <TableCell className="font-medium">{order.clientName}</TableCell>
+                    <TableCell>
+                      {order.supplier ? (
+                        <Badge variant="secondary" className="text-xs">{order.supplier}</Badge>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell>{order.orderNumber || '-'}</TableCell>
                     <TableCell>{order.oc || '-'}</TableCell>
                     <TableCell>{order.product}</TableCell>

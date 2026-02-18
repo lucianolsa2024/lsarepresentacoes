@@ -46,9 +46,12 @@ interface FileOption {
 }
 
 const AVAILABLE_FILES: FileOption[] = [
-  { id: 'lsa1', name: 'tabela-lsa.xlsx', path: '/data/tabela-lsa.xlsx', description: 'Produtos PV parte 1', factory: 'SOHOME' },
-  { id: 'lsa2', name: 'tabela-lsa-2.xlsx', path: '/data/tabela-lsa-2.xlsx', description: 'Produtos PV parte 2', factory: 'SOHOME' },
+  { id: 'lsa1', name: 'tabela-lsa.xlsx', path: '/data/tabela-lsa.xlsx', description: 'Sohome PV parte 1', factory: 'SOHOME' },
+  { id: 'lsa2', name: 'tabela-lsa-2.xlsx', path: '/data/tabela-lsa-2.xlsx', description: 'Sohome PV parte 2', factory: 'SOHOME' },
   { id: 'century', name: 'produtos-century.xlsx', path: '/data/produtos-century.xlsx', description: 'Century', factory: 'CENTURY' },
+  { id: 'wood-pv', name: 'wood-pv.xlsx', path: '/data/wood-pv.xlsx', description: 'Sohome Wood PV', factory: 'SOHOME WOOD' },
+  { id: 'wood-century', name: 'wood-century.xlsx', path: '/data/wood-century.xlsx', description: 'Sohome Wood Century', factory: 'SOHOME WOOD' },
+  { id: 'wood-pl', name: 'wood-private-label.xlsx', path: '/data/wood-private-label.xlsx', description: 'Sohome Wood Private Label', factory: 'SOHOME WOOD' },
 ];
 
 export function BulkImporter({ onImportComplete }: BulkImporterProps) {
