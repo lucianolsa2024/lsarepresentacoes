@@ -11,6 +11,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useQuotes } from '@/hooks/useQuotes';
 import { useClients, Client } from '@/hooks/useClients';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsRepresentative } from '@/hooks/useIsRepresentative';
 import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
@@ -68,6 +69,7 @@ const Index = () => {
   const { orders, addOrders } = useOrders();
   const { opportunities } = useSalesOpportunities();
   const { user, signOut } = useAuth();
+  const isRep = useIsRepresentative();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
   const handleSignOut = async () => {
@@ -292,7 +294,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto p-0 bg-muted rounded-none">
+            <TabsList className={`w-full grid ${isRep === false ? 'grid-cols-3 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-6'} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -300,6 +302,7 @@ const Index = () => {
                 <LayoutDashboard className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
+              {isRep !== false && (
               <TabsTrigger
                 value="comercial"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -307,6 +310,7 @@ const Index = () => {
                 <Briefcase className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Comercial</span>
               </TabsTrigger>
+              )}
               <TabsTrigger
                 value="activities"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"

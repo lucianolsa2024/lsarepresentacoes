@@ -23,6 +23,7 @@ export interface Activity {
   reminder_sent: boolean;
   recurrence_rule?: RecurrenceRule;
   parent_activity_id?: string;
+  assigned_to_email?: string;
   created_at: string;
   updated_at: string;
   // Populated data
@@ -79,6 +80,7 @@ export interface CreateActivityInput {
   template_id?: string;
   reminder_at?: string;
   recurrence_rule?: RecurrenceRule;
+  assigned_to_email?: string;
 }
 
 export interface UpdateActivityInput {
@@ -93,6 +95,7 @@ export interface UpdateActivityInput {
   quote_id?: string;
   completed_notes?: string;
   reminder_at?: string;
+  assigned_to_email?: string;
 }
 
 export const ACTIVITY_TYPE_CONFIG: Record<ActivityType, { label: string; icon: string; color: string }> = {
