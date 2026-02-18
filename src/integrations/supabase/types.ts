@@ -584,6 +584,24 @@ export type Database = {
           },
         ]
       }
+      rep_goals: {
+        Row: {
+          goal_value: number
+          month_start: string
+          owner_email: string
+        }
+        Insert: {
+          goal_value: number
+          month_start: string
+          owner_email: string
+        }
+        Update: {
+          goal_value?: number
+          month_start?: string
+          owner_email?: string
+        }
+        Relationships: []
+      }
       representatives_map: {
         Row: {
           active: boolean
@@ -780,7 +798,150 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_client_90d_compare: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_90d: number | null
+          orders_prev_90d: number | null
+          owner_email: string | null
+          revenue_90d: number | null
+          revenue_change_pct: number | null
+          revenue_prev_90d: number | null
+          ticket_90d: number | null
+          ticket_change_pct: number | null
+          ticket_prev_90d: number | null
+          volume_90d: number | null
+          volume_change_pct: number | null
+          volume_prev_90d: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_client_monthly_12m: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          month: string | null
+          orders: number | null
+          owner_email: string | null
+          revenue: number | null
+          volume: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_client_suppliers_12m: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_12m: number | null
+          owner_email: string | null
+          revenue_12m: number | null
+          supplier: string | null
+          volume_12m: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_clients_summary: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          days_since_last_purchase: number | null
+          last_purchase_date: string | null
+          no_purchase_60d: boolean | null
+          orders_12m: number | null
+          owner_email: string | null
+          revenue_12m: number | null
+          ticket_avg_12m: number | null
+          volume_12m: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_rep_90d_compare: {
+        Row: {
+          orders_90d: number | null
+          orders_prev_90d: number | null
+          owner_email: string | null
+          revenue_90d: number | null
+          revenue_change_pct: number | null
+          revenue_prev_90d: number | null
+          ticket_90d: number | null
+          ticket_change_pct: number | null
+          ticket_prev_90d: number | null
+          volume_90d: number | null
+          volume_change_pct: number | null
+          volume_prev_90d: number | null
+        }
+        Relationships: []
+      }
+      v_rep_clients_no_purchase_60d: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          days_since_last_purchase: number | null
+          last_purchase_date: string | null
+          orders_12m: number | null
+          owner_email: string | null
+          revenue_12m: number | null
+          ticket_avg_12m: number | null
+          volume_12m: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_rep_month_dashboard: {
+        Row: {
+          daily_pace_so_far: number | null
+          goal_achieved_pct: number | null
+          goal_value: number | null
+          month_end: string | null
+          month_start: string | null
+          owner_email: string | null
+          remaining_to_goal: number | null
+          required_daily_pace_remaining: number | null
+          sold_month: number | null
+          today: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
