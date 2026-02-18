@@ -12,6 +12,7 @@ import { useQuotes } from '@/hooks/useQuotes';
 import { useClients, Client } from '@/hooks/useClients';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsRepresentative } from '@/hooks/useIsRepresentative';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
@@ -35,7 +36,8 @@ import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload } from 'lucide-react';
+import { AdminPanel } from '@/components/admin/AdminPanel';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
@@ -71,6 +73,7 @@ const Index = () => {
   const { opportunities } = useSalesOpportunities();
   const { user, signOut } = useAuth();
   const isRep = useIsRepresentative();
+  const isAdmin = useIsAdmin();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
 
   const handleSignOut = async () => {
@@ -295,7 +298,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`w-full grid ${isRep === false ? 'grid-cols-3 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-6'} h-auto p-0 bg-muted rounded-none`}>
+            <TabsList className={`w-full grid ${isRep === false ? (isAdmin ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5') : (isAdmin ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6')} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -340,6 +343,15 @@ const Index = () => {
                 <Package className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
               </TabsTrigger>
+              {isAdmin && (
+              <TabsTrigger
+                value="admin"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <ShieldCheck className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Admin</span>
+              </TabsTrigger>
+              )}
             </TabsList>
 
             <div className="p-2 sm:p-4 md:p-6">
@@ -644,6 +656,12 @@ const Index = () => {
                   onRefresh={refetchProducts}
                 />
               </TabsContent>
+
+              {isAdmin && (
+                <TabsContent value="admin" className="mt-0">
+                  <AdminPanel orders={orders} />
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
