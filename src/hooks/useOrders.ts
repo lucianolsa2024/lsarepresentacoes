@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderFormData } from '@/types/order';
 import { toast } from 'sonner';
@@ -23,11 +23,12 @@ const dbToOrder = (row: any): Order => ({
   paymentTerms: row.payment_terms || '',
   pdfUrl: row.pdf_url || null,
   rescheduleDate: row.reschedule_date || null,
+  ownerEmail: row.owner_email || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
-const orderToDb = (order: OrderFormData, clientId?: string | null, pdfUrl?: string | null) => ({
+const orderToDb = (order: OrderFormData, clientId?: string | null, pdfUrl?: string | null, ownerEmail?: string | null) => ({
   client_id: clientId || null,
   issue_date: order.issueDate,
   client_name: order.clientName,
@@ -45,11 +46,32 @@ const orderToDb = (order: OrderFormData, clientId?: string | null, pdfUrl?: stri
   order_type: order.orderType || 'ENCOMENDA',
   payment_terms: order.paymentTerms || null,
   pdf_url: pdfUrl || null,
+  owner_email: ownerEmail || null,
 });
 
 export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const repMapRef = useRef<Record<string, string>>({});
+
+  const loadRepMap = useCallback(async () => {
+    if (Object.keys(repMapRef.current).length > 0) return;
+    const { data } = await supabase.from('representatives_map' as any).select('representative_name, email');
+    if (data) {
+      const map: Record<string, string> = {};
+      (data as any[]).forEach((r: any) => { map[r.representative_name.toUpperCase().trim()] = r.email; });
+      repMapRef.current = map;
+    }
+  }, []);
+
+  const resolveOwnerEmail = async (representative: string): Promise<string | null> => {
+    await loadRepMap();
+    const key = (representative || '').toUpperCase().trim();
+    if (repMapRef.current[key]) return repMapRef.current[key];
+    // fallback: use logged-in user email
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.email || null;
+  };
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -75,9 +97,10 @@ export function useOrders() {
 
   const addOrder = async (order: OrderFormData, clientId?: string | null, pdfUrl?: string | null): Promise<Order | null> => {
     try {
+      const ownerEmail = await resolveOwnerEmail(order.representative);
       const { data, error } = await supabase
         .from('orders')
-        .insert(orderToDb(order, clientId, pdfUrl))
+        .insert(orderToDb(order, clientId, pdfUrl, ownerEmail))
         .select()
         .single();
 
@@ -94,7 +117,11 @@ export function useOrders() {
 
   const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null }[]): Promise<number> => {
     try {
-      const rows = ordersData.map(d => orderToDb(d.order, d.clientId, d.pdfUrl));
+      await loadRepMap();
+      const rows = await Promise.all(ordersData.map(async d => {
+        const ownerEmail = await resolveOwnerEmail(d.order.representative);
+        return orderToDb(d.order, d.clientId, d.pdfUrl, ownerEmail);
+      }));
       const { data, error } = await supabase
         .from('orders')
         .insert(rows)

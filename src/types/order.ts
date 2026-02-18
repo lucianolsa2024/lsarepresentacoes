@@ -18,6 +18,7 @@ export interface Order {
   paymentTerms: string;
   pdfUrl: string | null;
   rescheduleDate: string | null;
+  ownerEmail: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +66,7 @@ export const SUPPLIERS = ['CENTURY', 'SOHOME'] as const;
 export const REPRESENTATIVES = [
   'LUCIANO ABREU',
   'MARCIA MORELLI',
+  'JULIANA CECONI',
+  'LIVIA MORELLI',
   'LUCIANO MORETTI',
-  'JULIANA CECCONI',
 ] as const;
