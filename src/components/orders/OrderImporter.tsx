@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { OrderFormData } from '@/types/order';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
 import { Button } from '@/components/ui/button';
@@ -99,6 +100,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
   const [detectedColumns, setDetectedColumns] = useState<Record<string, number>>({});
   const [headerNames, setHeaderNames] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { nameToEmail } = useRepresentatives();
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,6 +185,11 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       )];
 
       for (const name of newClientNames) {
+        // Find representative from first order of this client
+        const firstOrder = preview.find(o => o.clientName === name);
+        const repEmail = firstOrder?.representative
+          ? nameToEmail[(firstOrder.representative).toUpperCase().trim()] || undefined
+          : undefined;
         const newClient = await onAddClient({
           name: '',
           company: name,
@@ -190,6 +197,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
           phone: '',
           email: '',
           isNewClient: true,
+          ownerEmail: repEmail,
           address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
         });
         if (newClient) {

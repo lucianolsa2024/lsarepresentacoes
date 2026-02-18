@@ -63,6 +63,7 @@ export const ORDER_TYPES = ['ENCOMENDA', 'PRONTA ENTREGA', 'REPOSIÇÃO'] as con
 
 export const SUPPLIERS = ['CENTURY', 'SOHOME', 'SOHOME WOOD', 'BENITA CASA', 'AVANTI', 'SÃO CARLOS', 'LOVATO'] as const;
 
+/** @deprecated Use useRepresentatives() hook instead */
 export const REPRESENTATIVES = [
   'LUCIANO ABREU',
   'MARCIA MORELLI',

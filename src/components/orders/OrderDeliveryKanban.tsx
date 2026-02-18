@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Order, OrderFormData, REPRESENTATIVES } from '@/types/order';
+import { Order, OrderFormData } from '@/types/order';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,6 +84,7 @@ function getDeliveryStatus(order: Order): DeliveryStatus {
 export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanProps) {
   const [search, setSearch] = useState('');
   const [repFilter, setRepFilter] = useState('all');
+  const { repNames } = useRepresentatives();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [issueDateFrom, setIssueDateFrom] = useState<Date | undefined>();
@@ -263,7 +265,7 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os representantes</SelectItem>
-              {REPRESENTATIVES.map(name => (
+              {repNames.map(name => (
                 <SelectItem key={name} value={name}>{name}</SelectItem>
               ))}
             </SelectContent>

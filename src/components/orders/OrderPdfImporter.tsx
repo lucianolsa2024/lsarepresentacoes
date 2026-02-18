@@ -9,6 +9,7 @@ import { FileText, Upload, Loader2, CheckCircle, AlertCircle, X, Files } from 'l
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -72,6 +73,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
   const [extractedList, setExtractedList] = useState<ExtractedDataWithFile[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const fileRef = useRef<HTMLInputElement>(null);
+  const { nameToEmail } = useRepresentatives();
 
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -173,6 +175,9 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
         let clientId = clientMap.get(clientName.toLowerCase()) || null;
 
         if (!clientId) {
+          const repEmail = pedido.representante
+            ? nameToEmail[(pedido.representante).toUpperCase().trim()] || undefined
+            : undefined;
           const newClient = await onAddClient({
             name: '',
             company: clientName,
@@ -180,6 +185,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
             phone: cliente.telefone || '',
             email: cliente.email || '',
             isNewClient: true,
+            ownerEmail: repEmail,
             address: {
               street: cliente.endereco || '',
               number: '',

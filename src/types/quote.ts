@@ -85,6 +85,7 @@ export interface ClientData {
   email: string;
   isNewClient: boolean;
   clientType?: ClientType;
+  ownerEmail?: string;
   address: {
     street: string;
     number: string;
@@ -133,6 +134,7 @@ export const INITIAL_CLIENT: ClientData = {
   email: '',
   isNewClient: false,
   clientType: undefined,
+  ownerEmail: undefined,
   address: {
     street: '',
     number: '',
