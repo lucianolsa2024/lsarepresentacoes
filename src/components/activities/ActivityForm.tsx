@@ -16,6 +16,7 @@ import {
 } from '@/types/activity';
 import { useClients, Client } from '@/hooks/useClients';
 import { useActivityTemplates } from '@/hooks/useActivityTemplates';
+import { supabase } from '@/integrations/supabase/client';
 import { Search, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { addMinutes, format } from 'date-fns';
@@ -53,6 +54,34 @@ export function ActivityForm({
   const [clientSearch, setClientSearch] = useState('');
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignedToEmail, setAssignedToEmail] = useState('');
+  const [teamMembers, setTeamMembers] = useState<{ email: string; name: string }[]>([]);
+
+  // Load team members (reps + backoffice)
+  useEffect(() => {
+    const loadTeam = async () => {
+      const { data: reps } = await supabase.from('representatives_map' as any).select('email, representative_name');
+      const members: { email: string; name: string }[] = [];
+      if (reps) {
+        (reps as any[]).forEach((r: any) => members.push({ email: r.email, name: r.representative_name }));
+      }
+      // Add known backoffice emails
+      const backoffice = [
+        { email: 'joice@lsarepresentacoes.com.br', name: 'Joice' },
+        { email: 'posicao@lsarepresentacoes.com.br', name: 'Maíra' },
+        { email: 'assistencia@lsarepresentacoes.com.br', name: 'Marcia (Assistência)' },
+        { email: 'pedidos2@lsarepresentacoes.com.br', name: 'Isabella' },
+        { email: 'pedidos@lsarepresentacoes.com.br', name: 'Nilva' },
+      ];
+      for (const bo of backoffice) {
+        if (!members.find(m => m.email === bo.email)) {
+          members.push(bo);
+        }
+      }
+      setTeamMembers(members);
+    };
+    loadTeam();
+  }, []);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -66,6 +95,7 @@ export function ActivityForm({
         setPriority(activity.priority);
         setClientId(activity.client_id || '');
         setReminderMinutes(null);
+        setAssignedToEmail(activity.assigned_to_email || '');
       } else {
         setType('tarefa');
         setTitle('');
@@ -75,6 +105,7 @@ export function ActivityForm({
         setPriority('media');
         setClientId(defaultClientId || '');
         setReminderMinutes(null);
+        setAssignedToEmail('');
       }
       setClientSearch('');
       setShowClientSearch(false);
@@ -125,6 +156,7 @@ export function ActivityForm({
         client_id: clientId || undefined,
         quote_id: defaultQuoteId || undefined,
         reminder_at: reminderAt,
+        assigned_to_email: assignedToEmail || undefined,
       });
       onOpenChange(false);
     } finally {
@@ -297,6 +329,22 @@ export function ActivityForm({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Responsável */}
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <Select value={assignedToEmail || 'none'} onValueChange={(v) => setAssignedToEmail(v === 'none' ? '' : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sem responsável definido" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem responsável</SelectItem>
+                {teamMembers.map(m => (
+                  <SelectItem key={m.email} value={m.email}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Reminder */}

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          assigned_to_email: string | null
           client_id: string | null
           completed_at: string | null
           completed_notes: string | null
@@ -38,6 +39,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          assigned_to_email?: string | null
           client_id?: string | null
           completed_at?: string | null
           completed_notes?: string | null
@@ -60,6 +62,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          assigned_to_email?: string | null
           client_id?: string | null
           completed_at?: string | null
           completed_notes?: string | null
