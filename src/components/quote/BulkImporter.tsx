@@ -42,12 +42,13 @@ interface FileOption {
   name: string;
   path: string;
   description: string;
+  factory: string;
 }
 
 const AVAILABLE_FILES: FileOption[] = [
-  { id: 'lsa1', name: 'tabela-lsa.xlsx', path: '/data/tabela-lsa.xlsx', description: 'Produtos PV parte 1' },
-  { id: 'lsa2', name: 'tabela-lsa-2.xlsx', path: '/data/tabela-lsa-2.xlsx', description: 'Produtos PV parte 2' },
-  { id: 'century', name: 'produtos-century.xlsx', path: '/data/produtos-century.xlsx', description: 'Century' },
+  { id: 'lsa1', name: 'tabela-lsa.xlsx', path: '/data/tabela-lsa.xlsx', description: 'Produtos PV parte 1', factory: 'SOHOME' },
+  { id: 'lsa2', name: 'tabela-lsa-2.xlsx', path: '/data/tabela-lsa-2.xlsx', description: 'Produtos PV parte 2', factory: 'SOHOME' },
+  { id: 'century', name: 'produtos-century.xlsx', path: '/data/produtos-century.xlsx', description: 'Century', factory: 'CENTURY' },
 ];
 
 export function BulkImporter({ onImportComplete }: BulkImporterProps) {
@@ -400,7 +401,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       const lsaData = await loadExcelFile('/data/tabela-lsa.xlsx');
       setProgress(15);
       
-      const lsaProducts = parseExcelData(lsaData);
+      const lsaProducts = parseExcelData(lsaData, 'SOHOME');
       console.log(`LSA 1: ${lsaProducts.length} produtos`);
       setProgress(20);
 
@@ -409,7 +410,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       const lsa2Data = await loadExcelFile('/data/tabela-lsa-2.xlsx');
       setProgress(25);
       
-      const lsa2Products = parseExcelData(lsa2Data);
+      const lsa2Products = parseExcelData(lsa2Data, 'SOHOME');
       console.log(`LSA 2: ${lsa2Products.length} produtos`);
       setProgress(30);
 
@@ -418,7 +419,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       const centuryData = await loadExcelFile('/data/produtos-century.xlsx');
       setProgress(35);
       
-      const centuryProducts = parseExcelData(centuryData);
+      const centuryProducts = parseExcelData(centuryData, 'CENTURY');
       console.log(`Century: ${centuryProducts.length} produtos`);
       setProgress(40);
 
@@ -475,7 +476,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
         currentProgress += progressPerFile * 0.3;
         setProgress(currentProgress);
 
-        const products = parseExcelData(data);
+        const products = parseExcelData(data, file.factory);
         console.log(`${file.name}: ${products.length} produtos`);
         currentProgress += progressPerFile * 0.1;
         setProgress(currentProgress);
