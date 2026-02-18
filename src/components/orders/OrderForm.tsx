@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { OrderFormData, INITIAL_ORDER, ORDER_TYPES, SUPPLIERS, REPRESENTATIVES } from '@/types/order';
+import { OrderFormData, INITIAL_ORDER, ORDER_TYPES, SUPPLIERS } from '@/types/order';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ export function OrderForm({ clients, onSave, onAddClient, initialData }: Props) 
   const [form, setForm] = useState<OrderFormData>(initialData || INITIAL_ORDER);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { repNames, nameToEmail } = useRepresentatives();
 
   const handleClientSelect = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -49,6 +51,7 @@ export function OrderForm({ clients, onSave, onAddClient, initialData }: Props) 
         if (existing) {
           clientId = existing.id;
         } else {
+          const repEmail = nameToEmail[(form.representative || '').toUpperCase().trim()] || undefined;
           const newClient = await onAddClient({
             name: '',
             company: form.clientName,
@@ -56,6 +59,7 @@ export function OrderForm({ clients, onSave, onAddClient, initialData }: Props) 
             phone: '',
             email: '',
             isNewClient: true,
+            ownerEmail: repEmail,
             address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
           });
           clientId = newClient?.id || null;
@@ -120,7 +124,7 @@ export function OrderForm({ clients, onSave, onAddClient, initialData }: Props) 
             <Select value={form.representative} onValueChange={v => update('representative', v)}>
               <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
               <SelectContent>
-                {REPRESENTATIVES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                {repNames.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Plus, 
   Trash2, 
@@ -36,9 +37,11 @@ import {
   Eye,
   List,
   Map,
+  UserCheck,
 } from 'lucide-react';
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 
 interface ClientManagerProps {
   clients: Client[];
@@ -61,6 +64,7 @@ export function ClientManager({
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { activeReps: representatives, emailToName } = useRepresentatives();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
 
@@ -83,6 +87,7 @@ export function ClientManager({
       phone: client.phone,
       email: client.email,
       isNewClient: client.isNewClient,
+      ownerEmail: client.ownerEmail,
       address: client.address,
     });
     setIsDialogOpen(true);
@@ -204,6 +209,28 @@ export function ClientManager({
                       placeholder="email@exemplo.com"
                     />
                   </div>
+                </div>
+
+                {/* Responsável */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <UserCheck className="h-3 w-3" />
+                    Responsável
+                  </Label>
+                  <Select
+                    value={formData.ownerEmail || 'none'}
+                    onValueChange={(v) => updateField('ownerEmail', v === 'none' ? undefined as any : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o responsável..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não definido</SelectItem>
+                      {representatives.map(r => (
+                        <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="pt-2">
@@ -393,6 +420,12 @@ export function ClientManager({
                           <p className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {client.address.city} - {client.address.state}
+                          </p>
+                        )}
+                        {client.ownerEmail && (
+                          <p className="flex items-center gap-1 text-primary">
+                            <UserCheck className="h-3 w-3" />
+                            {emailToName[client.ownerEmail] || client.ownerEmail}
                           </p>
                         )}
                       </div>

@@ -46,6 +46,7 @@ export function ClientForm({
       email: selectedClient.email,
       isNewClient: selectedClient.isNewClient,
       clientType: selectedClient.clientType,
+      ownerEmail: selectedClient.ownerEmail,
       address: selectedClient.address,
     });
     onSelectClient?.(selectedClient);

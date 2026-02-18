@@ -21,6 +21,7 @@ const dbToClient = (row: {
   email: string | null;
   is_new_client: boolean | null;
   client_type: string | null;
+  owner_email: string | null;
   street: string | null;
   number: string | null;
   complement: string | null;
@@ -39,6 +40,7 @@ const dbToClient = (row: {
   email: row.email || '',
   isNewClient: row.is_new_client || false,
   clientType: (row.client_type as ClientType) || undefined,
+  ownerEmail: row.owner_email || undefined,
   address: {
     street: row.street || '',
     number: row.number || '',
@@ -61,6 +63,7 @@ const clientToDb = (client: ClientData) => ({
   email: client.email || null,
   is_new_client: client.isNewClient,
   client_type: client.clientType || null,
+  owner_email: client.ownerEmail || null,
   street: client.address.street || null,
   number: client.address.number || null,
   complement: client.address.complement || null,
