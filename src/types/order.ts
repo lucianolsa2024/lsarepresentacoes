@@ -61,7 +61,7 @@ export const INITIAL_ORDER: OrderFormData = {
 
 export const ORDER_TYPES = ['ENCOMENDA', 'PRONTA ENTREGA', 'REPOSIÇÃO'] as const;
 
-export const SUPPLIERS = ['CENTURY', 'SOHOME'] as const;
+export const SUPPLIERS = ['CENTURY', 'SOHOME', 'CASA BRAZIL', 'BENITA CASA', 'AVANTI', 'SÃO CARLOS', 'LOVATO'] as const;
 
 export const REPRESENTATIVES = [
   'LUCIANO ABREU',

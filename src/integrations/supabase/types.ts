@@ -942,6 +942,72 @@ export type Database = {
         }
         Relationships: []
       }
+      v_rep_supplier_90d_compare: {
+        Row: {
+          orders_90d: number | null
+          orders_prev_90d: number | null
+          owner_email: string | null
+          revenue_90d: number | null
+          revenue_change_pct: number | null
+          revenue_prev_90d: number | null
+          supplier: string | null
+          ticket_90d: number | null
+          ticket_change_pct: number | null
+          ticket_prev_90d: number | null
+          volume_90d: number | null
+          volume_change_pct: number | null
+          volume_prev_90d: number | null
+        }
+        Relationships: []
+      }
+      v_rep_supplier_clients_inactive_60d: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          days_since_last_purchase: number | null
+          last_purchase_date: string | null
+          owner_email: string | null
+          supplier: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_rep_suppliers_12m: {
+        Row: {
+          clients_12m: number | null
+          last_purchase_date: string | null
+          orders_12m: number | null
+          owner_email: string | null
+          revenue_12m: number | null
+          supplier: string | null
+          volume_12m: number | null
+        }
+        Relationships: []
+      }
+      v_rep_suppliers_month: {
+        Row: {
+          clients_month: number | null
+          orders_month: number | null
+          owner_email: string | null
+          revenue_month: number | null
+          supplier: string | null
+          volume_month: number | null
+        }
+        Relationships: []
+      }
+      v_suppliers_list: {
+        Row: {
+          supplier_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
