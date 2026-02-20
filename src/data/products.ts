@@ -12,6 +12,7 @@ export const PRODUCT_CATEGORIES = [
   'Mesas Laterais',
   'Mesas de Centro',
   'Mesas de Cabeceira',
+  'Tapetes',
   'Outros',
 ];
 
