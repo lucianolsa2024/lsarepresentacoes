@@ -1,83 +1,82 @@
 
-# Plano: Relatorio de Vendas + Painel Administrativo
 
-## Resumo
+# Plano: Filtro de Fabricas + Correcao Tapetes Sao Carlos
 
-Criar 3 funcionalidades novas:
-1. **Relatorio de Vendas** agrupado por fornecedor, vendedor e periodo
-2. **Painel de Administracao** (somente para seu login admin) com cadastro de metas, gerenciamento de usuarios e reset de senha
-3. Nova aba "Admin" visivel apenas para admins
+## 1. Problema Atual
 
----
+- **Fabricas sem identificacao**: Os produtos importados do BulkImporter (SOHOME, CENTURY, SOHOME WOOD) estao com campo `factory` vazio no banco. Apenas os tapetes da Sao Carlos tem fabrica preenchida.
+- **Tapetes mal cadastrados**: Os 35 tapetes foram importados apenas com preco por m², sem as medidas reais (0,50x1,00, 1,00x1,50, etc.) e sem os precos por medida que constam na planilha.
+- **Falta de logica para tapetes**: O fluxo de selecao de produto exige tecido/acabamento, mas tapetes nao tem tecido - o preco e diretamente pela medida.
 
-## 1. Relatorio de Vendas por Fornecedor/Vendedor
+## 2. Correcao das Fabricas nos Produtos Existentes
 
-Criar um componente `SalesReport` que permite filtrar pedidos por periodo e exibe:
+Atualizar o campo `factory` dos produtos ja cadastrados baseado no arquivo de origem:
+- Produtos importados de `tabela-lsa.xlsx` e `tabela-lsa-2.xlsx` -> factory = `SOHOME`
+- Produtos importados de `produtos-century.xlsx` -> factory = `CENTURY`
+- Produtos importados de `wood-pv.xlsx`, `wood-century.xlsx`, `wood-private-label.xlsx` -> factory = `SOHOME WOOD`
+- Tapetes -> factory = `SÃO CARLOS` (ja estao corretos)
 
-- **Tabela resumo por fornecedor**: faturamento, volume, qtd pedidos, ticket medio
-- **Tabela resumo por vendedor**: mesmos indicadores
-- **Tabela cruzada fornecedor x vendedor**: para ver qual vendedor vende mais de cada marca
-- Filtros de data (de/ate) no topo
-- Graficos de barras (Recharts) para visualizacao rapida
+Como os nomes dos produtos sao unicos por fabrica, usaremos os nomes presentes em cada arquivo Excel para fazer o UPDATE via SQL.
 
-Dados virao diretamente da tabela `orders` filtrada por periodo no frontend (ja carregada), ou das views existentes (`v_rep_suppliers_month`, `v_rep_supplier_90d_compare`) para dados pre-calculados.
+Adicionar LOVATO como fabrica disponivel (sem produtos por enquanto, para quando forem cadastrados).
 
----
+## 3. Re-importacao dos Tapetes com Medidas Corretas
 
-## 2. Painel de Administracao
+Apagar os tapetes atuais e reimportar com a estrutura correta da planilha:
 
-### 2a. Cadastro de Metas
-- Formulario para selecionar representante (lista de `representatives_map`), mes e valor da meta
-- CRUD na tabela `rep_goals` (ja existente com RLS admin-only para insert/update/delete)
-- Tabela listando metas cadastradas com opcao de editar/excluir
+**Estrutura por produto (ex: ARTESANIA):**
+- Modulacao "Tapete Retangular" com sizes:
+  - `1,00x1,50` -> R$ 333,74
+  - `1,50x2,00` -> R$ 667,48
+  - `2,00x2,50` -> R$ 1.112,47
+  - `2,00x3,00` -> R$ 1.334,96
+  - `2,50x3,50` -> R$ 1.946,82
+  - `3,00x4,00` -> R$ 2.669,93
+- Modulacao "Tapete Redondo" (quando disponivel):
+  - `1,40 RED` -> R$ 479,70
+- Modulacao "Passadeira" (quando disponivel):
+  - `0,75x1,80` -> R$ 300,37
+  - `0,75x2,40` -> R$ 400,49
+- Modulacao "Medida Especial":
+  - `Sob Medida (m²)` -> preco por m²
 
-### 2b. Gerenciamento de Usuarios
-- Listar usuarios do `representatives_map` + backoffice
-- Criar novos usuarios via edge function (usando `supabase.auth.admin.createUser`)
-- A edge function tera acesso ao `SUPABASE_SERVICE_ROLE_KEY` (ja configurado)
+Precos serao armazenados em `price_sem_tec` (sem tecido, pois tapete nao usa tecido).
+Dimensoes serao armazenadas nos campos `dimensions` e `description`.
 
-### 2c. Reset de Senha
-- Botao para resetar senha de qualquer usuario via edge function (`supabase.auth.admin.updateUserById`)
-- Input para nova senha, confirmacao, e execucao
+## 4. Ajuste no ProductSelector para Tapetes
 
----
+Quando a categoria do produto for "Tapetes":
+- Pular os passos de "Faixa de Tecido" e "Codigo do Tecido"
+- Apos selecionar modulacao e medida, ir direto para confirmacao
+- Usar o preco de `price_sem_tec` (ou `SEM TEC`) como preco final
+- No resumo, mostrar "Medida" em vez de "Tamanho" e nao exibir secao de tecidos
 
-## 3. Nova Aba "Admin"
+## 5. Filtro de Fabricas no ProductManager
 
-- Visivel apenas quando `has_role(uid, 'admin')` for true
-- Usar hook `useIsAdmin` que consulta `user_roles`
-- Contera sub-abas: Relatorio de Vendas | Metas | Usuarios
+O filtro por botoes ja existe e funciona. Com as fabricas corretamente preenchidas, os botoes aparecerao automaticamente: SOHOME, SOHOME WOOD, CENTURY, SÃO CARLOS.
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos novos:
-- `src/hooks/useIsAdmin.ts` - hook para verificar role admin
-- `src/components/admin/AdminPanel.tsx` - container com sub-abas
-- `src/components/admin/SalesReport.tsx` - relatorio de vendas
-- `src/components/admin/GoalManager.tsx` - CRUD de metas
-- `src/components/admin/UserManager.tsx` - gestao de usuarios + reset senha
-- `supabase/functions/admin-users/index.ts` - edge function para criar usuario e resetar senha
-
 ### Arquivos modificados:
-- `src/pages/Index.tsx` - adicionar aba Admin condicional
+- `src/components/quote/ProductSelector.tsx` - Adicionar logica para categoria "Tapetes" (pular tecido)
 
-### Edge Function `admin-users`:
+### Migracoes SQL:
+1. UPDATE products SET factory para SOHOME/CENTURY/SOHOME WOOD baseado nos nomes dos produtos
+2. DELETE tapetes atuais (SÃO CARLOS)
+3. INSERT tapetes com medidas e precos corretos da planilha
+
+### Dados dos tapetes (extraidos da planilha):
+35 colecoes com medidas variando de 0,50x1,00 ate 3,00x4,00, mais redondos (1,40 e 1,90 de diametro), passadeiras, formatos organicos (Feijao/Lente/Curve) e medidas especiais por m².
+
+### Logica no ProductSelector:
 ```
-POST /admin-users
-Body: { action: "create", email, password, name }
-      { action: "reset-password", userId, newPassword }
-      { action: "list" }
+const isCarpet = selectedProduct?.category === 'Tapetes';
+// Se isCarpet:
+//   - Nao mostrar selecao de faixa de tecido
+//   - Nao mostrar selecao de codigo de tecido
+//   - Usar price_sem_tec como preco
+//   - Confirmar item apos selecionar medida
 ```
-- Valida que o chamador eh admin (via JWT + `has_role`)
-- Usa service role key para operacoes admin do auth
 
-### Banco de dados:
-- Nenhuma migracao necessaria - `rep_goals` e `user_roles` ja existem
-- Views de fornecedor (`v_rep_suppliers_month`, `v_rep_supplier_90d_compare`) ja existem
-
-### Seguranca:
-- Aba Admin so renderiza se `useIsAdmin()` retornar true
-- Edge function valida role admin server-side antes de executar
-- Reset de senha e criacao de usuario sao operacoes server-side apenas
