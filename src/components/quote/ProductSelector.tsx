@@ -110,6 +110,11 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedProduct ? isTableCategory(selectedProduct.category) : false;
   }, [selectedProduct]);
 
+  // Check if the selected product is a carpet (no fabric selection needed)
+  const isCarpet = useMemo(() => {
+    return selectedProduct?.category === 'Tapetes';
+  }, [selectedProduct]);
+
   // Check if the selected size already includes finish info (TAMPO:) - skip fabric/finish step
   const hasTampoInSize = useMemo(() => {
     return selectedSize?.description.toUpperCase().includes('TAMPO:') ?? false;
@@ -152,11 +157,12 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   }, [config.fabricTier, fabricSearch]);
 
   const handleConfirm = () => {
-    // For tables with TAMPO in size, we skip both fabric tier and code selection
-    // For other tables, we skip fabric code but need tier
-    // For regular products, we need both
-    const needsFabricTier = !hasTampoInSize;
-    const needsFabricCode = !isTable && !hasTampoInSize;
+    // Carpets: no fabric at all
+    // Tables with TAMPO in size: skip both fabric tier and code
+    // Other tables: skip fabric code but need tier
+    // Regular products: need both
+    const needsFabricTier = !hasTampoInSize && !isCarpet;
+    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet;
     
     if (!selectedProduct || !config.modulationId || !config.sizeId) return;
     if (needsFabricTier && !config.fabricTier) return;
@@ -170,12 +176,15 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     let price: number;
     let fabricDescription: string;
     
-    if (hasTampoInSize) {
+    if (isCarpet) {
+      // Carpets use price_sem_tec directly (mapped to 'SEM TEC')
+      price = size.prices['SEM TEC'] || 0;
+      fabricDescription = 'Tapete - sem tecido';
+    } else if (hasTampoInSize) {
       // Find first non-zero price
       const priceKeys: FabricTier[] = ['FX B', 'FX C', 'FX D', 'FX E', 'FX F'];
       const priceEntry = priceKeys.find(key => (size.prices[key] || 0) > 0);
       price = priceEntry ? size.prices[priceEntry] : 0;
-      // Extract TAMPO info from description
       const tampoMatch = size.description.match(/TAMPO:\s*([^,\n]+)/i);
       fabricDescription = tampoMatch ? `TAMPO: ${tampoMatch[1].trim()}` : 'Acabamento incluído';
     } else {
@@ -199,7 +208,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeId: config.sizeId,
       sizeDescription: size.description,
       base: size.base || config.base,
-      fabricTier: (hasTampoInSize ? 'FX B' : config.fabricTier) as FabricTier,
+      fabricTier: (isCarpet ? 'SEM TEC' : hasTampoInSize ? 'FX B' : config.fabricTier) as FabricTier,
       fabricDescription,
       price,
       quantity: 1,
@@ -218,7 +227,9 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   };
 
   const getCurrentPrice = () => {
-    if (!selectedSize || !config.fabricTier) return 0;
+    if (!selectedSize) return 0;
+    if (isCarpet) return selectedSize.prices['SEM TEC'] || 0;
+    if (!config.fabricTier) return 0;
     return selectedSize.prices[config.fabricTier as FabricTier] || 0;
   };
 
@@ -397,7 +408,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               {/* Step 3: Size/Dimensions */}
               {selectedModulation && (availableBases.length === 0 || config.base) && (
                 <div className="space-y-2">
-                  <Label>{getStepNumber('size')}. Tamanho *</Label>
+                  <Label>{getStepNumber('size')}. {isCarpet ? 'Medida' : 'Tamanho'} *</Label>
                   <Select
                     value={config.sizeId}
                     onValueChange={handleSizeChange}
@@ -460,8 +471,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 4: Finish/Fabric Tier (skip if TAMPO is in size description) */}
-              {config.sizeId && !hasTampoInSize && (
+              {/* Step 4: Finish/Fabric Tier (skip for carpets and TAMPO products) */}
+              {config.sizeId && !hasTampoInSize && !isCarpet && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricTier')}. {isTable ? 'Acabamento' : 'Faixa de Tecido'} *</Label>
                   <Select
@@ -557,8 +568,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Item Summary - show for TAMPO products when size selected, tables when tier selected, others when fabric code selected */}
-              {(hasTampoInSize || (isTable && config.fabricTier) || (!isTable && config.fabricCode)) && (() => {
+              {/* Item Summary - show for carpets/TAMPO when size selected, tables when tier selected, others when fabric code selected */}
+              {(isCarpet && config.sizeId || hasTampoInSize || (isTable && config.fabricTier) || (!isTable && !isCarpet && config.fabricCode)) && (() => {
                 // Check if this is a CAIXA product and extract the tier
                 const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
                 const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
@@ -596,8 +607,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tamanho:</span>
-                      <span className="font-medium">{cleanDimensions}</span>
+                      <span className="text-muted-foreground">{isCarpet ? 'Medida:' : 'Tamanho:'}</span>
+                      <span className="font-medium">{isCarpet ? selectedSize?.description : cleanDimensions}</span>
                     </div>
                     
                     {/* Table finish section */}
@@ -612,8 +623,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       </div>
                     )}
                     
-                    {/* CAIXA + CORPO section for CAIXA products */}
-                    {!isTable && isCaixaProduct ? (
+                    {/* CAIXA + CORPO section for CAIXA products (skip for carpets) */}
+                    {!isTable && !isCarpet && isCaixaProduct ? (
                       <>
                         <div className="mt-2 pt-2 border-t border-dashed">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
@@ -633,7 +644,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                           </div>
                         </div>
                       </>
-                    ) : !isTable && (
+                    ) : !isTable && !isCarpet && (
                       <>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Faixa de Tecido:</span>
@@ -670,7 +681,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulationId || !config.sizeId || (!hasTampoInSize && !config.fabricTier) || (!isTable && !hasTampoInSize && !config.fabricCode)}
+                disabled={!config.modulationId || !config.sizeId || (!hasTampoInSize && !isCarpet && !config.fabricTier) || (!isTable && !hasTampoInSize && !isCarpet && !config.fabricCode)}
                 className="w-full"
               >
                 Confirmar Item
