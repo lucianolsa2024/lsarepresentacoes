@@ -257,22 +257,18 @@ serve(async (req) => {
     console.log(`Starting RD Station sync for: ${client.company}`);
     console.log(`Is new client: ${client.isNewClient}`);
 
-    // Step 1: Find or create organization
+    // Step 1: Always search first, then create only if not found
     let organizationId: string;
     
-    if (client.isNewClient) {
-      console.log('Creating new organization (marked as new client)');
-      organizationId = await createOrganization(client, RD_STATION_TOKEN);
+    console.log('Searching for existing organization');
+    const existingOrgId = await searchOrganization(client.company, RD_STATION_TOKEN);
+    
+    if (existingOrgId) {
+      organizationId = existingOrgId;
+      console.log(`Using existing organization: ${organizationId}`);
     } else {
-      console.log('Searching for existing organization');
-      const existingOrgId = await searchOrganization(client.company, RD_STATION_TOKEN);
-      
-      if (existingOrgId) {
-        organizationId = existingOrgId;
-      } else {
-        console.log('Organization not found, creating new one');
-        organizationId = await createOrganization(client, RD_STATION_TOKEN);
-      }
+      console.log('Organization not found, creating new one');
+      organizationId = await createOrganization(client, RD_STATION_TOKEN);
     }
 
     // Step 2: Find or create contact
