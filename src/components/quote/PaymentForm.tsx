@@ -38,6 +38,10 @@ const INSTALLMENT_OPTIONS = [
   { value: '30/60/90/120/150', label: '30/60/90/120/150 dias', installments: 5 },
   { value: '30/60/90/120/150/180', label: '30/60/90/120/150/180 dias', installments: 6 },
   { value: '30/60/90/120/150/180/210', label: '30/60/90/120/150/180/210 dias', installments: 7 },
+  { value: '30/60/90/120/150/180/210/240', label: '30/60/90/120/150/180/210/240 dias', installments: 8 },
+  { value: '30/60/90/120/150/180/210/240/270', label: '30/60/90/120/150/180/210/240/270 dias', installments: 9 },
+  { value: '30/60/90/120/150/180/210/240/270/300', label: '30/60/90/120/150/180/210/240/270/300 dias', installments: 10 },
+  { value: '30/60/90/120/150/180/210/240/270/300/330', label: '30/60/90/120/150/180/210/240/270/300/330 dias', installments: 11 },
 ];
 
 interface PaymentFormProps {
@@ -86,17 +90,30 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
   // Validate discount when it changes
   useEffect(() => {
     if (maxDiscount === null || payment.discountType !== 'percentage') return;
-    if (payment.discountValue > maxDiscount) {
+    // For positive maxDiscount: user can't go above it
+    // For negative maxDiscount (surcharge): user can't go above it either (value should be <= maxDiscount)
+    if (maxDiscount >= 0 && payment.discountValue > maxDiscount) {
       toast.error(`Desconto máximo para ${policyCode}: ${maxDiscount}%. Valor ajustado.`);
+      onChange({ ...payment, discountValue: maxDiscount });
+    } else if (maxDiscount < 0 && payment.discountValue > maxDiscount) {
+      // Surcharge: the value must be at most maxDiscount (which is negative)
+      toast.error(`Para o código ${policyCode}, o acréscimo obrigatório é de ${Math.abs(maxDiscount)}%. Valor ajustado.`);
       onChange({ ...payment, discountValue: maxDiscount });
     }
   }, [payment.discountValue, maxDiscount, payment.discountType]);
 
   const handleDiscountChange = (value: number) => {
-    if (payment.discountType === 'percentage' && maxDiscount !== null && value > maxDiscount) {
-      toast.error(`Desconto máximo permitido para código ${policyCode}: ${maxDiscount}%`);
-      updateField('discountValue', maxDiscount);
-      return;
+    if (payment.discountType === 'percentage' && maxDiscount !== null) {
+      if (maxDiscount >= 0 && value > maxDiscount) {
+        toast.error(`Desconto máximo permitido para código ${policyCode}: ${maxDiscount}%`);
+        updateField('discountValue', maxDiscount);
+        return;
+      }
+      if (maxDiscount < 0 && value > maxDiscount) {
+        toast.error(`Acréscimo obrigatório de ${Math.abs(maxDiscount)}% para código ${policyCode}`);
+        updateField('discountValue', maxDiscount);
+        return;
+      }
     }
     updateField('discountValue', value);
   };
