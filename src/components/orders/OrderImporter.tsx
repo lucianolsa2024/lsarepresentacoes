@@ -73,9 +73,10 @@ function parseExcelDate(value: any): string {
 }
 
 function parsePrice(value: any): number {
-  if (!value) return 0;
-  if (typeof value === 'number') return value;
-  let str = String(value).replace(/[^\d.,\-]/g, '');
+  const raw = cellValue(value);
+  if (!raw && raw !== 0) return 0;
+  if (typeof raw === 'number') return raw;
+  let str = String(raw).replace(/[^\d.,\-]/g, '');
   if (!str) return 0;
 
   const lastDot = str.lastIndexOf('.');
@@ -157,9 +158,11 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       });
 
       console.log('[OrderImporter] Headers detected:', headers.filter(Boolean));
+      console.log('[OrderImporter] Raw header values:', headerRow.values);
 
       const mapping = detectColumnMapping(headers);
       console.log('[OrderImporter] Column mapping:', mapping);
+      console.log('[OrderImporter] Unmapped fields:', Object.keys(COLUMN_PATTERNS).filter(f => !(f in mapping)));
       setDetectedColumns(mapping);
       setHeaderNames(headers);
 
@@ -176,6 +179,11 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         const rawVals = row.values as any[];
         // Normalize all cell values (handle rich text, formulas, etc.)
         const vals = rawVals.map(cellValue);
+
+        if (rowNumber === 2) {
+          console.log('[OrderImporter] Row 2 raw values:', rawVals.map((v, i) => `[${i}] ${typeof v}: ${JSON.stringify(v)?.substring(0, 80)}`));
+          console.log('[OrderImporter] Row 2 parsed values:', vals);
+        }
 
         const clientName = String(vals[mapping.clientName] || '').trim();
         if (!clientName) return;
