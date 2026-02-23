@@ -31,7 +31,7 @@ const COLUMN_PATTERNS: Record<string, RegExp> = {
   quantity: /^(qtd|quantidade|quant|qtde)/i,
   price: /^(valor|pre[cç]o|vlr|total|vl)/i,
   fabricProvided: /^(tecido\s*forn|tec\s*forn|fornece\s*tec)/i,
-  dimensions: /^(dimens[aã]o|dim|medida|tamanho)/i,
+  dimensions: /^(dimens[aã]o|dim|medida|tamanho|comp\s*[\+\&]?\s*prof)/i,
   orderType: /^(tipo\s*ped|tipo|order\s*type)/i,
 };
 
@@ -61,11 +61,31 @@ function parseExcelDate(value: any): string {
 function parsePrice(value: any): number {
   if (!value) return 0;
   if (typeof value === 'number') return value;
-  const str = String(value).replace(/[^\d.,]/g, '');
-  // Handle Brazilian format: 1.234,56 -> 1234.56
-  if (str.includes(',')) {
-    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  let str = String(value).replace(/[^\d.,\-]/g, '');
+  if (!str) return 0;
+
+  const lastDot = str.lastIndexOf('.');
+  const lastComma = str.lastIndexOf(',');
+
+  if (lastDot === -1 && lastComma === -1) {
+    return parseFloat(str) || 0;
   }
+
+  if (lastComma > lastDot) {
+    // Comma is the last separator
+    const afterComma = str.substring(lastComma + 1);
+    if (afterComma.length === 3 && !str.includes('.')) {
+      // "4,132" → 4132 (comma as thousands separator, no decimal)
+      str = str.replace(/,/g, '');
+    } else {
+      // "1.234,56" → 1234.56 (Brazilian decimal format)
+      str = str.replace(/\./g, '').replace(',', '.');
+    }
+  } else if (lastDot > lastComma) {
+    // Dot is the last separator (US format): "1,234.56"
+    str = str.replace(/,/g, '');
+  }
+
   return parseFloat(str) || 0;
 }
 
@@ -140,21 +160,37 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         const clientName = String(vals[mapping.clientName] || '').trim();
         if (!clientName) return;
 
+        // Detect fabric provided from fabric column value
+        const rawFabric = mapping.fabric != null ? String(vals[mapping.fabric] || '').trim() : '';
+        const isFabricProvided = /tecido\s*forn/i.test(rawFabric);
+        const fabricValue = isFabricProvided ? '' : rawFabric;
+        const fabricProvidedValue = mapping.fabricProvided != null
+          ? String(vals[mapping.fabricProvided] || 'NAO').trim().toUpperCase()
+          : (isFabricProvided ? 'SIM' : 'NAO');
+
+        // Normalize supplier to uppercase
+        const rawSupplier = mapping.supplier != null ? String(vals[mapping.supplier] || 'SOHOME').trim() : 'SOHOME';
+        const supplier = rawSupplier.toUpperCase();
+
+        // Normalize order type: map numeric values or fallback
+        let rawOrderType = mapping.orderType != null ? String(vals[mapping.orderType] || 'ENCOMENDA').trim() : 'ENCOMENDA';
+        if (/^\d+$/.test(rawOrderType)) rawOrderType = 'ENCOMENDA';
+
         rows.push({
           issueDate: mapping.issueDate != null ? parseExcelDate(vals[mapping.issueDate]) : new Date().toISOString().split('T')[0],
           clientName,
-          supplier: mapping.supplier != null ? String(vals[mapping.supplier] || 'SOHOME').trim() : 'SOHOME',
+          supplier,
           representative: mapping.representative != null ? String(vals[mapping.representative] || '').trim() : '',
           orderNumber: mapping.orderNumber != null ? String(vals[mapping.orderNumber] || '').trim() : '',
           oc: mapping.oc != null ? String(vals[mapping.oc] || '').trim() : '',
           product: mapping.product != null ? String(vals[mapping.product] || '').trim() : '',
-          fabricProvided: mapping.fabricProvided != null ? String(vals[mapping.fabricProvided] || 'NAO').trim().toUpperCase() : 'NAO',
-          fabric: mapping.fabric != null ? String(vals[mapping.fabric] || '').trim() : '',
+          fabricProvided: fabricProvidedValue,
+          fabric: fabricValue,
           dimensions: mapping.dimensions != null ? String(vals[mapping.dimensions] || '').trim() : '',
           deliveryDate: mapping.deliveryDate != null ? parseExcelDate(vals[mapping.deliveryDate]) : '',
           quantity: mapping.quantity != null ? (parseInt(String(vals[mapping.quantity] || '1')) || 1) : 1,
           price: mapping.price != null ? parsePrice(vals[mapping.price]) : 0,
-          orderType: mapping.orderType != null ? String(vals[mapping.orderType] || 'ENCOMENDA').trim() : 'ENCOMENDA',
+          orderType: rawOrderType.toUpperCase(),
           paymentTerms: mapping.paymentTerms != null ? String(vals[mapping.paymentTerms] || '').trim() : '',
         });
       });
