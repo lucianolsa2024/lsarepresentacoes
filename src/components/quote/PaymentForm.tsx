@@ -1,4 +1,5 @@
 import { PaymentConditions, FreightType, DiscountTier, DISCOUNT_TIER_OPTIONS } from '@/types/quote';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,31 @@ interface PaymentFormProps {
   payment: PaymentConditions;
   onChange: (payment: PaymentConditions) => void;
   subtotal: number;
+}
+
+function RepresentativeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { activeReps } = useRepresentatives();
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-1">
+        <User className="h-3 w-3" />
+        Nome do Representante
+      </Label>
+      <Select value={value || 'none'} onValueChange={(v) => onChange(v === 'none' ? '' : v)}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecione o representante..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Selecione...</SelectItem>
+          {activeReps.map((r) => (
+            <SelectItem key={r.email} value={r.name}>
+              {r.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
@@ -333,17 +359,10 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         </div>
 
         {/* Representative Name */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            Nome do Representante
-          </Label>
-          <Input
-            value={payment.representativeName}
-            onChange={(e) => updateField('representativeName', e.target.value)}
-            placeholder="Nome do representante comercial"
-          />
-        </div>
+        <RepresentativeSelector
+          value={payment.representativeName}
+          onChange={(v) => updateField('representativeName', v)}
+        />
 
         {/* Delivery */}
         <div className="space-y-2">
