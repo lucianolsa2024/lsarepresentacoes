@@ -1,4 +1,4 @@
-import { PaymentConditions, FreightType } from '@/types/quote';
+import { PaymentConditions, FreightType, DiscountTier, DISCOUNT_TIER_OPTIONS } from '@/types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, Percent, Calendar, User, Truck, CalendarCheck, DollarSign } from 'lucide-react';
+import { CreditCard, Percent, Calendar, User, Truck, CalendarCheck, DollarSign, Shield, AlertTriangle } from 'lucide-react';
+import { useDiscountPolicies } from '@/hooks/useDiscountPolicies';
+import { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 const CARRIER_OPTIONS = [
   'A combinar',
@@ -43,11 +47,72 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
+  const { getPoliciesForTier, findPolicy, getMaxDiscount } = useDiscountPolicies();
+  const [maxDiscount, setMaxDiscount] = useState<number | null>(null);
+  const [policyCode, setPolicyCode] = useState<string>('');
+
   const updateField = <K extends keyof PaymentConditions>(
     field: K,
     value: PaymentConditions[K]
   ) => {
     onChange({ ...payment, [field]: value });
+  };
+
+  // Resolve the applicable installment plan for discount lookup
+  const getEffectiveInstallmentPlan = (): string => {
+    if (payment.method === 'avista') return '15';
+    return payment.installmentPlan || '30';
+  };
+
+  // Update max discount whenever tier or installment plan changes
+  useEffect(() => {
+    if (!payment.discountTier) {
+      setMaxDiscount(null);
+      setPolicyCode('');
+      return;
+    }
+
+    const plan = getEffectiveInstallmentPlan();
+    const policy = findPolicy(payment.discountTier, plan);
+    if (policy) {
+      setMaxDiscount(policy.discountPct);
+      setPolicyCode(policy.code);
+    } else {
+      setMaxDiscount(null);
+      setPolicyCode('');
+    }
+  }, [payment.discountTier, payment.installmentPlan, payment.method]);
+
+  // Validate discount when it changes
+  useEffect(() => {
+    if (maxDiscount === null || payment.discountType !== 'percentage') return;
+    if (payment.discountValue > maxDiscount) {
+      toast.error(`Desconto máximo para ${policyCode}: ${maxDiscount}%. Valor ajustado.`);
+      onChange({ ...payment, discountValue: maxDiscount });
+    }
+  }, [payment.discountValue, maxDiscount, payment.discountType]);
+
+  const handleDiscountChange = (value: number) => {
+    if (payment.discountType === 'percentage' && maxDiscount !== null && value > maxDiscount) {
+      toast.error(`Desconto máximo permitido para código ${policyCode}: ${maxDiscount}%`);
+      updateField('discountValue', maxDiscount);
+      return;
+    }
+    updateField('discountValue', value);
+  };
+
+  const handleTierChange = (tier: DiscountTier) => {
+    const plan = getEffectiveInstallmentPlan();
+    const policy = findPolicy(tier, plan);
+
+    // Auto-set discount to max allowed
+    const newDiscount = policy ? policy.discountPct : 0;
+    onChange({
+      ...payment,
+      discountTier: tier,
+      discountType: 'percentage',
+      discountValue: newDiscount,
+    });
   };
 
   const calculateDiscount = () => {
@@ -75,6 +140,9 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
     return total;
   };
 
+  // Get available payment terms for the selected tier
+  const tierPolicies = payment.discountTier ? getPoliciesForTier(payment.discountTier) : [];
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -84,6 +152,42 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Discount Tier Selection */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            Faixa de Desconto
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {DISCOUNT_TIER_OPTIONS.map((tier) => (
+              <button
+                key={tier.value}
+                type="button"
+                onClick={() => handleTierChange(tier.value)}
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                  payment.discountTier === tier.value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:bg-muted/50'
+                }`}
+              >
+                {tier.label}
+              </button>
+            ))}
+          </div>
+          {policyCode && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                Código: {policyCode}
+              </Badge>
+              {maxDiscount !== null && (
+                <Badge variant={maxDiscount >= 0 ? 'default' : 'destructive'} className="text-xs">
+                  {maxDiscount >= 0 ? `Desconto máx: ${maxDiscount}%` : `Acréscimo: ${Math.abs(maxDiscount)}%`}
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Payment Method */}
         <div className="space-y-3">
           <Label>Forma de Pagamento</Label>
@@ -124,11 +228,20 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
                 value={payment.installmentPlan}
                 onValueChange={(value) => {
                   const option = INSTALLMENT_OPTIONS.find(o => o.value === value);
-                  onChange({
+                  const newPayment = {
                     ...payment,
                     installmentPlan: value,
                     installments: option?.installments || 1,
-                  });
+                  };
+                  // Recalculate discount for new plan if tier is set
+                  if (payment.discountTier) {
+                    const policy = findPolicy(payment.discountTier, value);
+                    if (policy) {
+                      newPayment.discountValue = policy.discountPct;
+                      newPayment.discountType = 'percentage';
+                    }
+                  }
+                  onChange(newPayment);
                 }}
               >
                 <SelectTrigger>
@@ -167,9 +280,17 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
             <Percent className="h-3 w-3" />
             Desconto / Acréscimo
           </Label>
-          <p className="text-xs text-muted-foreground">
-            Use valores positivos para desconto e negativos para acréscimo
-          </p>
+          {maxDiscount !== null && payment.discountType === 'percentage' && (
+            <div className={`flex items-center gap-2 text-xs p-2 rounded ${
+              maxDiscount >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
+            }`}>
+              <AlertTriangle className="h-3 w-3" />
+              {maxDiscount >= 0
+                ? `Desconto máximo permitido: ${maxDiscount}% (código ${policyCode})`
+                : `Acréscimo obrigatório: ${Math.abs(maxDiscount)}% (código ${policyCode})`
+              }
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
               value={payment.discountType}
@@ -188,9 +309,7 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
             <Input
               type="number"
               value={payment.discountValue}
-              onChange={(e) =>
-                updateField('discountValue', parseFloat(e.target.value) || 0)
-              }
+              onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0)}
               placeholder={payment.discountType === 'percentage' ? '0%' : 'R$ 0,00'}
             />
           </div>
@@ -320,16 +439,16 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
               <span>Subtotal:</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
-            {payment.discountValue > 0 && (
-              <div className="flex justify-between text-sm text-destructive">
+            {payment.discountValue !== 0 && (
+              <div className={`flex justify-between text-sm ${payment.discountValue > 0 ? 'text-destructive' : 'text-orange-600'}`}>
                 <span>
-                  Desconto (
+                  {payment.discountValue > 0 ? 'Desconto' : 'Acréscimo'} (
                   {payment.discountType === 'percentage'
-                    ? `${payment.discountValue}%`
-                    : formatCurrency(payment.discountValue)}
-                  ):
+                    ? `${Math.abs(payment.discountValue)}%`
+                    : formatCurrency(Math.abs(payment.discountValue))}
+                  ){policyCode && ` [${policyCode}]`}:
                 </span>
-                <span>- {formatCurrency(calculateDiscount())}</span>
+                <span>{payment.discountValue > 0 ? '- ' : '+ '}{formatCurrency(Math.abs(calculateDiscount()))}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-lg pt-2 border-t">

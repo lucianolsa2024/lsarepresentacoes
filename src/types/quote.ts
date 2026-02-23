@@ -99,20 +99,30 @@ export interface ClientData {
 
 export type FreightType = 'CIF' | 'FOB';
 
+export type DiscountTier = 'diamante' | 'ouro' | 'prata' | 'bronze';
+
+export const DISCOUNT_TIER_OPTIONS: { value: DiscountTier; label: string; prefix: string }[] = [
+  { value: 'diamante', label: 'Diamante', prefix: 'D' },
+  { value: 'ouro', label: 'Ouro', prefix: 'O' },
+  { value: 'prata', label: 'Prata', prefix: 'P' },
+  { value: 'bronze', label: 'Bronze', prefix: 'B' },
+];
+
 export interface PaymentConditions {
   method: 'avista' | 'parcelado' | 'entrada_parcelas';
   installments: number;
   installmentPlan: string; // e.g., "30/60/90" for display
   downPayment: number;
+  discountTier?: DiscountTier;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   deliveryDays: number;
   carrier: string;
   freightType: FreightType;
   observations: string;
-  representativeName: string; // Name of the sales representative
-  estimatedClosingDate: string; // Data no formato ISO (YYYY-MM-DD)
-  estimatedPrice: number; // Preço estimado do orçamento
+  representativeName: string;
+  estimatedClosingDate: string;
+  estimatedPrice: number;
 }
 
 export interface Quote {
