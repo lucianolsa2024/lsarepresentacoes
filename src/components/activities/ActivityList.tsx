@@ -12,6 +12,7 @@ interface ActivityListProps {
   onDelete: (id: string) => void;
   onCreateQuote?: (clientId: string) => void;
   onOpenChecklist?: (activity: Activity) => void;
+  onViewQuote?: (quoteId: string) => void;
   showCompleted?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function ActivityList({
   onDelete,
   onCreateQuote,
   onOpenChecklist,
+  onViewQuote,
   showCompleted = false,
 }: ActivityListProps) {
   const today = startOfDay(new Date());
@@ -100,6 +102,7 @@ export function ActivityList({
               onDelete={onDelete}
               onCreateQuote={onCreateQuote}
               onOpenChecklist={onOpenChecklist}
+              onViewQuote={onViewQuote}
             />
           ))}
         </div>

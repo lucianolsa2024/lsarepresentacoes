@@ -355,7 +355,7 @@ export function ClientManager({
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredClients.map((client) => (
-                  <Card key={client.id} className="hover:shadow-md transition-shadow">
+                  <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(client.id)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
@@ -376,7 +376,7 @@ export function ClientManager({
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => onViewDetail(client.id)}
+                              onClick={(e) => { e.stopPropagation(); onViewDetail(client.id); }}
                               title="Ver histórico"
                             >
                               <Eye className="h-4 w-4" />
@@ -385,7 +385,7 @@ export function ClientManager({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openEditDialog(client)}
+                            onClick={(e) => { e.stopPropagation(); openEditDialog(client); }}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -393,7 +393,7 @@ export function ClientManager({
                             variant="ghost"
                             size="icon"
                             className="text-destructive"
-                            onClick={() => setDeleteId(client.id)}
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(client.id); }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

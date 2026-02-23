@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, 
   Check, X, MessageCircle, Calendar, MoreHorizontal, Clock,
-  Building2, Play, GraduationCap, Wrench, Heart, ClipboardCheck
+  Building2, Play, GraduationCap, Wrench, Heart, ClipboardCheck, FileText
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ interface ActivityCardProps {
   onDelete: (id: string) => void;
   onCreateQuote?: (clientId: string) => void;
   onOpenChecklist?: (activity: Activity) => void;
+  onViewQuote?: (quoteId: string) => void;
   compact?: boolean;
 }
 
@@ -55,6 +56,7 @@ export function ActivityCard({
   onDelete,
   onCreateQuote,
   onOpenChecklist,
+  onViewQuote,
   compact = false,
 }: ActivityCardProps) {
   const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type];
@@ -245,6 +247,12 @@ export function ActivityCard({
                 <DropdownMenuItem onClick={() => onCreateQuote(activity.client!.id)}>
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Novo Orçamento
+                </DropdownMenuItem>
+              )}
+              {activity.quote_id && onViewQuote && (
+                <DropdownMenuItem onClick={() => onViewQuote(activity.quote_id!)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Ver Orçamento
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

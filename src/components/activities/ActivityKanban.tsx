@@ -12,6 +12,7 @@ interface ActivityKanbanProps {
   onDelete: (id: string) => void;
   onCreateQuote?: (clientId: string) => void;
   onOpenChecklist?: (activity: Activity) => void;
+  onViewQuote?: (quoteId: string) => void;
   onStatusChange?: (id: string, status: ActivityStatus) => void;
 }
 
@@ -26,6 +27,7 @@ export function ActivityKanban({
   onDelete,
   onCreateQuote,
   onOpenChecklist,
+  onViewQuote,
 }: ActivityKanbanProps) {
   const getActivitiesByStatus = (status: ActivityStatus) => {
     return activities.filter(a => a.status === status);
@@ -75,6 +77,7 @@ export function ActivityKanban({
                       onDelete={onDelete}
                       onCreateQuote={onCreateQuote}
                       onOpenChecklist={onOpenChecklist}
+                      onViewQuote={onViewQuote}
                       compact
                     />
                   ))
