@@ -727,16 +727,21 @@ const Index = () => {
           <DialogHeader>
             <DialogTitle>{clientForDetail?.company || 'Cliente'}</DialogTitle>
           </DialogHeader>
-          {clientDetailId && (
+      {clientDetailId && (
             <ClientDetailPanel
               clientId={clientDetailId}
-              clientName={clientForDetail?.company || ''}
+              client={clientForDetail}
               activities={activities}
               opportunities={opportunities}
               orders={orders}
+              quotes={allQuotes}
               onNewActivity={() => {
                 setClientDetailId(null);
                 setActiveTab('activities');
+              }}
+              onQuoteClick={(quote) => {
+                setClientDetailId(null);
+                handleEditQuote(quote);
               }}
             />
           )}
