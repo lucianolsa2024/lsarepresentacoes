@@ -34,9 +34,10 @@ import { Label } from '@/components/ui/label';
 
 interface ActivityManagerProps {
   onCreateQuote?: (clientId: string) => void;
+  onViewQuote?: (quoteId: string) => void;
 }
 
-export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
+export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerProps) {
   const {
     activities,
     loading,
@@ -220,6 +221,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           onDelete={(id) => setDeleteConfirm(id)}
           onCreateQuote={onCreateQuote}
           onOpenChecklist={handleOpenChecklist}
+          onViewQuote={onViewQuote}
           showCompleted={statusFilter === 'concluida' || statusFilter === 'all'}
         />
       )}
@@ -234,6 +236,7 @@ export function ActivityManager({ onCreateQuote }: ActivityManagerProps) {
           onDelete={(id) => setDeleteConfirm(id)}
           onCreateQuote={onCreateQuote}
           onOpenChecklist={handleOpenChecklist}
+          onViewQuote={onViewQuote}
         />
       )}
 

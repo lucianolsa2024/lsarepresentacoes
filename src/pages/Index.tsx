@@ -37,6 +37,7 @@ import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { AdminPanel } from '@/components/admin/AdminPanel';
+import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
@@ -361,12 +362,28 @@ const Index = () => {
                     <RepHomeDashboard />
                   </div>
                 )}
-                <QuoteDashboard 
-                  quotes={quotes} 
-                  activities={activities}
-                  orders={orders}
-                  onViewActivities={() => setActiveTab('activities')}
-                />
+                {isRep === true ? (
+                  <QuoteDashboard 
+                    quotes={quotes} 
+                    activities={activities}
+                    orders={orders}
+                    onViewActivities={() => setActiveTab('activities')}
+                  />
+                ) : (
+                  /* Backoffice users: show only their activities widget */
+                  <div className="space-y-6">
+                    <ActivityWidget
+                      activities={activities}
+                      onViewAll={() => setActiveTab('activities')}
+                      onActivityClick={(activity) => {
+                        if (activity.quote_id) {
+                          const quote = quotes.find(q => q.id === activity.quote_id);
+                          if (quote) handleEditQuote(quote);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               {/* COMERCIAL - Sub-tabs */}
@@ -636,7 +653,13 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="activities" className="mt-0">
-                <ActivityManager onCreateQuote={handleNavigateToQuote} />
+                <ActivityManager
+                  onCreateQuote={handleNavigateToQuote}
+                  onViewQuote={(quoteId) => {
+                    const quote = quotes.find(q => q.id === quoteId);
+                    if (quote) handleEditQuote(quote);
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="funnels" className="mt-0">
