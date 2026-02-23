@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ClientData,
   QuoteItem,
@@ -17,7 +17,7 @@ import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
 import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
-import { useRepresentatives } from '@/hooks/useRepresentatives';
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -77,19 +77,10 @@ const Index = () => {
   const isRep = useIsRepresentative();
   const isAdmin = useIsAdmin();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
-  const { emailToName } = useRepresentatives();
+  
 
-  // Filter quotes: reps see only their own, admins see all
-  const quotes = useMemo(() => {
-    if (isAdmin) return allQuotes;
-    if (!user?.email) return allQuotes;
-    const repName = emailToName[user.email];
-    if (!repName) return allQuotes; // not a mapped rep, show all
-    return allQuotes.filter(q => {
-      const qRepName = q.payment?.representativeName || '';
-      return qRepName.toUpperCase().trim() === repName.toUpperCase().trim();
-    });
-  }, [allQuotes, isAdmin, user?.email, emailToName]);
+  // RLS now handles filtering - reps only see their own quotes
+  const quotes = allQuotes;
 
   const handleSignOut = async () => {
     await signOut();
@@ -177,7 +168,7 @@ const Index = () => {
       await updateQuote(editingQuoteId, quote);
       toast.success('Orçamento atualizado com sucesso!');
     } else {
-      await addQuote(quote, selectedClientId || undefined);
+      await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined);
       toast.success('Orçamento gerado e salvo com sucesso!');
 
       // Auto-create sales opportunity in funnel
@@ -194,6 +185,7 @@ const Index = () => {
         contactName: client.name || '',
         contactPhone: client.phone || '',
         contactEmail: client.email || '',
+        ownerEmail: client.ownerEmail || user?.email || undefined,
       });
     }
 

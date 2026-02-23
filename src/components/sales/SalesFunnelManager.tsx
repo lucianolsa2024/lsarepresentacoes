@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { useSalesOpportunities, SalesOpportunity, FUNNEL_STAGES, OpportunityFormData } from '@/hooks/useSalesOpportunities';
 import { useClients, Client } from '@/hooks/useClients';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -179,6 +180,7 @@ function OpportunityForm({
 export function SalesFunnelManager() {
   const { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, moveStage } = useSalesOpportunities();
   const { clients } = useClients();
+  const { user } = useAuth();
   const [funnelType, setFunnelType] = useState<'lojista' | 'corporativo'>('lojista');
   const [showForm, setShowForm] = useState(false);
   const [editingOpp, setEditingOpp] = useState<SalesOpportunity | null>(null);
@@ -207,7 +209,12 @@ export function SalesFunnelManager() {
     if (editingOpp) {
       await updateOpportunity(editingOpp.id, data);
     } else {
-      await addOpportunity(data);
+      // Set owner_email from linked client or current user
+      const linkedClient = data.clientId ? clients.find(c => c.id === data.clientId) : null;
+      await addOpportunity({
+        ...data,
+        ownerEmail: linkedClient?.ownerEmail || user?.email || undefined,
+      });
     }
     setShowForm(false);
     setEditingOpp(null);
