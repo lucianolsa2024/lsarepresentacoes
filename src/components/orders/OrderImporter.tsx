@@ -35,24 +35,38 @@ const COLUMN_PATTERNS: Record<string, RegExp> = {
   orderType: /^(tipo\s*ped|tipo|order\s*type)/i,
 };
 
+// Extract raw value from ExcelJS cell (handles rich text, formulas, dates)
+function cellValue(val: any): any {
+  if (val == null) return '';
+  if (typeof val === 'object' && val.richText) {
+    return val.richText.map((r: any) => r.text || '').join('');
+  }
+  if (typeof val === 'object' && val.text != null) {
+    return val.text;
+  }
+  if (typeof val === 'object' && val.result != null) {
+    return val.result; // formula result
+  }
+  return val;
+}
+
 function parseExcelDate(value: any): string {
-  if (!value) return '';
-  if (value instanceof Date) return value.toISOString().split('T')[0];
-  if (typeof value === 'number') {
-    const date = new Date((value - 25569) * 86400 * 1000);
+  const v = cellValue(value);
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().split('T')[0];
+  if (typeof v === 'number') {
+    const date = new Date((v - 25569) * 86400 * 1000);
     return date.toISOString().split('T')[0];
   }
-  const str = String(value).trim();
-  // Try M/D/YY or MM/DD/YY
+  const str = String(v).trim();
+  // Try M/D/YY or MM/DD/YY or DD/MM/YYYY
   const slashParts = str.split('/');
   if (slashParts.length === 3) {
     let [a, b, c] = slashParts;
     let year = c.length === 2 ? `20${c}` : c;
-    // If first number > 12, it's DD/MM/YYYY
     if (parseInt(a) > 12) {
       return `${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
     }
-    // Otherwise MM/DD/YYYY (Excel US format)
     return `${year}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
   }
   return str;
@@ -134,14 +148,18 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       const sheet = workbook.worksheets[0];
       if (!sheet) { toast.error('Planilha vazia'); return; }
 
-      // Read header row
+      // Read header row - try to extract from cells
       const headerRow = sheet.getRow(1);
       const headers: string[] = [];
       headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        headers[colNumber] = String(cell.value || '');
+        const raw = cell.value;
+        headers[colNumber] = String(cellValue(raw) || '');
       });
 
+      console.log('[OrderImporter] Headers detected:', headers.filter(Boolean));
+
       const mapping = detectColumnMapping(headers);
+      console.log('[OrderImporter] Column mapping:', mapping);
       setDetectedColumns(mapping);
       setHeaderNames(headers);
 
@@ -155,7 +173,9 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
 
       sheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const vals = row.values as any[];
+        const rawVals = row.values as any[];
+        // Normalize all cell values (handle rich text, formulas, etc.)
+        const vals = rawVals.map(cellValue);
 
         const clientName = String(vals[mapping.clientName] || '').trim();
         if (!clientName) return;
@@ -165,7 +185,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         const isFabricProvided = /tecido\s*forn/i.test(rawFabric);
         const fabricValue = isFabricProvided ? '' : rawFabric;
         const fabricProvidedValue = mapping.fabricProvided != null
-          ? String(vals[mapping.fabricProvided] || 'NAO').trim().toUpperCase()
+          ? String(cellValue(rawVals[mapping.fabricProvided]) || 'NAO').trim().toUpperCase()
           : (isFabricProvided ? 'SIM' : 'NAO');
 
         // Normalize supplier to uppercase
@@ -177,7 +197,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         if (/^\d+$/.test(rawOrderType)) rawOrderType = 'ENCOMENDA';
 
         rows.push({
-          issueDate: mapping.issueDate != null ? parseExcelDate(vals[mapping.issueDate]) : new Date().toISOString().split('T')[0],
+          issueDate: mapping.issueDate != null ? parseExcelDate(rawVals[mapping.issueDate]) : new Date().toISOString().split('T')[0],
           clientName,
           supplier,
           representative: mapping.representative != null ? String(vals[mapping.representative] || '').trim() : '',
@@ -187,9 +207,9 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
           fabricProvided: fabricProvidedValue,
           fabric: fabricValue,
           dimensions: mapping.dimensions != null ? String(vals[mapping.dimensions] || '').trim() : '',
-          deliveryDate: mapping.deliveryDate != null ? parseExcelDate(vals[mapping.deliveryDate]) : '',
+          deliveryDate: mapping.deliveryDate != null ? parseExcelDate(rawVals[mapping.deliveryDate]) : '',
           quantity: mapping.quantity != null ? (parseInt(String(vals[mapping.quantity] || '1')) || 1) : 1,
-          price: mapping.price != null ? parsePrice(vals[mapping.price]) : 0,
+          price: mapping.price != null ? parsePrice(rawVals[mapping.price]) : 0,
           orderType: rawOrderType.toUpperCase(),
           paymentTerms: mapping.paymentTerms != null ? String(vals[mapping.paymentTerms] || '').trim() : '',
         });
