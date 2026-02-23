@@ -300,6 +300,33 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_policies: {
+        Row: {
+          avg_days: number
+          created_at: string | null
+          discount_pct: number
+          id: string
+          payment_terms: string
+          tier: string
+        }
+        Insert: {
+          avg_days: number
+          created_at?: string | null
+          discount_pct?: number
+          id?: string
+          payment_terms: string
+          tier: string
+        }
+        Update: {
+          avg_days?: number
+          created_at?: string | null
+          discount_pct?: number
+          id?: string
+          payment_terms?: string
+          tier?: string
+        }
+        Relationships: []
+      }
       modulation_sizes: {
         Row: {
           created_at: string | null
