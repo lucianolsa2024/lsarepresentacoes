@@ -34,6 +34,7 @@ export interface OpportunityFormData {
   contactPhone?: string;
   contactEmail?: string;
   notes?: string;
+  ownerEmail?: string;
 }
 
 export const FUNNEL_STAGES = [
@@ -94,21 +95,23 @@ export function useSalesOpportunities() {
 
   const addOpportunity = async (data: OpportunityFormData): Promise<SalesOpportunity | null> => {
     try {
+      const insertData: Record<string, any> = {
+        client_id: data.clientId || null,
+        title: data.title,
+        description: data.description || null,
+        funnel_type: data.funnelType,
+        stage: data.stage,
+        value: data.value || 0,
+        expected_close_date: data.expectedCloseDate || null,
+        contact_name: data.contactName || null,
+        contact_phone: data.contactPhone || null,
+        contact_email: data.contactEmail || null,
+        notes: data.notes || null,
+      };
+      if (data.ownerEmail) insertData.owner_email = data.ownerEmail;
       const { data: result, error } = await supabase
         .from('sales_opportunities')
-        .insert({
-          client_id: data.clientId || null,
-          title: data.title,
-          description: data.description || null,
-          funnel_type: data.funnelType,
-          stage: data.stage,
-          value: data.value || 0,
-          expected_close_date: data.expectedCloseDate || null,
-          contact_name: data.contactName || null,
-          contact_phone: data.contactPhone || null,
-          contact_email: data.contactEmail || null,
-          notes: data.notes || null,
-        })
+        .insert(insertData as any)
         .select()
         .single();
 

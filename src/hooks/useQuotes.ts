@@ -86,21 +86,23 @@ export function useQuotes() {
     fetchQuotes();
   }, [fetchQuotes]);
 
-  const addQuote = async (quote: Quote, clientId?: string): Promise<Quote | null> => {
+  const addQuote = async (quote: Quote, clientId?: string, ownerEmail?: string): Promise<Quote | null> => {
     try {
+      const insertData: Record<string, any> = {
+        id: quote.id,
+        client_id: clientId || null,
+        client_data: quote.client as unknown as Json,
+        items: quote.items as unknown as Json,
+        payment: quote.payment as unknown as Json,
+        subtotal: quote.subtotal,
+        discount: quote.discount,
+        total: quote.total,
+        status: 'completed',
+      };
+      if (ownerEmail) insertData.owner_email = ownerEmail;
       const { data, error } = await supabase
         .from('quotes')
-        .insert({
-          id: quote.id,
-          client_id: clientId || null,
-          client_data: quote.client as unknown as Json,
-          items: quote.items as unknown as Json,
-          payment: quote.payment as unknown as Json,
-          subtotal: quote.subtotal,
-          discount: quote.discount,
-          total: quote.total,
-          status: 'completed',
-        })
+        .insert(insertData as any)
         .select()
         .single();
 

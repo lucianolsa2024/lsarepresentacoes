@@ -572,6 +572,7 @@ export type Database = {
           discount: number
           id: string
           items: Json
+          owner_email: string | null
           payment: Json
           status: string
           subtotal: number
@@ -585,6 +586,7 @@ export type Database = {
           discount?: number
           id?: string
           items: Json
+          owner_email?: string | null
           payment: Json
           status?: string
           subtotal?: number
@@ -598,6 +600,7 @@ export type Database = {
           discount?: number
           id?: string
           items?: Json
+          owner_email?: string | null
           payment?: Json
           status?: string
           subtotal?: number
@@ -718,6 +721,7 @@ export type Database = {
           lost_at: string | null
           lost_reason: string | null
           notes: string | null
+          owner_email: string | null
           stage: string
           title: string
           updated_at: string
@@ -737,6 +741,7 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
+          owner_email?: string | null
           stage?: string
           title: string
           updated_at?: string
@@ -756,6 +761,7 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
+          owner_email?: string | null
           stage?: string
           title?: string
           updated_at?: string
