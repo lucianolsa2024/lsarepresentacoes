@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   ClientData,
   QuoteItem,
@@ -17,6 +17,7 @@ import { useRDStation } from '@/hooks/useRDStation';
 import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
 import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,7 @@ const formatWhatsAppMessage = (quote: Quote) => {
 
 const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
-  const { quotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
+  const { quotes: allQuotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { activities, addActivity } = useActivities();
   const { orders, addOrders } = useOrders();
@@ -76,6 +77,19 @@ const Index = () => {
   const isRep = useIsRepresentative();
   const isAdmin = useIsAdmin();
   const { syncQuoteToRDStation, isSyncing } = useRDStation();
+  const { emailToName } = useRepresentatives();
+
+  // Filter quotes: reps see only their own, admins see all
+  const quotes = useMemo(() => {
+    if (isAdmin) return allQuotes;
+    if (!user?.email) return allQuotes;
+    const repName = emailToName[user.email];
+    if (!repName) return allQuotes; // not a mapped rep, show all
+    return allQuotes.filter(q => {
+      const qRepName = q.payment?.representativeName || '';
+      return qRepName.toUpperCase().trim() === repName.toUpperCase().trim();
+    });
+  }, [allQuotes, isAdmin, user?.email, emailToName]);
 
   const handleSignOut = async () => {
     await signOut();

@@ -66,14 +66,18 @@ export function useDiscountPolicies() {
     // Map installmentPlan (e.g. "30/60/90") to matching policy
     return policies.find(p => {
       if (p.tier !== tier) return false;
-      // Normalize both to compare
+      // Normalize: extract only digits and slashes from both
       const policyNums = p.paymentTerms
         .replace(/\s*DIAS?\s*/gi, '')
-        .replace(/\s*\/\s*ANTECIPADO/gi, '')
+        .replace(/\s*\/?\s*ANTECIPADO/gi, '')
         .replace(/\s+/g, '')
         .trim();
       const planNums = installmentPlan.replace(/\s+/g, '').trim();
-      return policyNums === planNums || p.paymentTerms.includes(planNums);
+      // Direct match
+      if (policyNums === planNums) return true;
+      // For "15" match "15 DIAS / ANTECIPADO"
+      if (planNums === '15' && policyNums === '15') return true;
+      return false;
     });
   };
 
