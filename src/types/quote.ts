@@ -125,6 +125,14 @@ export interface PaymentConditions {
   estimatedPrice: number;
 }
 
+export type QuoteStatus = 'orcamento' | 'pedido' | 'cancelado';
+
+export const QUOTE_STATUS_OPTIONS: { value: QuoteStatus; label: string }[] = [
+  { value: 'orcamento', label: 'Orçamento' },
+  { value: 'pedido', label: 'Pedido' },
+  { value: 'cancelado', label: 'Cancelado' },
+];
+
 export interface Quote {
   id: string;
   createdAt: string;
@@ -134,6 +142,7 @@ export interface Quote {
   subtotal: number;
   discount: number;
   total: number;
+  status?: QuoteStatus;
 }
 
 export const INITIAL_CLIENT: ClientData = {
@@ -167,7 +176,7 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   carrier: '',
   freightType: 'CIF',
   observations: '',
-  representativeName: 'Luciano Abreu',
+  representativeName: '',
   estimatedClosingDate: '',
   estimatedPrice: 0,
 };

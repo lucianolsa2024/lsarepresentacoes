@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Quote, ClientData, QuoteItem, PaymentConditions } from '@/types/quote';
+import { Quote, QuoteStatus, ClientData, QuoteItem, PaymentConditions } from '@/types/quote';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
@@ -19,16 +19,25 @@ const dbToQuote = (row: {
   status: string;
   created_at: string;
   updated_at: string;
-}): Quote => ({
-  id: row.id,
-  createdAt: row.created_at,
-  client: row.client_data as unknown as ClientData,
-  items: row.items as unknown as QuoteItem[],
-  payment: row.payment as unknown as PaymentConditions,
-  subtotal: row.subtotal,
-  discount: row.discount,
-  total: row.total,
-});
+}): Quote => {
+  // Map DB status to QuoteStatus
+  const mapStatus = (s: string): QuoteStatus => {
+    if (s === 'pedido') return 'pedido';
+    if (s === 'cancelado') return 'cancelado';
+    return 'orcamento';
+  };
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    client: row.client_data as unknown as ClientData,
+    items: row.items as unknown as QuoteItem[],
+    payment: row.payment as unknown as PaymentConditions,
+    subtotal: row.subtotal,
+    discount: row.discount,
+    total: row.total,
+    status: mapStatus(row.status),
+  };
+};
 
 export function useQuotes() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -189,11 +198,29 @@ export function useQuotes() {
     return quotes.find((q) => q.id === id);
   };
 
+  const updateQuoteStatus = async (id: string, status: QuoteStatus): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status })
+        .eq('id', id);
+      if (error) throw error;
+      setQuotes((prev) => prev.map((q) => (q.id === id ? { ...q, status } : q)));
+      toast.success(`Status atualizado para ${status === 'pedido' ? 'Pedido' : status === 'cancelado' ? 'Cancelado' : 'Orçamento'}`);
+      return true;
+    } catch (error) {
+      console.error('Error updating quote status:', error);
+      toast.error('Erro ao atualizar status');
+      return false;
+    }
+  };
+
   return {
     quotes,
     loading,
     addQuote,
     updateQuote,
+    updateQuoteStatus,
     deleteQuote,
     duplicateQuote,
     getQuoteById,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Quote } from '@/types/quote';
+import { Quote, QuoteStatus, QUOTE_STATUS_OPTIONS } from '@/types/quote';
 import { Activity } from '@/types/activity';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { openQuoteReminder } from '@/utils/outlookCalendar';
@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +58,7 @@ interface QuoteHistoryProps {
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onEdit?: (quote: Quote) => void;
+  onStatusChange?: (id: string, status: QuoteStatus) => void;
 }
 
 export function QuoteHistory({
@@ -59,6 +67,7 @@ export function QuoteHistory({
   onDelete,
   onDuplicate,
   onEdit,
+  onStatusChange,
 }: QuoteHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
@@ -228,6 +237,25 @@ export function QuoteHistory({
                         {quote.items.length}{' '}
                         {quote.items.length === 1 ? 'item' : 'itens'}
                       </span>
+                      {onStatusChange ? (
+                        <Select
+                          value={quote.status || 'orcamento'}
+                          onValueChange={(v) => onStatusChange(quote.id, v as QuoteStatus)}
+                        >
+                          <SelectTrigger className="h-6 w-auto text-xs px-2 py-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {QUOTE_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant={quote.status === 'pedido' ? 'default' : 'secondary'} className="text-xs">
+                          {quote.status === 'pedido' ? '✅ Pedido' : quote.status === 'cancelado' ? '❌ Cancelado' : '📋 Orçamento'}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 

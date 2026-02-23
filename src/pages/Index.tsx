@@ -68,11 +68,11 @@ const formatWhatsAppMessage = (quote: Quote) => {
 
 const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
-  const { quotes: allQuotes, addQuote, updateQuote, deleteQuote, duplicateQuote } = useQuotes();
+  const { quotes: allQuotes, addQuote, updateQuote, updateQuoteStatus, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
   const { activities, addActivity } = useActivities();
   const { orders, addOrders } = useOrders();
-  const { opportunities } = useSalesOpportunities();
+  const { opportunities, addOpportunity } = useSalesOpportunities();
   const { user, signOut } = useAuth();
   const isRep = useIsRepresentative();
   const isAdmin = useIsAdmin();
@@ -179,8 +179,24 @@ const Index = () => {
     } else {
       await addQuote(quote, selectedClientId || undefined);
       toast.success('Orçamento gerado e salvo com sucesso!');
+
+      // Auto-create sales opportunity in funnel
+      const funnelType = (client.clientType === 'corporativo' || client.clientType === 'escritorio_arquitetura')
+        ? 'corporativo' : 'lojista';
+      await addOpportunity({
+        clientId: selectedClientId || null,
+        title: `Orç. #${quote.id.slice(0, 8).toUpperCase()} - ${client.company}`,
+        description: `Orçamento gerado automaticamente. ${quote.items.length} itens.`,
+        funnelType,
+        stage: 'proposta',
+        value: quote.total,
+        expectedCloseDate: payment.estimatedClosingDate || undefined,
+        contactName: client.name || '',
+        contactPhone: client.phone || '',
+        contactEmail: client.email || '',
+      });
     }
-    
+
     syncQuoteToRDStation(quote);
 
     // Auto-create follow-up activity D+5 only if no pending one exists for this quote
@@ -526,6 +542,7 @@ const Index = () => {
                       onDelete={deleteQuote}
                       onDuplicate={duplicateQuote}
                       onEdit={handleEditQuote}
+                      onStatusChange={updateQuoteStatus}
                     />
                   </TabsContent>
 
