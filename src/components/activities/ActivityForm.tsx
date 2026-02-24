@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Activity, 
   ActivityType, 
@@ -55,6 +56,7 @@ export function ActivityForm({
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignedToEmail, setAssignedToEmail] = useState('');
+  const [watcherEmails, setWatcherEmails] = useState<string[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ email: string; name: string }[]>([]);
 
   // Load team members (reps + backoffice)
@@ -96,6 +98,7 @@ export function ActivityForm({
         setClientId(activity.client_id || '');
         setReminderMinutes(null);
         setAssignedToEmail(activity.assigned_to_email || '');
+        setWatcherEmails(activity.watcher_emails || []);
       } else {
         setType('tarefa');
         setTitle('');
@@ -106,6 +109,7 @@ export function ActivityForm({
         setClientId(defaultClientId || '');
         setReminderMinutes(null);
         setAssignedToEmail('');
+        setWatcherEmails([]);
       }
       setClientSearch('');
       setShowClientSearch(false);
@@ -118,6 +122,15 @@ export function ActivityForm({
   );
 
   const selectedClient = clients.find(c => c.id === clientId);
+
+  const toggleWatcher = (email: string, checked: boolean) => {
+    setWatcherEmails((prev) => {
+      if (checked) {
+        return prev.includes(email) ? prev : [...prev, email];
+      }
+      return prev.filter((item) => item !== email);
+    });
+  };
 
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -157,6 +170,7 @@ export function ActivityForm({
         quote_id: defaultQuoteId || undefined,
         reminder_at: reminderAt,
         assigned_to_email: assignedToEmail || undefined,
+        watcher_emails: watcherEmails,
       });
       onOpenChange(false);
     } finally {
@@ -345,6 +359,32 @@ export function ActivityForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Acompanhamento */}
+          <div className="space-y-2">
+            <Label>Acompanhamento</Label>
+            <div className="border rounded-md p-2 max-h-36 overflow-y-auto space-y-2">
+              {teamMembers.map((member) => {
+                const checked = watcherEmails.includes(member.email);
+                return (
+                  <label key={`watcher-${member.email}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(value) => toggleWatcher(member.email, value === true)}
+                    />
+                    <span>{member.name}</span>
+                    <span className="text-xs text-muted-foreground">({member.email})</span>
+                  </label>
+                );
+              })}
+              {teamMembers.length === 0 && (
+                <p className="text-xs text-muted-foreground">Nenhum usuário disponível</p>
+              )}
+            </div>
+            {watcherEmails.length > 0 && (
+              <p className="text-xs text-muted-foreground">{watcherEmails.length} usuário(s) no acompanhamento</p>
+            )}
           </div>
 
           {/* Reminder */}

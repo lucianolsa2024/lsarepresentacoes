@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { OrderFormData } from '@/types/order';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Client } from '@/hooks/useClients';
@@ -113,16 +113,64 @@ function normalizeHeader(header: string): string {
     .trim();
 }
 
+const COLUMN_KEYWORDS: Record<string, string[]> = {
+  issueDate: ['dt emissao', 'data emissao', 'emissao', 'dt ped', 'data pedido'],
+  clientName: ['cliente', 'client', 'razao social', 'empresa'],
+  orderNumber: ['numero pedido', 'num ped', 'pedido', 'n ped'],
+  oc: ['oc', 'ordem comp', 'o c'],
+  product: ['produto completo', 'produto', 'prod', 'modelo', 'descricao prod'],
+  fabric: ['tecido', 'tec', 'revestimento'],
+  supplier: ['fornecedor', 'forn', 'fabrica', 'marca'],
+  deliveryDate: ['dt entrega', 'data entrega', 'entrega', 'prev entrega', 'previsao'],
+  paymentTerms: ['cond pgto', 'cond pagto', 'cond pag', 'condicoes', 'prazo pag', 'pagamento'],
+  representative: ['representante pf', 'representante', 'rep', 'vendedor', 'consultor'],
+  quantity: ['qtde #', 'qtde', 'qtd', 'quantidade', 'quant'],
+  price: ['valor r', 'valor', 'preco', 'vlr', 'total', 'vl'],
+  fabricProvided: ['tecido forn', 'tec forn', 'fornece tec'],
+  dimensions: ['comp prof', 'dimensao', 'dim', 'medida', 'tamanho'],
+  orderType: ['tipo pedido', 'tipo ped', 'tipo', 'order type'],
+};
+
+function normalizeHeaderForMatch(header: string): string {
+  return normalizeHeader(header)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 function detectColumnMapping(headers: string[]): Record<string, number> {
   const mapping: Record<string, number> = {};
-  const normalized = headers.map(normalizeHeader);
+  const normalized = headers.map(normalizeHeaderForMatch);
 
-  for (const [field, pattern] of Object.entries(COLUMN_PATTERNS)) {
+  for (const field of Object.keys(COLUMN_PATTERNS)) {
+    const keywords = COLUMN_KEYWORDS[field] || [];
+    let bestIndex = -1;
+    let bestScore = -1;
+
     for (let i = 0; i < normalized.length; i++) {
-      if (normalized[i] && pattern.test(normalized[i])) {
-        mapping[field] = i;
-        break;
+      const header = normalized[i];
+      if (!header) continue;
+
+      let score = -1;
+      if (keywords.some((k) => header === k)) score = 3;
+      else if (keywords.some((k) => header.startsWith(k))) score = 2;
+      else if (keywords.some((k) => header.includes(k))) score = 1;
+      else {
+        const regex = COLUMN_PATTERNS[field];
+        regex.lastIndex = 0;
+        if (regex.test(header)) score = 0;
       }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0) {
+      mapping[field] = bestIndex;
     }
   }
 
@@ -136,6 +184,18 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
   const [headerNames, setHeaderNames] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const { nameToEmail } = useRepresentatives();
+  const normalizedNameToEmail = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(nameToEmail).map(([name, email]) => [
+        name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase()
+          .trim(),
+        email,
+      ])
+    );
+  }, [nameToEmail]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -167,7 +227,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       setHeaderNames(headers);
 
       // Check required fields
-      if (!mapping.clientName) {
+      if (mapping.clientName == null) {
         toast.error('Coluna de cliente não encontrada na planilha');
         return;
       }
@@ -252,7 +312,11 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         // Find representative from first order of this client
         const firstOrder = preview.find(o => o.clientName === name);
         const repEmail = firstOrder?.representative
-          ? nameToEmail[(firstOrder.representative).toUpperCase().trim()] || undefined
+          ? normalizedNameToEmail[(firstOrder.representative)
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toUpperCase()
+              .trim()] || undefined
           : undefined;
         const newClient = await onAddClient({
           name: '',
@@ -340,7 +404,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         {mappedFields.length > 0 && (
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <p className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CheckCircle className="h-4 w-4 text-primary" />
               Colunas detectadas automaticamente:
             </p>
             <div className="flex flex-wrap gap-1.5">

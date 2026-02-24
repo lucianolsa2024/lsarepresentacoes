@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useClients, Client } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, X, Plus, Wrench, Image, Upload, User, Loader2, Trash2, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -24,6 +25,7 @@ interface AssistanceFormData {
   priority: 'baixa' | 'media' | 'alta' | 'urgente';
   dueDate: string;
   assignedToEmail: string;
+  watcherEmails: string[];
 }
 
 interface Attachment {
@@ -45,7 +47,31 @@ export function AssistanceManager() {
   const [uploading, setUploading] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientSearch, setShowClientSearch] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<{ name: string; email: string }[]>([]);
+  const teamMembers = useMemo(() => {
+    const members: { name: string; email: string }[] = [];
+    repNames.forEach((name) => {
+      const email = nameToEmail[name.toUpperCase().trim()];
+      if (email && !members.some((m) => m.email === email)) {
+        members.push({ name, email });
+      }
+    });
+
+    const backoffice = [
+      { email: 'joice@lsarepresentacoes.com.br', name: 'Joice' },
+      { email: 'posicao@lsarepresentacoes.com.br', name: 'Maíra' },
+      { email: 'assistencia@lsarepresentacoes.com.br', name: 'Marcia (Assistência)' },
+      { email: 'pedidos2@lsarepresentacoes.com.br', name: 'Isabella' },
+      { email: 'pedidos@lsarepresentacoes.com.br', name: 'Nilva' },
+    ];
+
+    backoffice.forEach((item) => {
+      if (!members.some((m) => m.email === item.email)) {
+        members.push(item);
+      }
+    });
+
+    return members;
+  }, [repNames, nameToEmail]);
   const [form, setForm] = useState<AssistanceFormData>({
     clientId: '',
     product: '',
@@ -54,16 +80,9 @@ export function AssistanceManager() {
     priority: 'media',
     dueDate: new Date().toISOString().split('T')[0],
     assignedToEmail: '',
+    watcherEmails: [],
   });
 
-  useEffect(() => {
-    const members: { name: string; email: string }[] = [];
-    repNames.forEach(name => {
-      const email = nameToEmail[name.toUpperCase().trim()];
-      if (email) members.push({ name, email });
-    });
-    setTeamMembers(members);
-  }, [repNames, nameToEmail]);
 
   const filteredClients = clients.filter(c =>
     c.company.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -145,9 +164,29 @@ export function AssistanceManager() {
 
   const handleAssign = async (email: string) => {
     if (!selectedActivity) return;
-    await updateActivity(selectedActivity.id, { assigned_to_email: email });
-    setSelectedActivity({ ...selectedActivity, assigned_to_email: email });
+    await updateActivity(selectedActivity.id, { assigned_to_email: email || undefined });
+    setSelectedActivity({ ...selectedActivity, assigned_to_email: email || undefined });
     toast.success('Responsável atualizado');
+  };
+
+  const handleToggleWatcher = async (email: string, checked: boolean) => {
+    if (!selectedActivity) return;
+    const current = selectedActivity.watcher_emails || [];
+    const next = checked
+      ? (current.includes(email) ? current : [...current, email])
+      : current.filter((item) => item !== email);
+
+    await updateActivity(selectedActivity.id, { watcher_emails: next });
+    setSelectedActivity({ ...selectedActivity, watcher_emails: next });
+  };
+
+  const handleToggleFormWatcher = (email: string, checked: boolean) => {
+    setForm((prev) => {
+      const next = checked
+        ? (prev.watcherEmails.includes(email) ? prev.watcherEmails : [...prev.watcherEmails, email])
+        : prev.watcherEmails.filter((item) => item !== email);
+      return { ...prev, watcherEmails: next };
+    });
   };
 
   const handleSubmit = async () => {
@@ -164,11 +203,21 @@ export function AssistanceManager() {
       priority: form.priority,
       client_id: form.clientId,
       assigned_to_email: form.assignedToEmail || undefined,
+      watcher_emails: form.watcherEmails,
     });
 
     toast.success('Solicitação de assistência criada');
     setShowForm(false);
-    setForm({ clientId: '', product: '', defect: '', description: '', priority: 'media', dueDate: new Date().toISOString().split('T')[0], assignedToEmail: '' });
+    setForm({
+      clientId: '',
+      product: '',
+      defect: '',
+      description: '',
+      priority: 'media',
+      dueDate: new Date().toISOString().split('T')[0],
+      assignedToEmail: '',
+      watcherEmails: [],
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -301,6 +350,29 @@ export function AssistanceManager() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Acompanhamento */}
+              <div className="space-y-2 border-t pt-3">
+                <Label className="text-xs text-muted-foreground">Acompanhamento</Label>
+                <div className="border rounded-md p-2 max-h-40 overflow-y-auto space-y-2">
+                  {teamMembers.map((member) => {
+                    const checked = (selectedActivity.watcher_emails || []).includes(member.email);
+                    return (
+                      <label key={`detail-watcher-${member.email}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => handleToggleWatcher(member.email, value === true)}
+                        />
+                        <span>{member.name}</span>
+                        <span className="text-xs text-muted-foreground">({member.email})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {(selectedActivity.watcher_emails || []).length} usuário(s) acompanhando
+                </p>
               </div>
 
               {/* Attachments */}
@@ -441,6 +513,28 @@ export function AssistanceManager() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Acompanhamento</Label>
+              <div className="border rounded-md p-2 max-h-36 overflow-y-auto space-y-2">
+                {teamMembers.map((member) => {
+                  const checked = form.watcherEmails.includes(member.email);
+                  return (
+                    <label key={`form-watcher-${member.email}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(value) => handleToggleFormWatcher(member.email, value === true)}
+                      />
+                      <span>{member.name}</span>
+                      <span className="text-xs text-muted-foreground">({member.email})</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {form.watcherEmails.length > 0 && (
+                <p className="text-xs text-muted-foreground">{form.watcherEmails.length} usuário(s) no acompanhamento</p>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end pt-2">

@@ -37,6 +37,7 @@ export type Database = {
           title: string
           type: string
           updated_at: string | null
+          watcher_emails: string[]
         }
         Insert: {
           assigned_to_email?: string | null
@@ -60,6 +61,7 @@ export type Database = {
           title: string
           type: string
           updated_at?: string | null
+          watcher_emails?: string[]
         }
         Update: {
           assigned_to_email?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           title?: string
           type?: string
           updated_at?: string | null
+          watcher_emails?: string[]
         }
         Relationships: [
           {
