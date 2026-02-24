@@ -26,7 +26,7 @@ const COLUMN_PATTERNS: Record<string, RegExp> = {
   fabric: /^(tecido|tec|revestimento)/i,
   supplier: /^(fornecedor|forn|f[aá]brica|marca)/i,
   deliveryDate: /^(dt\s*entrega|data\s*entrega|entrega|prev\s*entrega|previs[aã]o)/i,
-  paymentTerms: /^(cond\s*pg|cond\s*pagto|cond\.\s*pag|condi[cç][oõ]es|prazo\s*pag|pagamento)/i,
+  paymentTerms: /^(cond\s*pg|cond\s*pagto|cond\.?\s*pag|condi[cç][oõ]es|prazo\s*pag|pagamento)/i,
   representative: /^(representante|rep|vendedor|consultor)/i,
   quantity: /^(qtd|quantidade|quant|qtde)/i,
   price: /^(valor|pre[cç]o|vlr|total|vl)/i,

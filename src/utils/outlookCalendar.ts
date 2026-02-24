@@ -14,16 +14,13 @@ export interface OutlookCalendarParams {
 }
 
 /**
- * Generates an Outlook Live calendar event URL
- * Opens Outlook web to create a new event with pre-filled data
+ * Generates an Outlook calendar event URL using outlook.office.com
+ * This works for Microsoft 365 / work accounts (uses logged-in user's account)
  */
 export function generateOutlookCalendarUrl(params: OutlookCalendarParams): string {
   const { subject, startDate, body, location, isAllDay } = params;
-  
-  // End date defaults to 1 hour after start
   const endDate = params.endDate || new Date(startDate.getTime() + 60 * 60 * 1000);
   
-  // Format dates in ISO 8601 format for Outlook
   const startDt = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
   const endDt = format(endDate, "yyyy-MM-dd'T'HH:mm:ss");
   
@@ -36,38 +33,26 @@ export function generateOutlookCalendarUrl(params: OutlookCalendarParams): strin
     body: body,
   });
   
-  if (location) {
-    searchParams.set('location', location);
-  }
-
-  if (isAllDay) {
-    searchParams.set('allday', 'true');
-  }
+  if (location) searchParams.set('location', location);
+  if (isAllDay) searchParams.set('allday', 'true');
   
-  return `https://outlook.live.com/calendar/deeplink/compose?${searchParams.toString()}`;
+  // Use outlook.office.com for work/school Microsoft 365 accounts
+  return `https://outlook.office.com/calendar/deeplink/compose?${searchParams.toString()}`;
 }
 
 /**
  * Creates an Outlook calendar event for a quote closing reminder
  */
 export function createQuoteReminderUrl(quote: Quote): string | null {
-  if (!quote.payment.estimatedClosingDate) {
-    return null;
-  }
+  if (!quote.payment.estimatedClosingDate) return null;
   
   const closingDate = new Date(quote.payment.estimatedClosingDate);
-  // Set time to 9:00 AM
   closingDate.setHours(9, 0, 0, 0);
   
   const clientName = quote.client.company || quote.client.name;
   const quoteNumber = quote.id.slice(0, 8).toUpperCase();
-  
   const subject = `Fechamento Orçamento - ${clientName} #${quoteNumber}`;
-  
-  const totalFormatted = quote.total.toLocaleString('pt-BR', { 
-    style: 'currency', 
-    currency: 'BRL' 
-  });
+  const totalFormatted = quote.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   
   const body = [
     `Lembrete de fechamento de orçamento`,
@@ -79,11 +64,7 @@ export function createQuoteReminderUrl(quote: Quote): string | null {
     `Orçamento #${quoteNumber}`,
   ].join('\n');
   
-  return generateOutlookCalendarUrl({
-    subject,
-    startDate: closingDate,
-    body,
-  });
+  return generateOutlookCalendarUrl({ subject, startDate: closingDate, body });
 }
 
 /**
@@ -91,10 +72,7 @@ export function createQuoteReminderUrl(quote: Quote): string | null {
  */
 export function openQuoteReminder(quote: Quote): boolean {
   const url = createQuoteReminderUrl(quote);
-  if (url) {
-    window.open(url, '_blank');
-    return true;
-  }
+  if (url) { window.open(url, '_blank'); return true; }
   return false;
 }
 
@@ -104,15 +82,9 @@ export function openQuoteReminder(quote: Quote): boolean {
 export function generateRouteCalendarUrl(route: RouteWithVisits): string {
   const startDate = new Date(route.start_date + 'T09:00:00');
   const endDate = new Date(route.end_date + 'T18:00:00');
-  
-  // Get unique cities from visits
   const cities = [...new Set(route.visits.map(v => v.client?.city).filter(Boolean))];
   const citiesStr = cities.join(', ');
-  
-  const clientsList = route.visits
-    .filter(v => v.client)
-    .map(v => `• ${v.client?.company}`)
-    .join('\n');
+  const clientsList = route.visits.filter(v => v.client).map(v => `• ${v.client?.company}`).join('\n');
   
   const body = [
     `Rota de Visitas: ${route.name}`,
@@ -126,14 +98,7 @@ export function generateRouteCalendarUrl(route: RouteWithVisits): string {
     route.notes ? `Observações: ${route.notes}` : '',
   ].filter(Boolean).join('\n');
   
-  return generateOutlookCalendarUrl({
-    subject: `🗺️ ${route.name}`,
-    startDate,
-    endDate,
-    body,
-    location: citiesStr,
-    isAllDay: true,
-  });
+  return generateOutlookCalendarUrl({ subject: `🗺️ ${route.name}`, startDate, endDate, body, location: citiesStr, isAllDay: true });
 }
 
 /**
@@ -141,17 +106,10 @@ export function generateRouteCalendarUrl(route: RouteWithVisits): string {
  */
 export function generateVisitCalendarUrl(visit: RouteVisit, client: RouteClient): string {
   const visitDate = new Date(visit.visit_date + 'T09:00:00');
-  // Add 1 hour visit duration
   visitDate.setHours(9 + (visit.visit_order - 1), 0, 0, 0);
   const endTime = new Date(visitDate.getTime() + 60 * 60 * 1000);
   
-  const address = formatAddress({
-    street: client.street,
-    number: client.number,
-    neighborhood: client.neighborhood,
-    city: client.city,
-    state: client.state,
-  });
+  const address = formatAddress({ street: client.street, number: client.number, neighborhood: client.neighborhood, city: client.city, state: client.state });
   
   const body = [
     `Visita ao cliente: ${client.company}`,
@@ -165,11 +123,5 @@ export function generateVisitCalendarUrl(visit: RouteVisit, client: RouteClient)
     visit.notes ? `Observações: ${visit.notes}` : '',
   ].filter(Boolean).join('\n');
   
-  return generateOutlookCalendarUrl({
-    subject: `📍 Visita - ${client.company}`,
-    startDate: visitDate,
-    endDate: endTime,
-    body,
-    location: address,
-  });
+  return generateOutlookCalendarUrl({ subject: `📍 Visita - ${client.company}`, startDate: visitDate, endDate: endTime, body, location: address });
 }

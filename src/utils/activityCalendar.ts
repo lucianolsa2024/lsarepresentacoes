@@ -1,5 +1,6 @@
 import { Activity, ACTIVITY_TYPE_CONFIG } from '@/types/activity';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OutlookCalendarParams {
   subject: string;
@@ -10,28 +11,30 @@ interface OutlookCalendarParams {
 }
 
 function generateOutlookUrl(params: OutlookCalendarParams): string {
-  const formatDateForOutlook = (date: Date): string => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  };
+  const startDt = format(params.startDate, "yyyy-MM-dd'T'HH:mm:ss");
+  const endDt = format(params.endDate, "yyyy-MM-dd'T'HH:mm:ss");
 
-  const baseUrl = 'https://outlook.live.com/calendar/0/action/compose';
-  const queryParams = new URLSearchParams({
-    allday: 'false',
+  const searchParams = new URLSearchParams({
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    startdt: startDt,
+    enddt: endDt,
     subject: params.subject,
-    startdt: formatDateForOutlook(params.startDate),
-    enddt: formatDateForOutlook(params.endDate),
     body: params.body || '',
-    location: params.location || '',
   });
 
-  return `${baseUrl}?${queryParams.toString()}`;
+  if (params.location) {
+    searchParams.set('location', params.location);
+  }
+
+  // Use outlook.office.com for work/school accounts (Microsoft 365)
+  return `https://outlook.office.com/calendar/deeplink/compose?${searchParams.toString()}`;
 }
 
 export function generateActivityCalendarUrl(activity: Activity): string {
   const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type];
   const typeEmoji = getTypeEmoji(activity.type);
   
-  // Parse date and time
   let startDate: Date;
   if (activity.due_time) {
     const [hours, minutes] = activity.due_time.split(':').map(Number);
@@ -39,22 +42,16 @@ export function generateActivityCalendarUrl(activity: Activity): string {
     startDate.setHours(hours, minutes, 0, 0);
   } else {
     startDate = new Date(activity.due_date);
-    startDate.setHours(9, 0, 0, 0); // Default to 9 AM
+    startDate.setHours(9, 0, 0, 0);
   }
   
-  // End date is 1 hour after start
   const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
   
-  // Build body
   let body = `${typeConfig.label}: ${activity.title}`;
-  if (activity.description) {
-    body += `\n\n${activity.description}`;
-  }
+  if (activity.description) body += `\n\n${activity.description}`;
   if (activity.client) {
     body += `\n\nCliente: ${activity.client.company}`;
-    if (activity.client.phone) {
-      body += `\nTelefone: ${activity.client.phone}`;
-    }
+    if (activity.client.phone) body += `\nTelefone: ${activity.client.phone}`;
   }
   
   return generateOutlookUrl({
