@@ -63,7 +63,23 @@ async function extractTextFromPdf(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    pages.push(content.items.map((item: any) => item.str).join(' '));
+    // Preserve line breaks by detecting Y-position changes
+    const items = content.items as any[];
+    if (items.length === 0) continue;
+    const lines: string[] = [];
+    let currentLine = '';
+    let lastY: number | null = null;
+    for (const item of items) {
+      const y = item.transform ? item.transform[5] : null;
+      if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) {
+        lines.push(currentLine.trim());
+        currentLine = '';
+      }
+      currentLine += (currentLine ? ' ' : '') + item.str;
+      lastY = y;
+    }
+    if (currentLine.trim()) lines.push(currentLine.trim());
+    pages.push(lines.join('\n'));
   }
   return pages.join('\n\n');
 }

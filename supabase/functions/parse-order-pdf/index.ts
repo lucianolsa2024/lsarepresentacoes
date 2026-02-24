@@ -71,7 +71,7 @@ Dado o texto extraído de um PDF de orçamento, extraia os seguintes dados:
    - previsaoFaturamento (formato YYYY-MM-DD)
    - fornecedor (nome da fábrica, ex: "CENTURY")
 
-3. Lista de itens, cada um com:
+3. Lista de itens — EXTRAIA TODOS os itens/linhas do pedido, sem exceção. Cada item deve conter:
    - produto (nome do modelo, ex: "DESIREE", "ANNE")
    - descricaoCompleta (descrição completa do item)
    - dimensoes (ex: "COMP:0.66M PROF:0.62M ALT:0.81M")
@@ -80,6 +80,8 @@ Dado o texto extraído de um PDF de orçamento, extraia os seguintes dados:
    - quantidade (número inteiro)
    - precoUnitario (número decimal, preço líquido unitário)
    - precoTotal (número decimal, preço total do item)
+
+IMPORTANTE: Você DEVE extrair TODAS as linhas de itens do pedido. Se houver 10, 20 ou mais itens, todos devem estar na lista. Não pare no primeiro item.
 
 Retorne APENAS um JSON válido, sem markdown.`;
 
