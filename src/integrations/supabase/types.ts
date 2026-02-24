@@ -875,6 +875,7 @@ export type Database = {
           responsible_name: string | null
           responsible_type: string
           rt_percentage: number | null
+          service_types: string[]
           status: string
           supplies_cost: number
           supplies_nf_data: Json | null
@@ -901,6 +902,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_type?: string
           rt_percentage?: number | null
+          service_types?: string[]
           status?: string
           supplies_cost?: number
           supplies_nf_data?: Json | null
@@ -927,6 +929,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_type?: string
           rt_percentage?: number | null
+          service_types?: string[]
           status?: string
           supplies_cost?: number
           supplies_nf_data?: Json | null

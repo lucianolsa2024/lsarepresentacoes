@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { SERVICE_ORDER_STATUSES, RESPONSIBLE_TYPES, calculateNetResult } from '@/types/serviceOrder';
+import { SERVICE_ORDER_STATUSES, RESPONSIBLE_TYPES, SERVICE_TYPES, calculateNetResult } from '@/types/serviceOrder';
 import type { ServiceOrder, ServiceOrderFormData } from '@/types/serviceOrder';
 
 interface Props {
@@ -38,9 +39,9 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
   const [exitNf, setExitNf] = useState('');
   const [boletoInfo, setBoletoInfo] = useState('');
   const [clientId, setClientId] = useState('');
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset form on open
   const resetForm = () => {
     if (order) {
       setProduct(order.product || '');
@@ -58,13 +59,21 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
       setExitNf(order.exit_nf || '');
       setBoletoInfo(order.boleto_info || '');
       setClientId(order.client_id || '');
+      setServiceTypes(order.service_types || []);
     } else {
       setProduct(''); setResponsibleType('Fábrica'); setResponsibleName('');
       setHasRt(false); setRtPercentage(0); setOriginNf(''); setDefect('');
       setLaborCost(0); setSuppliesCost(0); setFreightCost(0);
       setDeliveryForecast(undefined); setStatus('Aguardando');
       setExitNf(''); setBoletoInfo(''); setClientId('');
+      setServiceTypes([]);
     }
+  };
+
+  const toggleServiceType = (type: string) => {
+    setServiceTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
   };
 
   const netResult = useMemo(() =>
@@ -81,6 +90,7 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
       freight_cost: freightCost,
       delivery_forecast: deliveryForecast ? format(deliveryForecast, 'yyyy-MM-dd') : '',
       status, exit_nf: exitNf, boleto_info: boletoInfo, client_id: clientId,
+      service_types: serviceTypes,
     });
     setSubmitting(false);
     onOpenChange(false);
@@ -105,6 +115,22 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Service Types - multi-select checkboxes */}
+          <div>
+            <Label>Tipo de Serviço</Label>
+            <div className="flex flex-wrap gap-3 mt-1">
+              {SERVICE_TYPES.map(type => (
+                <label key={type} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={serviceTypes.includes(type)}
+                    onCheckedChange={() => toggleServiceType(type)}
+                  />
+                  <span className="text-sm">{type}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Responsible type */}

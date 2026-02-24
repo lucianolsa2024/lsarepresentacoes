@@ -1,3 +1,10 @@
+export const SERVICE_TYPES = [
+  'Troca de tecido',
+  'Troca de capa',
+  'Assistência fábrica',
+  'Pintura',
+] as const;
+
 export interface ServiceOrder {
   id: string;
   os_number: string;
@@ -21,6 +28,7 @@ export interface ServiceOrder {
   client_id: string | null;
   owner_email: string | null;
   change_history: ChangeHistoryEntry[];
+  service_types: string[];
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +66,7 @@ export interface ServiceOrderFormData {
   exit_nf: string;
   boleto_info: string;
   client_id: string;
+  service_types: string[];
 }
 
 export const SERVICE_ORDER_STATUSES = [
