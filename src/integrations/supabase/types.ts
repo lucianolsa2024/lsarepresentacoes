@@ -819,6 +819,130 @@ export type Database = {
           },
         ]
       }
+      service_order_photos: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          file_url: string
+          id: string
+          photo_type: string
+          service_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          photo_type?: string
+          service_order_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          photo_type?: string
+          service_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_photos_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          boleto_info: string | null
+          change_history: Json
+          client_id: string | null
+          created_at: string
+          defect: string | null
+          delivery_forecast: string | null
+          exit_nf: string | null
+          freight_cost: number
+          has_rt: boolean
+          id: string
+          labor_cost: number
+          net_result: number
+          origin_nf: string | null
+          os_number: string
+          owner_email: string | null
+          product: string | null
+          responsible_name: string | null
+          responsible_type: string
+          rt_percentage: number | null
+          status: string
+          supplies_cost: number
+          supplies_nf_data: Json | null
+          supplies_nf_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          boleto_info?: string | null
+          change_history?: Json
+          client_id?: string | null
+          created_at?: string
+          defect?: string | null
+          delivery_forecast?: string | null
+          exit_nf?: string | null
+          freight_cost?: number
+          has_rt?: boolean
+          id?: string
+          labor_cost?: number
+          net_result?: number
+          origin_nf?: string | null
+          os_number?: string
+          owner_email?: string | null
+          product?: string | null
+          responsible_name?: string | null
+          responsible_type?: string
+          rt_percentage?: number | null
+          status?: string
+          supplies_cost?: number
+          supplies_nf_data?: Json | null
+          supplies_nf_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          boleto_info?: string | null
+          change_history?: Json
+          client_id?: string | null
+          created_at?: string
+          defect?: string | null
+          delivery_forecast?: string | null
+          exit_nf?: string | null
+          freight_cost?: number
+          has_rt?: boolean
+          id?: string
+          labor_cost?: number
+          net_result?: number
+          origin_nf?: string | null
+          os_number?: string
+          owner_email?: string | null
+          product?: string | null
+          responsible_name?: string | null
+          responsible_type?: string
+          rt_percentage?: number | null
+          status?: string
+          supplies_cost?: number
+          supplies_nf_data?: Json | null
+          supplies_nf_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
