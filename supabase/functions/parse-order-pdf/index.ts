@@ -89,6 +89,10 @@ IMPORTANTE:
 - Extraia TODAS as linhas. Se houver 50 itens, retorne 50.
 - O campo clienteNome é OBRIGATÓRIO em cada item. Use o nome que aparece na linha/coluna de cliente.
 - Se o PDF é tipo A (um único cliente), repita o nome em todos os itens.
+- Valores monetários em formato brasileiro devem virar número em reais:
+  - "2.092" significa 2092.00 (não 2.092)
+  - "2.092,00" significa 2092.00
+  - "159,90" significa 159.90
 
 Retorne APENAS JSON válido.`;
 

@@ -92,6 +92,44 @@ async function extractTextFromPdf(file: File): Promise<string> {
   return pages.join('\n\n');
 }
 
+function parseLocalizedMoney(value: unknown): number {
+  if (value === null || value === undefined || value === '') return 0;
+
+  const raw = String(value).trim().replace(/[R$\s]/g, '');
+  if (!raw) return 0;
+
+  const hasComma = raw.includes(',');
+  const hasDot = raw.includes('.');
+
+  let normalized = raw;
+
+  if (hasComma && hasDot) {
+    // pt-BR style: 1.234,56
+    if (raw.lastIndexOf(',') > raw.lastIndexOf('.')) {
+      normalized = raw.replace(/\./g, '').replace(',', '.');
+    } else {
+      normalized = raw.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    normalized = raw.replace(',', '.');
+  } else if (hasDot) {
+    const parts = raw.split('.');
+    const looksLikeThousands = parts.length > 1 && parts[parts.length - 1].length === 3;
+    normalized = looksLikeThousands ? raw.replace(/\./g, '') : raw;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getItemTotal(item: { precoTotal?: number; precoUnitario: number; quantidade: number }): number {
+  const qty = Number(item.quantidade) > 0 ? Number(item.quantidade) : 1;
+  const total = parseLocalizedMoney(item.precoTotal);
+  if (total > 0) return total;
+
+  return parseLocalizedMoney(item.precoUnitario) * qty;
+}
+
 export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }: Props) {
   const [step, setStep] = useState<'upload' | 'extracting' | 'preview' | 'importing'>('upload');
   const [extractedList, setExtractedList] = useState<ExtractedDataWithFile[]>([]);
@@ -249,6 +287,9 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
             }
           }
 
+          const normalizedPrice = parseLocalizedMoney(item.precoUnitario);
+          const normalizedQuantity = Number(item.quantidade) > 0 ? Number(item.quantidade) : 1;
+
           allOrders.push({
             order: {
               issueDate: pedido.dataEmissao || new Date().toISOString().split('T')[0],
@@ -262,8 +303,8 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
               fabric: item.tecido || '',
               dimensions: item.dimensoes || '',
               deliveryDate: pedido.previsaoFaturamento || '',
-              quantity: item.quantidade || 1,
-              price: item.precoUnitario || 0,
+              quantity: normalizedQuantity,
+              price: normalizedPrice,
               orderType: 'ENCOMENDA',
               paymentTerms: pedido.condicaoPagamento || '',
             },
@@ -294,7 +335,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
 
   const totalItems = extractedList.reduce((s, r) => s + r.itens.length, 0);
   const totalValue = extractedList.reduce(
-    (s, r) => s + r.itens.reduce((si, item) => si + (item.precoTotal || item.precoUnitario * item.quantidade), 0),
+    (s, r) => s + r.itens.reduce((si, item) => si + getItemTotal(item), 0),
     0
   );
 
@@ -359,9 +400,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
             {/* Per-PDF cards */}
             <div className="space-y-3 max-h-[400px] overflow-auto">
               {extractedList.map((extracted, idx) => {
-                const pdfTotal = extracted.itens.reduce(
-                  (s, item) => s + (item.precoTotal || item.precoUnitario * item.quantidade), 0
-                );
+                const pdfTotal = extracted.itens.reduce((s, item) => s + getItemTotal(item), 0);
                 const uniqueClients = [...new Set(extracted.itens.map(i => i.clienteNome || extracted.cliente?.nomeFantasia || ''))];
 
                 return (
@@ -407,9 +446,9 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
                               <td className="p-1.5">{item.clienteNome || extracted.cliente?.nomeFantasia || '-'}</td>
                               <td className="p-1.5">{item.produto}</td>
                               <td className="p-1.5">{item.tecido || '-'}</td>
-                              <td className="p-1.5 text-right">{item.quantidade}</td>
-                              <td className="p-1.5 text-right">
-                                {formatCurrency(item.precoTotal || item.precoUnitario * item.quantidade)}
+                                <td className="p-1.5 text-right">{Number(item.quantidade) || 1}</td>
+                                <td className="p-1.5 text-right">
+                                  {formatCurrency(getItemTotal(item))}
                               </td>
                             </tr>
                           ))}
