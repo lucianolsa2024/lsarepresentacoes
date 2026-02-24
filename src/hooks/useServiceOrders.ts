@@ -23,6 +23,7 @@ export function useServiceOrders() {
         ...row,
         change_history: (row.change_history as unknown as ChangeHistoryEntry[]) || [],
         supplies_nf_data: row.supplies_nf_data as Record<string, unknown> | null,
+        service_types: (row as any).service_types || [],
       })));
     }
     setLoading(false);
@@ -59,6 +60,7 @@ export function useServiceOrders() {
         boleto_info: formData.boleto_info || null,
         client_id: formData.client_id || null,
         owner_email: email,
+        service_types: formData.service_types || [],
       })
       .select()
       .single();
@@ -85,7 +87,7 @@ export function useServiceOrders() {
       has_rt: 'Indicação RT', rt_percentage: '% RT', origin_nf: 'NF Origem',
       defect: 'Defeito', labor_cost: 'Mão de obra', supplies_cost: 'Insumos',
       freight_cost: 'Frete', delivery_forecast: 'Previsão entrega', status: 'Status',
-      exit_nf: 'NF Saída', boleto_info: 'Boleto',
+      exit_nf: 'NF Saída', boleto_info: 'Boleto', service_types: 'Tipo de Serviço',
     };
 
     for (const [key, newVal] of Object.entries(updates)) {
@@ -128,6 +130,7 @@ export function useServiceOrders() {
     if (updates.exit_nf !== undefined) dbUpdates.exit_nf = updates.exit_nf || null;
     if (updates.boleto_info !== undefined) dbUpdates.boleto_info = updates.boleto_info || null;
     if (updates.client_id !== undefined) dbUpdates.client_id = updates.client_id || null;
+    if (updates.service_types !== undefined) dbUpdates.service_types = updates.service_types;
 
     dbUpdates.net_result = netResult;
     dbUpdates.change_history = newHistory as unknown as Record<string, never>;

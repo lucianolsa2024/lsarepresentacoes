@@ -36,10 +36,11 @@ import { OrderImporter } from '@/components/orders/OrderImporter';
 import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
+import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
@@ -321,7 +322,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`w-full grid ${isRep === false ? (isAdmin ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5') : (isAdmin ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6')} h-auto p-0 bg-muted rounded-none`}>
+            <TabsList className={`w-full grid ${isRep === false ? (isAdmin ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6') : (isAdmin ? 'grid-cols-4 sm:grid-cols-8' : 'grid-cols-4 sm:grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -351,6 +352,13 @@ const Index = () => {
               >
                 <TrendingUp className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Funis</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="service-orders"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <Wrench className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Ordens de Serviço</span>
               </TabsTrigger>
               <TabsTrigger
                 value="operations"
@@ -687,6 +695,10 @@ const Index = () => {
 
               <TabsContent value="funnels" className="mt-0">
                 <SalesFunnelManager />
+              </TabsContent>
+
+              <TabsContent value="service-orders" className="mt-0">
+                <ServiceOrderManager />
               </TabsContent>
 
               <TabsContent value="operations" className="mt-0">
