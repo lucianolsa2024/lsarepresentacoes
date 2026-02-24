@@ -29,6 +29,7 @@ interface DbActivity {
   recurrence_rule: unknown;
   parent_activity_id: string | null;
   assigned_to_email: string | null;
+  watcher_emails: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,7 @@ const dbToActivity = (row: DbActivity, client?: DbClient | null): Activity => ({
   recurrence_rule: row.recurrence_rule as RecurrenceRule | undefined,
   parent_activity_id: row.parent_activity_id || undefined,
   assigned_to_email: row.assigned_to_email || undefined,
+  watcher_emails: row.watcher_emails || [],
   created_at: row.created_at,
   updated_at: row.updated_at,
   client: client ? {
@@ -139,6 +141,7 @@ export function useActivities() {
         reminder_at: input.reminder_at || null,
         recurrence_rule: input.recurrence_rule ? JSON.stringify(input.recurrence_rule) : null,
         assigned_to_email: input.assigned_to_email || null,
+        watcher_emails: input.watcher_emails ?? [],
       };
       
       const { data, error } = await supabase
@@ -172,6 +175,7 @@ export function useActivities() {
           completed_notes: updates.completed_notes !== undefined ? updates.completed_notes || null : undefined,
           reminder_at: updates.reminder_at !== undefined ? updates.reminder_at || null : undefined,
           assigned_to_email: updates.assigned_to_email !== undefined ? updates.assigned_to_email || null : undefined,
+          watcher_emails: updates.watcher_emails !== undefined ? updates.watcher_emails : undefined,
         })
         .eq('id', id);
 
