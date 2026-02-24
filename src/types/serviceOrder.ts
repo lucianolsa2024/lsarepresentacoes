@@ -98,9 +98,11 @@ export function calculateNetResult(
   hasRt: boolean,
   rtPercentage: number
 ): number {
-  const totalCosts = laborCost + suppliesCost + freightCost;
+  // laborCost = valor cobrado da OS (positivo)
+  // resultado = valor cobrado - insumos - frete
+  const netBeforeRt = laborCost - suppliesCost - freightCost;
   if (responsibleType === 'Fábrica' && hasRt && rtPercentage > 0) {
-    return -(totalCosts) * (1 - rtPercentage / 100);
+    return netBeforeRt * (1 - rtPercentage / 100);
   }
-  return -totalCosts;
+  return netBeforeRt;
 }
