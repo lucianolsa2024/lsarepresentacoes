@@ -22,25 +22,22 @@ interface Props {
 
 interface ExtractedData {
   fileName: string;
-  cliente: {
-    nomeFantasia: string;
-    cnpj?: string;
-    telefone?: string;
-    email?: string;
-    endereco?: string;
-    cidade?: string;
-    estado?: string;
-    cep?: string;
-  };
   pedido: {
-    numeroPedido: string;
-    dataEmissao: string;
+    numeroPedido?: string;
+    dataEmissao?: string;
     representante?: string;
     condicaoPagamento?: string;
     previsaoFaturamento?: string;
     fornecedor?: string;
   };
   itens: {
+    clienteNome: string;
+    clienteCnpj?: string;
+    clienteTelefone?: string;
+    clienteEmail?: string;
+    clienteCidade?: string;
+    clienteEstado?: string;
+    numeroPedidoItem?: string;
     produto: string;
     descricaoCompleta?: string;
     dimensoes?: string;
@@ -50,6 +47,17 @@ interface ExtractedData {
     precoUnitario: number;
     precoTotal?: number;
   }[];
+  // Legacy support for single-client PDFs
+  cliente?: {
+    nomeFantasia: string;
+    cnpj?: string;
+    telefone?: string;
+    email?: string;
+    endereco?: string;
+    cidade?: string;
+    estado?: string;
+    cep?: string;
+  };
 }
 
 interface ExtractedDataWithFile extends ExtractedData {
@@ -176,50 +184,9 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
       let skippedDuplicates = 0;
 
       for (const extracted of extractedList) {
-        const { cliente, pedido, itens, file } = extracted;
-        const clientName = cliente.nomeFantasia;
-        const orderNum = (pedido.numeroPedido || '').trim().toLowerCase();
-        const dedupKey = `${orderNum}|${clientName.trim().toLowerCase()}`;
+        const { pedido, itens, file, cliente } = extracted;
 
-        // Skip if this order already exists (by order_number + client_name)
-        if (orderNum && existingSet.has(dedupKey)) {
-          skippedDuplicates++;
-          toast.info(`Pedido #${pedido.numeroPedido} de "${clientName}" já existe — ignorado`);
-          continue;
-        }
-
-        let clientId = clientMap.get(clientName.toLowerCase()) || null;
-
-        if (!clientId) {
-          const repEmail = pedido.representante
-            ? nameToEmail[(pedido.representante).toUpperCase().trim()] || undefined
-            : undefined;
-          const newClient = await onAddClient({
-            name: '',
-            company: clientName,
-            document: cliente.cnpj || '',
-            phone: cliente.telefone || '',
-            email: cliente.email || '',
-            isNewClient: true,
-            ownerEmail: repEmail,
-            address: {
-              street: cliente.endereco || '',
-              number: '',
-              complement: '',
-              neighborhood: '',
-              city: cliente.cidade || '',
-              state: cliente.estado || '',
-              zipCode: cliente.cep || '',
-            },
-          });
-          if (newClient) {
-            clientId = newClient.id;
-            clientMap.set(clientName.toLowerCase(), newClient.id);
-            toast.info(`Novo cliente "${clientName}" criado`);
-          }
-        }
-
-        // Upload PDF to storage
+        // Upload PDF to storage once per file
         let pdfUrl: string | null = null;
         try {
           const timestamp = Date.now();
@@ -228,25 +195,67 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
           const { error: uploadError } = await supabase.storage
             .from('pedidos')
             .upload(filePath, file, { upsert: true });
-
-          if (!uploadError) {
-            // Store the path, not the public URL (bucket is private)
-            pdfUrl = filePath;
-          } else {
-            console.warn('PDF upload failed:', uploadError);
-          }
+          if (!uploadError) pdfUrl = filePath;
+          else console.warn('PDF upload failed:', uploadError);
         } catch (err) {
           console.warn('PDF upload error:', err);
         }
 
         for (const item of itens) {
+          // Resolve client name: per-item clienteNome takes priority, fallback to legacy cliente.nomeFantasia
+          const clientName = item.clienteNome || cliente?.nomeFantasia || '';
+          if (!clientName) continue;
+
+          const orderNum = (item.numeroPedidoItem || pedido.numeroPedido || '').trim().toLowerCase();
+          const dedupKey = `${orderNum}|${clientName.trim().toLowerCase()}`;
+
+          if (orderNum && existingSet.has(dedupKey)) {
+            skippedDuplicates++;
+            continue;
+          }
+
+          // Also skip if we already added this key in this batch
+          if (orderNum) {
+            existingSet.add(dedupKey);
+          }
+
+          let clientId = clientMap.get(clientName.toLowerCase()) || null;
+
+          if (!clientId) {
+            const repEmail = pedido.representante
+              ? nameToEmail[(pedido.representante).toUpperCase().trim()] || undefined
+              : undefined;
+            const newClient = await onAddClient({
+              name: '',
+              company: clientName,
+              document: item.clienteCnpj || cliente?.cnpj || '',
+              phone: item.clienteTelefone || cliente?.telefone || '',
+              email: item.clienteEmail || cliente?.email || '',
+              isNewClient: true,
+              ownerEmail: repEmail,
+              address: {
+                street: '',
+                number: '',
+                complement: '',
+                neighborhood: '',
+                city: item.clienteCidade || cliente?.cidade || '',
+                state: item.clienteEstado || cliente?.estado || '',
+                zipCode: '',
+              },
+            });
+            if (newClient) {
+              clientId = newClient.id;
+              clientMap.set(clientName.toLowerCase(), newClient.id);
+            }
+          }
+
           allOrders.push({
             order: {
               issueDate: pedido.dataEmissao || new Date().toISOString().split('T')[0],
               clientName,
               supplier: pedido.fornecedor || 'CENTURY',
               representative: pedido.representante || '',
-              orderNumber: pedido.numeroPedido || '',
+              orderNumber: item.numeroPedidoItem || pedido.numeroPedido || '',
               oc: '',
               product: item.produto || '',
               fabricProvided: item.tecidoFornecido === 'SIM' ? 'SIM' : 'NAO',
@@ -257,20 +266,19 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
               price: item.precoUnitario || 0,
               orderType: 'ENCOMENDA',
               paymentTerms: pedido.condicaoPagamento || '',
-              // Pass description for richer quote items
-              description: item.descricaoCompleta || '',
-            } as OrderFormData & { description?: string },
+            },
             clientId,
             pdfUrl,
           });
         }
       }
 
+      if (skippedDuplicates > 0) {
+        toast.info(`${skippedDuplicates} item(ns) duplicado(s) ignorado(s)`);
+      }
+
       const count = await onImport(allOrders);
-      const msg = skippedDuplicates > 0
-        ? `${count} pedido(s) importado(s), ${skippedDuplicates} duplicado(s) ignorado(s)`
-        : `${count} pedido(s) importado(s) de ${extractedList.length} PDF(s)!`;
-      toast.success(msg);
+      toast.success(`${count} pedido(s) importado(s) de ${extractedList.length} PDF(s)!`);
       setExtractedList([]);
       setStep('upload');
       onComplete();
@@ -354,9 +362,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
                 const pdfTotal = extracted.itens.reduce(
                   (s, item) => s + (item.precoTotal || item.precoUnitario * item.quantidade), 0
                 );
-                const isNewClient = !clients.some(
-                  c => c.company.toLowerCase() === extracted.cliente.nomeFantasia.toLowerCase()
-                );
+                const uniqueClients = [...new Set(extracted.itens.map(i => i.clienteNome || extracted.cliente?.nomeFantasia || ''))];
 
                 return (
                   <div key={idx} className="border rounded-lg p-3 space-y-2">
@@ -364,17 +370,14 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium">
-                            Pedido #{extracted.pedido.numeroPedido}
+                            {extracted.pedido.numeroPedido ? `Pedido #${extracted.pedido.numeroPedido}` : extracted.fileName}
                           </p>
                           <Badge variant="outline" className="text-xs">
                             {extracted.fileName}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Cliente: {extracted.cliente.nomeFantasia}
-                          {isNewClient && (
-                            <span className="ml-2 text-destructive">(novo)</span>
-                          )}
+                          {uniqueClients.length === 1 ? `Cliente: ${uniqueClients[0]}` : `${uniqueClients.length} clientes`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {extracted.itens.length} item(ns) | {formatCurrency(pdfTotal)} |
@@ -387,10 +390,11 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
                     </div>
 
                     {/* Compact items list */}
-                    <div className="border rounded overflow-auto max-h-[150px]">
+                    <div className="border rounded overflow-auto max-h-[200px]">
                       <table className="w-full text-xs">
                         <thead className="bg-muted sticky top-0">
                           <tr>
+                            <th className="p-1.5 text-left">Cliente</th>
                             <th className="p-1.5 text-left">Produto</th>
                             <th className="p-1.5 text-left">Tecido</th>
                             <th className="p-1.5 text-right">Qtd</th>
@@ -400,6 +404,7 @@ export function OrderPdfImporter({ clients, onImport, onAddClient, onComplete }:
                         <tbody>
                           {extracted.itens.map((item, i) => (
                             <tr key={i} className="border-t">
+                              <td className="p-1.5">{item.clienteNome || extracted.cliente?.nomeFantasia || '-'}</td>
                               <td className="p-1.5">{item.produto}</td>
                               <td className="p-1.5">{item.tecido || '-'}</td>
                               <td className="p-1.5 text-right">{item.quantidade}</td>

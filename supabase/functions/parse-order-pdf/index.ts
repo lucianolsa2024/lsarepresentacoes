@@ -49,41 +49,48 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `Você é um especialista em extrair dados estruturados de orçamentos/pedidos de fábricas de móveis (como Century, SoHome).
+    const systemPrompt = `Você é um especialista em extrair dados estruturados de orçamentos/pedidos de fábricas de móveis.
 
-Dado o texto extraído de um PDF de orçamento, extraia os seguintes dados:
+O PDF pode ser de dois tipos:
+A) Um orçamento/pedido de uma fábrica para UM cliente (ex: PDF da Century/SoHome com cabeçalho do cliente)
+B) Uma planilha/relatório exportado como PDF com VÁRIOS clientes em linhas diferentes
 
-1. Dados do cliente:
-   - nomeFantasia (nome fantasia do cliente)
-   - cnpj
-   - telefone
-   - email
-   - endereco (rua completa com número)
-   - cidade
-   - estado
-   - cep
+Para o tipo A, extraia os dados normalmente com um único cliente.
+Para o tipo B, cada linha da tabela pode ter um cliente diferente — extraia o nome do cliente DE CADA LINHA.
 
-2. Dados do pedido:
-   - numeroPedido (número do orçamento/pedido)
+Extraia os seguintes dados:
+
+1. Dados gerais do pedido:
+   - numeroPedido (número do orçamento/pedido, se houver)
    - dataEmissao (formato YYYY-MM-DD)
    - representante (nome do representante)
-   - condicaoPagamento (ex: "30/60/90/120/150/180 DIAS")
+   - condicaoPagamento
    - previsaoFaturamento (formato YYYY-MM-DD)
-   - fornecedor (nome da fábrica, ex: "CENTURY")
+   - fornecedor (nome da fábrica)
 
-3. Lista de itens — EXTRAIA TODOS os itens/linhas do pedido, sem exceção. Cada item deve conter:
-   - produto (nome do modelo, ex: "DESIREE", "ANNE")
-   - descricaoCompleta (descrição completa do item)
-   - dimensoes (ex: "COMP:0.66M PROF:0.62M ALT:0.81M")
-   - tecido (faixa e código do tecido, ex: "FX D D4264")
+2. Lista de itens — EXTRAIA TODOS os itens/linhas, sem exceção. Cada item deve conter:
+   - clienteNome (nome do cliente DESTE item específico — campo OBRIGATÓRIO)
+   - clienteCnpj (CNPJ do cliente, se disponível)
+   - clienteTelefone
+   - clienteEmail
+   - clienteCidade
+   - clienteEstado
+   - numeroPedidoItem (número do pedido deste item, se diferente do geral)
+   - produto (nome do modelo)
+   - descricaoCompleta (descrição completa)
+   - dimensoes
+   - tecido (faixa e código do tecido)
    - tecidoFornecido ("SIM" ou "NAO")
    - quantidade (número inteiro)
-   - precoUnitario (número decimal, preço líquido unitário)
-   - precoTotal (número decimal, preço total do item)
+   - precoUnitario (número decimal)
+   - precoTotal (número decimal)
 
-IMPORTANTE: Você DEVE extrair TODAS as linhas de itens do pedido. Se houver 10, 20 ou mais itens, todos devem estar na lista. Não pare no primeiro item.
+IMPORTANTE: 
+- Extraia TODAS as linhas. Se houver 50 itens, retorne 50.
+- O campo clienteNome é OBRIGATÓRIO em cada item. Use o nome que aparece na linha/coluna de cliente.
+- Se o PDF é tipo A (um único cliente), repita o nome em todos os itens.
 
-Retorne APENAS um JSON válido, sem markdown.`;
+Retorne APENAS JSON válido.`;
 
     console.log("Sending PDF text to AI for extraction, text length:", pdfText.length);
 
@@ -101,7 +108,7 @@ Retorne APENAS um JSON válido, sem markdown.`;
             { role: "system", content: systemPrompt },
             {
               role: "user",
-              content: `Extraia os dados do seguinte texto de PDF de orçamento:\n\n${pdfText}`,
+              content: `Extraia os dados do seguinte texto de PDF de orçamento/planilha:\n\n${pdfText}`,
             },
           ],
           tools: [
@@ -109,24 +116,10 @@ Retorne APENAS um JSON válido, sem markdown.`;
               type: "function",
               function: {
                 name: "extract_order_data",
-                description: "Extrai dados estruturados de um orçamento/pedido PDF",
+                description: "Extrai dados estruturados de um orçamento/pedido PDF ou planilha PDF",
                 parameters: {
                   type: "object",
                   properties: {
-                    cliente: {
-                      type: "object",
-                      properties: {
-                        nomeFantasia: { type: "string" },
-                        cnpj: { type: "string" },
-                        telefone: { type: "string" },
-                        email: { type: "string" },
-                        endereco: { type: "string" },
-                        cidade: { type: "string" },
-                        estado: { type: "string" },
-                        cep: { type: "string" },
-                      },
-                      required: ["nomeFantasia"],
-                    },
                     pedido: {
                       type: "object",
                       properties: {
@@ -137,13 +130,19 @@ Retorne APENAS um JSON válido, sem markdown.`;
                         previsaoFaturamento: { type: "string" },
                         fornecedor: { type: "string" },
                       },
-                      required: ["numeroPedido", "dataEmissao"],
                     },
                     itens: {
                       type: "array",
                       items: {
                         type: "object",
                         properties: {
+                          clienteNome: { type: "string", description: "Nome do cliente desta linha" },
+                          clienteCnpj: { type: "string" },
+                          clienteTelefone: { type: "string" },
+                          clienteEmail: { type: "string" },
+                          clienteCidade: { type: "string" },
+                          clienteEstado: { type: "string" },
+                          numeroPedidoItem: { type: "string" },
                           produto: { type: "string" },
                           descricaoCompleta: { type: "string" },
                           dimensoes: { type: "string" },
@@ -153,11 +152,11 @@ Retorne APENAS um JSON válido, sem markdown.`;
                           precoUnitario: { type: "number" },
                           precoTotal: { type: "number" },
                         },
-                        required: ["produto", "quantidade", "precoUnitario"],
+                        required: ["clienteNome", "produto", "quantidade", "precoUnitario"],
                       },
                     },
                   },
-                  required: ["cliente", "pedido", "itens"],
+                  required: ["pedido", "itens"],
                   additionalProperties: false,
                 },
               },
