@@ -122,6 +122,38 @@ export type Database = {
           },
         ]
       }
+      activity_attachments: {
+        Row: {
+          activity_id: string
+          created_at: string
+          file_name: string | null
+          file_url: string
+          id: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_attachments_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_checklist_items: {
         Row: {
           activity_id: string
@@ -415,6 +447,7 @@ export type Database = {
           delivery_date: string | null
           dimensions: string | null
           fabric: string | null
+          fabric_arrival_date: string | null
           fabric_provided: string | null
           id: string
           issue_date: string
@@ -429,6 +462,7 @@ export type Database = {
           quantity: number | null
           representative: string | null
           reschedule_date: string | null
+          reschedule_history: Json | null
           supplier: string | null
           updated_at: string
         }
@@ -439,6 +473,7 @@ export type Database = {
           delivery_date?: string | null
           dimensions?: string | null
           fabric?: string | null
+          fabric_arrival_date?: string | null
           fabric_provided?: string | null
           id?: string
           issue_date: string
@@ -453,6 +488,7 @@ export type Database = {
           quantity?: number | null
           representative?: string | null
           reschedule_date?: string | null
+          reschedule_history?: Json | null
           supplier?: string | null
           updated_at?: string
         }
@@ -463,6 +499,7 @@ export type Database = {
           delivery_date?: string | null
           dimensions?: string | null
           fabric?: string | null
+          fabric_arrival_date?: string | null
           fabric_provided?: string | null
           id?: string
           issue_date?: string
@@ -477,6 +514,7 @@ export type Database = {
           quantity?: number | null
           representative?: string | null
           reschedule_date?: string | null
+          reschedule_history?: Json | null
           supplier?: string | null
           updated_at?: string
         }

@@ -15,12 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Calendar, Package, Truck, AlertTriangle, CheckCircle2, Clock, Search, Bell, CalendarIcon, X } from 'lucide-react';
+import { Calendar, Package, Truck, AlertTriangle, CheckCircle2, Clock, Search, Bell, CalendarIcon, X, History } from 'lucide-react';
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, isBefore, isWithinInterval, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 type DeliveryStatus = 'embarque_semana' | 'embarque_proxima' | 'embarque_futuro' | 'atrasado' | 'faturado';
 
@@ -60,10 +61,8 @@ const STATUS_CONFIG: Record<DeliveryStatus, { label: string; icon: React.ReactNo
 const COLUMN_ORDER: DeliveryStatus[] = ['atrasado', 'embarque_semana', 'embarque_proxima', 'embarque_futuro', 'faturado'];
 
 function getDeliveryStatus(order: Order): DeliveryStatus {
-  // If order type indicates it's already delivered/invoiced
   if (order.orderType === 'PRONTA ENTREGA') return 'faturado';
-
-  const deliveryDateStr = (order as any).rescheduleDate || order.deliveryDate;
+  const deliveryDateStr = order.rescheduleDate || order.deliveryDate;
   if (!deliveryDateStr) return 'embarque_futuro';
 
   const today = new Date();
@@ -87,92 +86,38 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
   const { repNames } = useRepresentatives();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
+  const [fabricArrivalDate, setFabricArrivalDate] = useState('');
+  const [rescheduleHistory, setRescheduleHistory] = useState<string[]>([]);
   const [issueDateFrom, setIssueDateFrom] = useState<Date | undefined>();
   const [issueDateTo, setIssueDateTo] = useState<Date | undefined>();
   const [deliveryDateFrom, setDeliveryDateFrom] = useState<Date | undefined>();
   const [deliveryDateTo, setDeliveryDateTo] = useState<Date | undefined>();
 
-  // Overdue alert on mount
   useEffect(() => {
     const overdueCount = orders.filter(o => getDeliveryStatus(o) === 'atrasado').length;
     if (overdueCount > 0) {
-      toast.warning(`⚠️ ${overdueCount} pedido(s) com entrega atrasada!`, {
-        duration: 6000,
-        id: 'overdue-alert',
-      });
+      toast.warning(`⚠️ ${overdueCount} pedido(s) com entrega atrasada!`, { duration: 6000, id: 'overdue-alert' });
     }
   }, [orders]);
 
   const hasDateFilters = issueDateFrom || issueDateTo || deliveryDateFrom || deliveryDateTo;
-
-  const clearDateFilters = () => {
-    setIssueDateFrom(undefined);
-    setIssueDateTo(undefined);
-    setDeliveryDateFrom(undefined);
-    setDeliveryDateTo(undefined);
-  };
+  const clearDateFilters = () => { setIssueDateFrom(undefined); setIssueDateTo(undefined); setDeliveryDateFrom(undefined); setDeliveryDateTo(undefined); };
 
   const filteredOrders = useMemo(() => {
     let result = orders;
-    if (repFilter !== 'all') {
-      result = result.filter(o => o.representative === repFilter);
-    }
-    // Issue date filters
-    if (issueDateFrom) {
-      result = result.filter(o => {
-        if (!o.issueDate) return false;
-        const d = parseISO(o.issueDate);
-        return !isBefore(d, issueDateFrom);
-      });
-    }
-    if (issueDateTo) {
-      result = result.filter(o => {
-        if (!o.issueDate) return false;
-        const d = parseISO(o.issueDate);
-        return !isAfter(d, issueDateTo);
-      });
-    }
-    // Delivery date filters
-    if (deliveryDateFrom) {
-      result = result.filter(o => {
-        const dateStr = (o as any).rescheduleDate || o.deliveryDate;
-        if (!dateStr) return false;
-        const d = parseISO(dateStr);
-        return !isBefore(d, deliveryDateFrom);
-      });
-    }
-    if (deliveryDateTo) {
-      result = result.filter(o => {
-        const dateStr = (o as any).rescheduleDate || o.deliveryDate;
-        if (!dateStr) return false;
-        const d = parseISO(dateStr);
-        return !isAfter(d, deliveryDateTo);
-      });
-    }
+    if (repFilter !== 'all') result = result.filter(o => o.representative === repFilter);
+    if (issueDateFrom) result = result.filter(o => o.issueDate && !isBefore(parseISO(o.issueDate), issueDateFrom));
+    if (issueDateTo) result = result.filter(o => o.issueDate && !isAfter(parseISO(o.issueDate), issueDateTo));
+    if (deliveryDateFrom) result = result.filter(o => { const d = o.rescheduleDate || o.deliveryDate; return d && !isBefore(parseISO(d), deliveryDateFrom); });
+    if (deliveryDateTo) result = result.filter(o => { const d = o.rescheduleDate || o.deliveryDate; return d && !isAfter(parseISO(d), deliveryDateTo); });
     if (!search.trim()) return result;
     const q = search.toLowerCase();
-    return result.filter(o =>
-      o.clientName.toLowerCase().includes(q) ||
-      o.product.toLowerCase().includes(q) ||
-      o.orderNumber.toLowerCase().includes(q) ||
-      o.oc.toLowerCase().includes(q)
-    );
+    return result.filter(o => o.clientName.toLowerCase().includes(q) || o.product.toLowerCase().includes(q) || o.orderNumber.toLowerCase().includes(q) || o.oc.toLowerCase().includes(q));
   }, [orders, search, repFilter, issueDateFrom, issueDateTo, deliveryDateFrom, deliveryDateTo]);
 
   const columns = useMemo(() => {
-    const result: Record<DeliveryStatus, Order[]> = {
-      atrasado: [],
-      embarque_semana: [],
-      embarque_proxima: [],
-      embarque_futuro: [],
-      faturado: [],
-    };
-
-    filteredOrders.forEach(order => {
-      const status = getDeliveryStatus(order);
-      result[status].push(order);
-    });
-
+    const result: Record<DeliveryStatus, Order[]> = { atrasado: [], embarque_semana: [], embarque_proxima: [], embarque_futuro: [], faturado: [] };
+    filteredOrders.forEach(order => { result[getDeliveryStatus(order)].push(order); });
     return result;
   }, [filteredOrders]);
 
@@ -181,54 +126,54 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
     try { return format(parseISO(d), 'dd/MM/yyyy'); } catch { return d; }
   };
 
-  const handleOpenCard = (order: Order) => {
+  const handleOpenCard = async (order: Order) => {
     setSelectedOrder(order);
-    setRescheduleDate((order as any).rescheduleDate || '');
+    setRescheduleDate(order.rescheduleDate || '');
+    setFabricArrivalDate((order as any).fabricArrivalDate || '');
+    // Load reschedule history from DB
+    try {
+      const { data } = await supabase.from('orders').select('reschedule_history, fabric_arrival_date').eq('id', order.id).single();
+      if (data) {
+        const history = Array.isArray(data.reschedule_history) ? data.reschedule_history as string[] : [];
+        setRescheduleHistory(history);
+        setFabricArrivalDate(data.fabric_arrival_date || '');
+      }
+    } catch { setRescheduleHistory([]); }
   };
 
   const handleSaveReschedule = async () => {
     if (!selectedOrder) return;
-    const formData: OrderFormData = {
-      issueDate: selectedOrder.issueDate,
-      clientName: selectedOrder.clientName,
-      supplier: selectedOrder.supplier,
-      representative: selectedOrder.representative,
-      orderNumber: selectedOrder.orderNumber,
-      oc: selectedOrder.oc,
-      product: selectedOrder.product,
-      fabricProvided: selectedOrder.fabricProvided,
-      fabric: selectedOrder.fabric,
-      dimensions: selectedOrder.dimensions,
-      deliveryDate: selectedOrder.deliveryDate || '',
-      quantity: selectedOrder.quantity,
-      price: selectedOrder.price,
-      orderType: selectedOrder.orderType,
-      paymentTerms: selectedOrder.paymentTerms,
-    };
 
-    // We save reschedule_date via direct supabase call since it's not in OrderFormData
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { error } = await supabase
-      .from('orders')
-      .update({ reschedule_date: rescheduleDate || null })
-      .eq('id', selectedOrder.id);
-
-    if (error) {
-      const { toast } = await import('sonner');
-      toast.error('Erro ao salvar reprogramação');
-      return;
+    // Build new history: append previous reschedule date if it exists and is different
+    const newHistory = [...rescheduleHistory];
+    const currentReschedule = selectedOrder.rescheduleDate;
+    if (currentReschedule && currentReschedule !== rescheduleDate && !newHistory.includes(currentReschedule)) {
+      newHistory.push(currentReschedule);
+    }
+    // Also add original delivery date to history on first reschedule
+    if (newHistory.length === 0 && selectedOrder.deliveryDate && rescheduleDate && selectedOrder.deliveryDate !== rescheduleDate) {
+      newHistory.push(selectedOrder.deliveryDate);
     }
 
-    // Update local state
-    (selectedOrder as any).rescheduleDate = rescheduleDate || null;
-    const { toast } = await import('sonner');
-    toast.success('Reprogramação salva');
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        reschedule_date: rescheduleDate || null,
+        reschedule_history: newHistory,
+        fabric_arrival_date: fabricArrivalDate || null,
+      })
+      .eq('id', selectedOrder.id);
+
+    if (error) { toast.error('Erro ao salvar'); return; }
+
+    selectedOrder.rescheduleDate = rescheduleDate || null;
+    (selectedOrder as any).fabricArrivalDate = fabricArrivalDate || null;
+    setRescheduleHistory(newHistory);
+    toast.success('Dados salvos');
     setSelectedOrder(null);
   };
 
   const handleDragEnd = async (result: DropResult) => {
-    // Drag-and-drop is visual only for delivery kanban - status is date-driven
-    // We could allow dragging to "faturado" to mark as invoiced
     if (!result.destination) return;
     const destStatus = result.destination.droppableId as DeliveryStatus;
     const orderId = result.draggableId;
@@ -236,8 +181,6 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
     if (!order) return;
 
     if (destStatus === 'faturado' && getDeliveryStatus(order) !== 'faturado') {
-      // Mark as "PRONTA ENTREGA" to move to faturado
-      const { supabase } = await import('@/integrations/supabase/client');
       await supabase.from('orders').update({ order_type: 'PRONTA ENTREGA' }).eq('id', orderId);
       order.orderType = 'PRONTA ENTREGA';
       toast.success('Pedido marcado como faturado');
@@ -245,6 +188,7 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
   };
 
   const overdueCount = useMemo(() => filteredOrders.filter(o => getDeliveryStatus(o) === 'atrasado').length, [filteredOrders]);
+  const isFabricProvided = selectedOrder?.fabricProvided === 'SIM';
 
   return (
     <div className="space-y-4">
@@ -252,29 +196,18 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar pedido, cliente, produto..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10"
-            />
+            <Input placeholder="Buscar pedido, cliente, produto..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
           <Select value={repFilter} onValueChange={setRepFilter}>
-            <SelectTrigger className="w-full sm:w-[220px]">
-              <SelectValue placeholder="Todos os representantes" />
-            </SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[220px]"><SelectValue placeholder="Todos os representantes" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os representantes</SelectItem>
-              {repNames.map(name => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
+              {repNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">{filteredOrders.length} pedido(s)</span>
           {overdueCount > 0 && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <Bell className="h-3 w-3" /> {overdueCount} atrasado(s)
-            </Badge>
+            <Badge variant="destructive" className="flex items-center gap-1"><Bell className="h-3 w-3" /> {overdueCount} atrasado(s)</Badge>
           )}
         </div>
 
@@ -285,13 +218,10 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !issueDateFrom && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-1 h-3 w-3" />
-                  {issueDateFrom ? format(issueDateFrom, "dd/MM/yyyy") : "Início"}
+                  <CalendarIcon className="mr-1 h-3 w-3" />{issueDateFrom ? format(issueDateFrom, "dd/MM/yyyy") : "Início"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={issueDateFrom} onSelect={setIssueDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={issueDateFrom} onSelect={setIssueDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} /></PopoverContent>
             </Popover>
           </div>
           <div className="space-y-1">
@@ -299,13 +229,10 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !issueDateTo && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-1 h-3 w-3" />
-                  {issueDateTo ? format(issueDateTo, "dd/MM/yyyy") : "Fim"}
+                  <CalendarIcon className="mr-1 h-3 w-3" />{issueDateTo ? format(issueDateTo, "dd/MM/yyyy") : "Fim"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={issueDateTo} onSelect={setIssueDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={issueDateTo} onSelect={setIssueDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} /></PopoverContent>
             </Popover>
           </div>
           <div className="space-y-1">
@@ -313,13 +240,10 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !deliveryDateFrom && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-1 h-3 w-3" />
-                  {deliveryDateFrom ? format(deliveryDateFrom, "dd/MM/yyyy") : "Início"}
+                  <CalendarIcon className="mr-1 h-3 w-3" />{deliveryDateFrom ? format(deliveryDateFrom, "dd/MM/yyyy") : "Início"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={deliveryDateFrom} onSelect={setDeliveryDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={deliveryDateFrom} onSelect={setDeliveryDateFrom} locale={ptBR} className={cn("p-3 pointer-events-auto")} /></PopoverContent>
             </Popover>
           </div>
           <div className="space-y-1">
@@ -327,19 +251,14 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-left font-normal", !deliveryDateTo && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-1 h-3 w-3" />
-                  {deliveryDateTo ? format(deliveryDateTo, "dd/MM/yyyy") : "Fim"}
+                  <CalendarIcon className="mr-1 h-3 w-3" />{deliveryDateTo ? format(deliveryDateTo, "dd/MM/yyyy") : "Fim"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={deliveryDateTo} onSelect={setDeliveryDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={deliveryDateTo} onSelect={setDeliveryDateTo} locale={ptBR} className={cn("p-3 pointer-events-auto")} /></PopoverContent>
             </Popover>
           </div>
           {hasDateFilters && (
-            <Button variant="ghost" size="sm" onClick={clearDateFilters} className="text-muted-foreground">
-              <X className="h-3 w-3 mr-1" /> Limpar datas
-            </Button>
+            <Button variant="ghost" size="sm" onClick={clearDateFilters} className="text-muted-foreground"><X className="h-3 w-3 mr-1" /> Limpar datas</Button>
           )}
         </div>
       </div>
@@ -354,57 +273,32 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
                 <div className={`flex items-center gap-2 p-2 rounded-t-lg border ${config.color}`}>
                   {config.icon}
                   <span className="text-sm font-semibold">{config.label}</span>
-                  <span className="ml-auto text-xs font-bold bg-background/50 rounded-full px-2 py-0.5">
-                    {columnOrders.length}
-                  </span>
+                  <span className="ml-auto text-xs font-bold bg-background/50 rounded-full px-2 py-0.5">{columnOrders.length}</span>
                 </div>
                 <Droppable droppableId={status}>
                   {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`border border-t-0 rounded-b-lg p-2 space-y-2 min-h-[200px] transition-colors ${
-                        snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-muted/20'
-                      }`}
-                    >
+                    <div ref={provided.innerRef} {...provided.droppableProps} className={`border border-t-0 rounded-b-lg p-2 space-y-2 min-h-[200px] transition-colors ${snapshot.isDraggingOver ? 'bg-primary/5' : 'bg-muted/20'}`}>
                       {columnOrders.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-8">Nenhum pedido</p>
                       ) : (
                         columnOrders.map((order, index) => (
                           <Draggable key={order.id} draggableId={order.id} index={index}>
                             {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                              >
-                                <Card
-                                  className={`cursor-pointer hover:shadow-md transition-shadow ${
-                                    snapshot.isDragging ? 'shadow-lg rotate-2' : ''
-                                  }`}
-                                  onClick={() => handleOpenCard(order)}
-                                >
+                              <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                <Card className={`cursor-pointer hover:shadow-md transition-shadow ${snapshot.isDragging ? 'shadow-lg rotate-2' : ''}`} onClick={() => handleOpenCard(order)}>
                                   <CardContent className="p-3 space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-xs font-bold text-primary">
-                                        #{order.orderNumber || '—'}
-                                      </span>
-                                      {(order as any).rescheduleDate && (
-                                        <Badge variant="outline" className="text-[10px] px-1">
-                                          Reprog.
-                                        </Badge>
-                                      )}
+                                      <span className="text-xs font-bold text-primary">#{order.orderNumber || '—'}</span>
+                                      <div className="flex gap-1">
+                                        {order.rescheduleDate && <Badge variant="outline" className="text-[10px] px-1">Reprog.</Badge>}
+                                        {order.fabricProvided === 'SIM' && <Badge variant="secondary" className="text-[10px] px-1">Tec. Forn.</Badge>}
+                                      </div>
                                     </div>
                                     <p className="text-sm font-medium truncate">{order.clientName}</p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      <Package className="inline h-3 w-3 mr-1" />
-                                      {order.product || '—'}
-                                    </p>
-                                    {order.oc && (
-                                      <p className="text-xs text-muted-foreground">OC: {order.oc}</p>
-                                    )}
+                                    <p className="text-xs text-muted-foreground truncate"><Package className="inline h-3 w-3 mr-1" />{order.product || '—'}</p>
+                                    {order.oc && <p className="text-xs text-muted-foreground">OC: {order.oc}</p>}
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span>Entrega: {formatDate((order as any).rescheduleDate || order.deliveryDate)}</span>
+                                      <span>Entrega: {formatDate(order.rescheduleDate || order.deliveryDate)}</span>
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -425,59 +319,52 @@ export function OrderDeliveryKanban({ orders, onUpdate }: OrderDeliveryKanbanPro
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={(open) => { if (!open) setSelectedOrder(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Pedido #{selectedOrder?.orderNumber || '—'}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Cliente</Label>
-                  <p className="font-medium">{selectedOrder.clientName}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Produto</Label>
-                  <p className="font-medium">{selectedOrder.product || '—'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">OC</Label>
-                  <p className="font-medium">{selectedOrder.oc || '—'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Tipo</Label>
-                  <p className="font-medium">{selectedOrder.orderType}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Data Entrega Original</Label>
-                  <p className="font-medium">{formatDate(selectedOrder.deliveryDate)}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                  <p className="font-medium">{selectedOrder.quantity}</p>
-                </div>
+                <div><Label className="text-xs text-muted-foreground">Cliente</Label><p className="font-medium">{selectedOrder.clientName}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Produto</Label><p className="font-medium">{selectedOrder.product || '—'}</p></div>
+                <div><Label className="text-xs text-muted-foreground">OC</Label><p className="font-medium">{selectedOrder.oc || '—'}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Tipo</Label><p className="font-medium">{selectedOrder.orderType}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Data Entrega Original</Label><p className="font-medium">{formatDate(selectedOrder.deliveryDate)}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Quantidade</Label><p className="font-medium">{selectedOrder.quantity}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Tecido</Label><p className="font-medium">{selectedOrder.fabric || '—'}</p></div>
+                <div><Label className="text-xs text-muted-foreground">Tecido Fornecido</Label><p className="font-medium">{selectedOrder.fabricProvided === 'SIM' ? 'Sim' : 'Não'}</p></div>
               </div>
+
+              {/* Reschedule History */}
+              {rescheduleHistory.length > 0 && (
+                <div className="border-t pt-3 space-y-1">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" /> Histórico de Reprogramações</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {rescheduleHistory.map((date, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{formatDate(date)}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fabric Arrival Date (only for "tecido fornecido") */}
+              {isFabricProvided && (
+                <div className="border-t pt-3 space-y-2">
+                  <Label htmlFor="fabricArrival">Data de Chegada do Tecido</Label>
+                  <Input id="fabricArrival" type="date" value={fabricArrivalDate} onChange={e => setFabricArrivalDate(e.target.value)} />
+                </div>
+              )}
 
               <div className="border-t pt-4 space-y-2">
                 <Label htmlFor="reschedule">Reprogramação</Label>
-                <Input
-                  id="reschedule"
-                  type="date"
-                  value={rescheduleDate}
-                  onChange={e => setRescheduleDate(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Defina uma nova data caso o embarque tenha sido reprogramado
-                </p>
+                <Input id="reschedule" type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Defina uma nova data caso o embarque tenha sido reprogramado</p>
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setSelectedOrder(null)}>
-                  Fechar
-                </Button>
-                <Button className="flex-1" onClick={handleSaveReschedule}>
-                  Salvar Reprogramação
-                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setSelectedOrder(null)}>Fechar</Button>
+                <Button className="flex-1" onClick={handleSaveReschedule}>Salvar</Button>
               </div>
             </div>
           )}

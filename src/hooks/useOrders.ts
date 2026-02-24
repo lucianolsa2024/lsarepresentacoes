@@ -23,6 +23,8 @@ const dbToOrder = (row: any): Order => ({
   paymentTerms: row.payment_terms || '',
   pdfUrl: row.pdf_url || null,
   rescheduleDate: row.reschedule_date || null,
+  rescheduleHistory: Array.isArray(row.reschedule_history) ? row.reschedule_history : [],
+  fabricArrivalDate: row.fabric_arrival_date || null,
   ownerEmail: row.owner_email || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,

@@ -18,6 +18,8 @@ export interface Order {
   paymentTerms: string;
   pdfUrl: string | null;
   rescheduleDate: string | null;
+  rescheduleHistory: string[];
+  fabricArrivalDate: string | null;
   ownerEmail: string | null;
   createdAt: string;
   updatedAt: string;

@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useClients, Client } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, X, Plus, Wrench } from 'lucide-react';
+import { Search, X, Plus, Wrench, Image, Upload, User, Loader2, Trash2, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ACTIVITY_STATUS_CONFIG, ACTIVITY_PRIORITY_CONFIG, Activity } from '@/types/activity';
 import { toast } from 'sonner';
 
 interface AssistanceFormData {
@@ -19,14 +23,29 @@ interface AssistanceFormData {
   description: string;
   priority: 'baixa' | 'media' | 'alta' | 'urgente';
   dueDate: string;
+  assignedToEmail: string;
+}
+
+interface Attachment {
+  id: string;
+  file_url: string;
+  file_name: string | null;
+  created_at: string;
 }
 
 export function AssistanceManager() {
   const { clients } = useClients();
-  const { activities, addActivity } = useActivities();
+  const { activities, addActivity, updateActivity } = useActivities();
+  const { repNames, nameToEmail } = useRepresentatives();
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientSearch, setShowClientSearch] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{ name: string; email: string }[]>([]);
   const [form, setForm] = useState<AssistanceFormData>({
     clientId: '',
     product: '',
@@ -34,7 +53,17 @@ export function AssistanceManager() {
     description: '',
     priority: 'media',
     dueDate: new Date().toISOString().split('T')[0],
+    assignedToEmail: '',
   });
+
+  useEffect(() => {
+    const members: { name: string; email: string }[] = [];
+    repNames.forEach(name => {
+      const email = nameToEmail[name.toUpperCase().trim()];
+      if (email) members.push({ name, email });
+    });
+    setTeamMembers(members);
+  }, [repNames, nameToEmail]);
 
   const filteredClients = clients.filter(c =>
     c.company.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -46,22 +75,87 @@ export function AssistanceManager() {
   const assistanceActivities = activities.filter(a => a.type === 'assistencia')
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime());
 
+  const loadAttachments = async (activityId: string) => {
+    setLoadingAttachments(true);
+    try {
+      const { data, error } = await supabase
+        .from('activity_attachments' as any)
+        .select('*')
+        .eq('activity_id', activityId)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setAttachments(data as any[]);
+      }
+    } catch (e) {
+      console.error('Error loading attachments:', e);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  const handleOpenDetail = async (activity: Activity) => {
+    setSelectedActivity(activity);
+    setShowDetail(true);
+    await loadAttachments(activity.id);
+  };
+
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedActivity || !e.target.files?.length) return;
+    setUploading(true);
+    try {
+      const file = e.target.files[0];
+      const ext = file.name.split('.').pop();
+      const path = `${selectedActivity.id}/${Date.now()}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('assistance-attachments')
+        .upload(path, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('assistance-attachments')
+        .getPublicUrl(path);
+
+      await supabase.from('activity_attachments' as any).insert({
+        activity_id: selectedActivity.id,
+        file_url: urlData.publicUrl,
+        file_name: file.name,
+      });
+
+      await loadAttachments(selectedActivity.id);
+      toast.success('Imagem anexada');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Erro ao anexar imagem');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (att: Attachment) => {
+    try {
+      await supabase.from('activity_attachments' as any).delete().eq('id', att.id);
+      setAttachments(prev => prev.filter(a => a.id !== att.id));
+      toast.success('Anexo removido');
+    } catch (e) {
+      toast.error('Erro ao remover anexo');
+    }
+  };
+
+  const handleAssign = async (email: string) => {
+    if (!selectedActivity) return;
+    await updateActivity(selectedActivity.id, { assigned_to_email: email });
+    setSelectedActivity({ ...selectedActivity, assigned_to_email: email });
+    toast.success('Responsável atualizado');
+  };
+
   const handleSubmit = async () => {
-    if (!form.clientId) {
-      toast.error('Selecione um cliente');
-      return;
-    }
-    if (!form.product) {
-      toast.error('Informe o produto');
-      return;
-    }
-    if (!form.defect) {
-      toast.error('Descreva o defeito');
-      return;
-    }
+    if (!form.clientId) { toast.error('Selecione um cliente'); return; }
+    if (!form.product) { toast.error('Informe o produto'); return; }
+    if (!form.defect) { toast.error('Descreva o defeito'); return; }
 
     const clientName = selectedClient?.company || '';
-
     await addActivity({
       type: 'assistencia',
       title: `Assistência - ${clientName} - ${form.product}`,
@@ -69,18 +163,26 @@ export function AssistanceManager() {
       due_date: form.dueDate,
       priority: form.priority,
       client_id: form.clientId,
+      assigned_to_email: form.assignedToEmail || undefined,
     });
 
     toast.success('Solicitação de assistência criada');
     setShowForm(false);
-    setForm({
-      clientId: '',
-      product: '',
-      defect: '',
-      description: '',
-      priority: 'media',
-      dueDate: new Date().toISOString().split('T')[0],
-    });
+    setForm({ clientId: '', product: '', defect: '', description: '', priority: 'media', dueDate: new Date().toISOString().split('T')[0], assignedToEmail: '' });
+  };
+
+  const getStatusColor = (status: string) => {
+    const config = ACTIVITY_STATUS_CONFIG[status as keyof typeof ACTIVITY_STATUS_CONFIG];
+    if (!config) return '';
+    const colors: Record<string, string> = { gray: 'bg-muted text-muted-foreground', blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', red: 'bg-destructive/10 text-destructive' };
+    return colors[config.color] || '';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    const config = ACTIVITY_PRIORITY_CONFIG[priority as keyof typeof ACTIVITY_PRIORITY_CONFIG];
+    if (!config) return '';
+    const colors: Record<string, string> = { green: 'border-green-500 text-green-700 dark:text-green-400', yellow: 'border-yellow-500 text-yellow-700 dark:text-yellow-400', orange: 'border-orange-500 text-orange-700 dark:text-orange-400', red: 'border-destructive text-destructive' };
+    return colors[config.color] || '';
   };
 
   return (
@@ -95,27 +197,44 @@ export function AssistanceManager() {
       {/* List */}
       {assistanceActivities.length > 0 ? (
         <div className="space-y-2">
-          {assistanceActivities.map(a => (
-            <Card key={a.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Wrench className="h-4 w-4 text-muted-foreground" />
-                      <p className="font-medium">{a.title}</p>
+          {assistanceActivities.map(a => {
+            const statusConfig = ACTIVITY_STATUS_CONFIG[a.status as keyof typeof ACTIVITY_STATUS_CONFIG];
+            const priorityConfig = ACTIVITY_PRIORITY_CONFIG[a.priority as keyof typeof ACTIVITY_PRIORITY_CONFIG];
+            return (
+              <Card
+                key={a.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleOpenDetail(a)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <p className="font-medium truncate">{a.title}</p>
+                        {statusConfig && (
+                          <Badge variant="secondary" className={`text-[10px] ${getStatusColor(a.status)}`}>
+                            {statusConfig.label}
+                          </Badge>
+                        )}
+                        {priorityConfig && (
+                          <Badge variant="outline" className={`text-[10px] ${getPriorityColor(a.priority)}`}>
+                            {priorityConfig.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {a.client?.company && `${a.client.company} • `}
+                        {new Date(a.due_date).toLocaleDateString('pt-BR')}
+                        {a.assigned_to_email && ` • ${a.assigned_to_email}`}
+                      </p>
                     </div>
-                    {a.description && (
-                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{a.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {a.client?.company && `${a.client.company} • `}
-                      {new Date(a.due_date).toLocaleDateString('pt-BR')} • {a.status}
-                    </p>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -125,6 +244,109 @@ export function AssistanceManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* Detail Dialog */}
+      <Dialog open={showDetail} onOpenChange={(open) => { if (!open) { setShowDetail(false); setSelectedActivity(null); setAttachments([]); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5" />
+              {selectedActivity?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedActivity && (
+            <div className="space-y-4">
+              {/* Info */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Cliente</Label>
+                  <p className="font-medium">{selectedActivity.client?.company || '—'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <p className="font-medium">{ACTIVITY_STATUS_CONFIG[selectedActivity.status as keyof typeof ACTIVITY_STATUS_CONFIG]?.label || selectedActivity.status}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Prioridade</Label>
+                  <p className="font-medium">{ACTIVITY_PRIORITY_CONFIG[selectedActivity.priority as keyof typeof ACTIVITY_PRIORITY_CONFIG]?.label || selectedActivity.priority}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Prazo</Label>
+                  <p className="font-medium">{new Date(selectedActivity.due_date).toLocaleDateString('pt-BR')}</p>
+                </div>
+              </div>
+
+              {selectedActivity.description && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Descrição</Label>
+                  <p className="text-sm whitespace-pre-line mt-1">{selectedActivity.description}</p>
+                </div>
+              )}
+
+              {/* Responsible */}
+              <div className="space-y-2 border-t pt-3">
+                <Label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <User className="h-3 w-3" /> Responsável
+                </Label>
+                <Select
+                  value={selectedActivity.assigned_to_email || ''}
+                  onValueChange={handleAssign}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Designar responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map(m => (
+                      <SelectItem key={m.email} value={m.email}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Attachments */}
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Image className="h-3 w-3" /> Anexos ({attachments.length})
+                  </Label>
+                  <label>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={uploading} />
+                    <Button variant="outline" size="sm" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+                        Anexar
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+
+                {loadingAttachments ? (
+                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                ) : attachments.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {attachments.map(att => (
+                      <div key={att.id} className="relative group rounded-md border overflow-hidden">
+                        <img src={att.file_url} alt={att.file_name || 'Anexo'} className="w-full h-24 object-cover" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att); }}
+                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                        {att.file_name && (
+                          <p className="text-[10px] text-muted-foreground truncate px-1 py-0.5">{att.file_name}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">Nenhum anexo</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -163,11 +385,7 @@ export function AssistanceManager() {
                           key={c.id}
                           type="button"
                           className="w-full px-3 py-2 text-left hover:bg-muted text-sm"
-                          onClick={() => {
-                            setForm({ ...form, clientId: c.id });
-                            setClientSearch('');
-                            setShowClientSearch(false);
-                          }}
+                          onClick={() => { setForm({ ...form, clientId: c.id }); setClientSearch(''); setShowClientSearch(false); }}
                         >
                           <p className="font-medium">{c.company}</p>
                           {c.name && <p className="text-xs text-muted-foreground">{c.name}</p>}
@@ -211,6 +429,18 @@ export function AssistanceManager() {
                 <Label>Prazo</Label>
                 <Input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Responsável</Label>
+              <Select value={form.assignedToEmail} onValueChange={v => setForm({ ...form, assignedToEmail: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecionar responsável" /></SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map(m => (
+                    <SelectItem key={m.email} value={m.email}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
