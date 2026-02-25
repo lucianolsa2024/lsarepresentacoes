@@ -19,6 +19,8 @@ const dbToQuote = (row: {
   status: string;
   created_at: string;
   updated_at: string;
+  version?: number;
+  parent_quote_id?: string | null;
 }): Quote => {
   // Map DB status to QuoteStatus
   const mapStatus = (s: string): QuoteStatus => {
@@ -36,6 +38,8 @@ const dbToQuote = (row: {
     discount: row.discount,
     total: row.total,
     status: mapStatus(row.status),
+    version: row.version || 1,
+    parentQuoteId: row.parent_quote_id || null,
   };
 };
 
@@ -86,7 +90,7 @@ export function useQuotes() {
     fetchQuotes();
   }, [fetchQuotes]);
 
-  const addQuote = async (quote: Quote, clientId?: string, ownerEmail?: string): Promise<Quote | null> => {
+  const addQuote = async (quote: Quote, clientId?: string, ownerEmail?: string, version?: number, parentQuoteId?: string): Promise<Quote | null> => {
     try {
       const insertData: Record<string, any> = {
         id: quote.id,
@@ -98,6 +102,8 @@ export function useQuotes() {
         discount: quote.discount,
         total: quote.total,
         status: 'completed',
+        version: version || 1,
+        parent_quote_id: parentQuoteId || null,
       };
       if (ownerEmail) insertData.owner_email = ownerEmail;
       const { data, error } = await supabase

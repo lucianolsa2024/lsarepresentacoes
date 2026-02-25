@@ -144,6 +144,8 @@ export interface Quote {
   discount: number;
   total: number;
   status?: QuoteStatus;
+  version?: number;
+  parentQuoteId?: string | null;
 }
 
 export const INITIAL_CLIENT: ClientData = {

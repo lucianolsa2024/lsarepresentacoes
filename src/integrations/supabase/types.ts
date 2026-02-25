@@ -625,11 +625,13 @@ export type Database = {
           id: string
           items: Json
           owner_email: string | null
+          parent_quote_id: string | null
           payment: Json
           status: string
           subtotal: number
           total: number
           updated_at: string
+          version: number
         }
         Insert: {
           client_data: Json
@@ -639,11 +641,13 @@ export type Database = {
           id?: string
           items: Json
           owner_email?: string | null
+          parent_quote_id?: string | null
           payment: Json
           status?: string
           subtotal?: number
           total?: number
           updated_at?: string
+          version?: number
         }
         Update: {
           client_data?: Json
@@ -653,11 +657,13 @@ export type Database = {
           id?: string
           items?: Json
           owner_email?: string | null
+          parent_quote_id?: string | null
           payment?: Json
           status?: string
           subtotal?: number
           total?: number
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -665,6 +671,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_parent_quote_id_fkey"
+            columns: ["parent_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
