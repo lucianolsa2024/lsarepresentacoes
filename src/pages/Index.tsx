@@ -177,12 +177,19 @@ const Index = () => {
       
       quote.version = nextVersion;
       quote.parentQuoteId = parentId;
+      quote.status = 'orcamento';
       
-      await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined, nextVersion, parentId);
-      toast.success(`Nova versão v${nextVersion} do orçamento salva!`);
+      const result = await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined, nextVersion, parentId);
+      if (result) {
+        toast.success(`Nova versão v${nextVersion} do orçamento salva!`);
+        handleReset(true);
+        setComercialTab('history');
+      }
     } else {
       quote.version = 1;
-      await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined);
+      quote.status = 'orcamento';
+      const result = await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined);
+      if (!result) return;
       toast.success('Orçamento gerado e salvo com sucesso!');
 
       // Auto-create sales opportunity in funnel
@@ -226,18 +233,16 @@ const Index = () => {
 
     if (clearAfterSave) {
       handleReset();
-    } else {
-      setEditingQuoteId(null);
     }
   };
 
-  const handleReset = () => {
+  const handleReset = (silent: boolean = false) => {
     setClient(INITIAL_CLIENT);
     setSelectedClientId(null);
     setItems([]);
     setPayment(INITIAL_PAYMENT);
     setEditingQuoteId(null);
-    toast.success('Orçamento limpo');
+    if (!silent) toast.success('Orçamento limpo');
   };
 
   const handleEditQuote = (quote: Quote) => {
@@ -465,7 +470,7 @@ const Index = () => {
                         <span className="text-sm text-warning-foreground">
                           📝 Editando orçamento existente
                         </span>
-                        <Button variant="ghost" size="sm" onClick={handleReset}>
+                        <Button variant="ghost" size="sm" onClick={() => handleReset()}>
                           Cancelar edição
                         </Button>
                       </div>
@@ -499,7 +504,7 @@ const Index = () => {
                         />
                         <div className="flex flex-col gap-3">
                           <div className="flex gap-3">
-                            <Button variant="outline" onClick={handleReset} className="flex-1">
+                            <Button variant="outline" onClick={() => handleReset()} className="flex-1">
                               <RotateCcw className="h-4 w-4 mr-2" />
                               Limpar
                             </Button>
