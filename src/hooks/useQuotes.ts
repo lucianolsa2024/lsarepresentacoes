@@ -101,7 +101,7 @@ export function useQuotes() {
         subtotal: quote.subtotal,
         discount: quote.discount,
         total: quote.total,
-        status: 'completed',
+        status: quote.status || 'orcamento',
         version: version || 1,
         parent_quote_id: parentQuoteId || null,
       };
@@ -113,7 +113,8 @@ export function useQuotes() {
         .single();
 
       if (error) {
-        console.error('DB error, saving to localStorage:', error);
+        console.error('DB error inserting quote:', error);
+        toast.error(`Erro ao salvar orçamento: ${error.message}`);
         // Fall back to localStorage
         const newQuotes = [quote, ...quotes];
         setQuotes(newQuotes);
