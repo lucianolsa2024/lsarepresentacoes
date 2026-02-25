@@ -287,6 +287,7 @@ export type Database = {
           neighborhood: string | null
           number: string | null
           owner_email: string | null
+          parent_client_id: string | null
           phone: string | null
           state: string | null
           street: string | null
@@ -307,6 +308,7 @@ export type Database = {
           neighborhood?: string | null
           number?: string | null
           owner_email?: string | null
+          parent_client_id?: string | null
           phone?: string | null
           state?: string | null
           street?: string | null
@@ -327,13 +329,22 @@ export type Database = {
           neighborhood?: string | null
           number?: string | null
           owner_email?: string | null
+          parent_client_id?: string | null
           phone?: string | null
           state?: string | null
           street?: string | null
           updated_at?: string
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_parent_client_id_fkey"
+            columns: ["parent_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discount_policies: {
         Row: {

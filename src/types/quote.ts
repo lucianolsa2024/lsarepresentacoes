@@ -86,6 +86,7 @@ export interface ClientData {
   isNewClient: boolean;
   clientType?: ClientType;
   ownerEmail?: string;
+  parentClientId?: string | null;
   address: {
     street: string;
     number: string;

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Client } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { 
   Plus, 
   Trash2, 
@@ -38,6 +39,7 @@ import {
   List,
   Map,
   UserCheck,
+  GitBranch,
 } from 'lucide-react';
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
@@ -64,17 +66,50 @@ export function ClientManager({
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [branchParentId, setBranchParentId] = useState<string | null>(null);
   const { activeReps: representatives, emailToName } = useRepresentatives();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
 
+  // Group clients into parent (matriz) and branches (filiais)
+  const { parentClients, branchesByParent } = useMemo(() => {
+    const branchesByParent: Record<string, Client[]> = {};
+    const parentClients: Client[] = [];
+
+    clients.forEach(c => {
+      if (c.parentClientId) {
+        if (!branchesByParent[c.parentClientId]) branchesByParent[c.parentClientId] = [];
+        branchesByParent[c.parentClientId].push(c);
+      } else {
+        parentClients.push(c);
+      }
+    });
+
+    return { parentClients, branchesByParent };
+  }, [clients]);
+
   const resetForm = () => {
     setFormData(INITIAL_CLIENT);
     setEditingClient(null);
+    setBranchParentId(null);
   };
 
   const openNewDialog = () => {
     resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const openNewBranchDialog = (parentClient: Client) => {
+    resetForm();
+    setBranchParentId(parentClient.id);
+    // Pre-fill company name with parent's name
+    setFormData({
+      ...INITIAL_CLIENT,
+      company: parentClient.company,
+      ownerEmail: parentClient.ownerEmail,
+      document: parentClient.document,
+      parentClientId: parentClient.id,
+    });
     setIsDialogOpen(true);
   };
 
@@ -88,6 +123,7 @@ export function ClientManager({
       email: client.email,
       isNewClient: client.isNewClient,
       ownerEmail: client.ownerEmail,
+      parentClientId: client.parentClientId,
       address: client.address,
     });
     setIsDialogOpen(true);
@@ -99,14 +135,27 @@ export function ClientManager({
       return;
     }
 
+    const dataToSave = {
+      ...formData,
+      parentClientId: branchParentId || formData.parentClientId || null,
+    };
+
+    // For branches, inherit ownerEmail from parent
+    if (dataToSave.parentClientId) {
+      const parent = clients.find(c => c.id === dataToSave.parentClientId);
+      if (parent?.ownerEmail) {
+        dataToSave.ownerEmail = parent.ownerEmail;
+      }
+    }
+
     if (editingClient) {
-      const success = await onUpdate(editingClient.id, formData);
+      const success = await onUpdate(editingClient.id, dataToSave);
       if (success) {
         setIsDialogOpen(false);
         resetForm();
       }
     } else {
-      const result = await onAdd(formData);
+      const result = await onAdd(dataToSave);
       if (result) {
         setIsDialogOpen(false);
         resetForm();
@@ -121,17 +170,25 @@ export function ClientManager({
     }
   };
 
-  const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return clients;
+  const filteredParentClients = useMemo(() => {
+    if (!searchQuery.trim()) return parentClients;
     const query = searchQuery.toLowerCase();
-    return clients.filter(
-      (c) =>
+    // Search in parents AND their branches
+    return parentClients.filter((c) => {
+      const matchesParent =
         c.company.toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
         c.document.toLowerCase().includes(query) ||
-        c.email.toLowerCase().includes(query)
-    );
-  }, [clients, searchQuery]);
+        c.email.toLowerCase().includes(query);
+      const branches = branchesByParent[c.id] || [];
+      const matchesBranch = branches.some(b =>
+        b.company.toLowerCase().includes(query) ||
+        b.name.toLowerCase().includes(query) ||
+        b.address.city.toLowerCase().includes(query)
+      );
+      return matchesParent || matchesBranch;
+    });
+  }, [parentClients, branchesByParent, searchQuery]);
 
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
@@ -144,12 +201,135 @@ export function ClientManager({
     });
   };
 
+  const isBranchMode = !!branchParentId;
+  const parentForBranch = isBranchMode ? clients.find(c => c.id === branchParentId) : null;
+
+  const renderClientCard = (client: Client, isBranch = false) => {
+    const branches = branchesByParent[client.id] || [];
+
+    return (
+      <Card key={client.id} className={`hover:shadow-md transition-shadow ${isBranch ? 'border-l-4 border-l-primary/30' : ''}`}>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-3">
+            <div
+              className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+              onClick={() => onViewDetail?.(client.id)}
+            >
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${isBranch ? 'bg-accent' : 'bg-primary/10'}`}>
+                {isBranch ? (
+                  <GitBranch className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Building2 className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold truncate">{client.company}</h3>
+                  {!isBranch && branches.length > 0 && (
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">
+                      {branches.length} filial{branches.length > 1 ? 'is' : ''}
+                    </Badge>
+                  )}
+                  {isBranch && (
+                    <Badge variant="outline" className="text-xs flex-shrink-0">Filial</Badge>
+                  )}
+                </div>
+                {client.name && (
+                  <p className="text-sm text-muted-foreground truncate">{client.name}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1 flex-shrink-0">
+              {onViewDetail && (
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onViewDetail(client.id); }} title="Ver histórico">
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEditDialog(client); }}>
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(client.id); }}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-1 text-sm text-muted-foreground">
+            {client.document && <p className="truncate">{client.document}</p>}
+            {client.phone && (
+              <p className="flex items-center gap-1"><Phone className="h-3 w-3" />{client.phone}</p>
+            )}
+            {client.email && (
+              <p className="flex items-center gap-1 truncate"><Mail className="h-3 w-3" />{client.email}</p>
+            )}
+            {client.address.city && client.address.state && (
+              <p className="flex items-center gap-1"><MapPin className="h-3 w-3" />{client.address.city} - {client.address.state}</p>
+            )}
+            {client.ownerEmail && (
+              <p className="flex items-center gap-1 text-primary"><UserCheck className="h-3 w-3" />{emailToName[client.ownerEmail] || client.ownerEmail}</p>
+            )}
+          </div>
+
+          {/* Branch action + branch list for parent clients */}
+          {!isBranch && (
+            <div className="mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={(e) => { e.stopPropagation(); openNewBranchDialog(client); }}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Adicionar Filial
+              </Button>
+
+              {branches.length > 0 && (
+                <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
+                  {branches.map(branch => (
+                    <div
+                      key={branch.id}
+                      className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => onViewDetail?.(branch.id)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <GitBranch className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">{branch.name || 'Filial'}</span>
+                          {branch.address.city && (
+                            <span className="text-xs text-muted-foreground">• {branch.address.city}{branch.address.state ? ` - ${branch.address.state}` : ''}</span>
+                          )}
+                        </div>
+                        {branch.address.street && (
+                          <p className="text-xs text-muted-foreground truncate ml-4.5">
+                            {branch.address.street}{branch.address.number ? `, ${branch.address.number}` : ''}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(branch); }}>
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(branch.id); }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Base de Clientes</h2>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button onClick={openNewDialog}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -159,18 +339,29 @@ export function ClientManager({
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+                  {editingClient
+                    ? 'Editar Cliente'
+                    : isBranchMode
+                    ? `Nova Filial de ${parentForBranch?.company || ''}`
+                    : 'Novo Cliente'}
                 </DialogTitle>
               </DialogHeader>
+
+              {isBranchMode && (
+                <div className="bg-primary/10 text-primary text-sm px-3 py-2 rounded-md flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  <span>Esta filial ficará vinculada à matriz <strong>{parentForBranch?.company}</strong>. O responsável será herdado automaticamente.</span>
+                </div>
+              )}
 
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Empresa *</Label>
+                    <Label>{isBranchMode ? 'Nome da Filial / Unidade *' : 'Empresa *'}</Label>
                     <Input
                       value={formData.company}
                       onChange={(e) => updateField('company', e.target.value)}
-                      placeholder="Nome da empresa"
+                      placeholder={isBranchMode ? 'Ex: Loeil - Unidade Centro' : 'Nome da empresa'}
                     />
                   </div>
                   <div className="space-y-2">
@@ -211,32 +402,34 @@ export function ClientManager({
                   </div>
                 </div>
 
-                {/* Responsável */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <UserCheck className="h-3 w-3" />
-                    Responsável
-                  </Label>
-                  <Select
-                    value={formData.ownerEmail || 'none'}
-                    onValueChange={(v) => updateField('ownerEmail', v === 'none' ? undefined as any : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Não definido</SelectItem>
-                      {representatives.map(r => (
-                        <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Responsável - hidden for branches */}
+                {!isBranchMode && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" />
+                      Responsável
+                    </Label>
+                    <Select
+                      value={formData.ownerEmail || 'none'}
+                      onValueChange={(v) => updateField('ownerEmail', v === 'none' ? undefined as any : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o responsável..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não definido</SelectItem>
+                        {representatives.map(r => (
+                          <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="pt-2">
                   <Label className="flex items-center gap-1 mb-3">
                     <MapPin className="h-3 w-3" />
-                    Endereço
+                    Endereço {isBranchMode && <span className="text-xs text-muted-foreground">(desta unidade)</span>}
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2 space-y-2">
@@ -302,7 +495,7 @@ export function ClientManager({
                 </div>
 
                 <Button onClick={handleSubmit} className="w-full">
-                  {editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+                  {editingClient ? 'Salvar Alterações' : isBranchMode ? 'Cadastrar Filial' : 'Cadastrar Cliente'}
                 </Button>
               </div>
             </DialogContent>
@@ -335,7 +528,10 @@ export function ClientManager({
             </div>
 
             <div className="text-sm text-muted-foreground">
-              {filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''} cadastrado{filteredClients.length !== 1 ? 's' : ''}
+              {parentClients.length} empresa{parentClients.length !== 1 ? 's' : ''}
+              {Object.values(branchesByParent).flat().length > 0 && (
+                <> • {Object.values(branchesByParent).flat().length} filial{Object.values(branchesByParent).flat().length !== 1 ? 'is' : ''}</>
+              )}
             </div>
 
             {loading ? (
@@ -344,7 +540,7 @@ export function ClientManager({
                   <p>Carregando clientes...</p>
                 </CardContent>
               </Card>
-            ) : filteredClients.length === 0 ? (
+            ) : filteredParentClients.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -354,84 +550,7 @@ export function ClientManager({
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredClients.map((client) => (
-                  <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(client.id)}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold truncate">{client.company}</h3>
-                            {client.name && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                {client.name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          {onViewDetail && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); onViewDetail(client.id); }}
-                              title="Ver histórico"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => { e.stopPropagation(); openEditDialog(client); }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={(e) => { e.stopPropagation(); setDeleteId(client.id); }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        {client.document && (
-                          <p className="truncate">{client.document}</p>
-                        )}
-                        {client.phone && (
-                          <p className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {client.phone}
-                          </p>
-                        )}
-                        {client.email && (
-                          <p className="flex items-center gap-1 truncate">
-                            <Mail className="h-3 w-3" />
-                            {client.email}
-                          </p>
-                        )}
-                        {client.address.city && client.address.state && (
-                          <p className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {client.address.city} - {client.address.state}
-                          </p>
-                        )}
-                        {client.ownerEmail && (
-                          <p className="flex items-center gap-1 text-primary">
-                            <UserCheck className="h-3 w-3" />
-                            {emailToName[client.ownerEmail] || client.ownerEmail}
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredParentClients.map((client) => renderClientCard(client))}
               </div>
             )}
           </div>
@@ -448,6 +567,11 @@ export function ClientManager({
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+              {deleteId && branchesByParent[deleteId]?.length > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  Atenção: este cliente possui {branchesByParent[deleteId].length} filial(is) que ficarão desvinculadas.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
