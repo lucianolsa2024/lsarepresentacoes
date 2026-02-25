@@ -155,7 +155,7 @@ const Index = () => {
     }
 
     const quote: Quote = {
-      id: editingQuoteId || crypto.randomUUID(),
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       client,
       items,
@@ -166,9 +166,22 @@ const Index = () => {
     };
 
     if (editingQuoteId) {
-      await updateQuote(editingQuoteId, quote);
-      toast.success('Orçamento atualizado com sucesso!');
+      // Versioning: find the original quote to determine version chain
+      const originalQuote = quotes.find(q => q.id === editingQuoteId);
+      const parentId = originalQuote?.parentQuoteId || editingQuoteId;
+      // Count existing versions in this chain
+      const existingVersions = quotes.filter(q => 
+        q.id === parentId || q.parentQuoteId === parentId
+      );
+      const nextVersion = existingVersions.length + 1;
+      
+      quote.version = nextVersion;
+      quote.parentQuoteId = parentId;
+      
+      await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined, nextVersion, parentId);
+      toast.success(`Nova versão v${nextVersion} do orçamento salva!`);
     } else {
+      quote.version = 1;
       await addQuote(quote, selectedClientId || undefined, client.ownerEmail || user?.email || undefined);
       toast.success('Orçamento gerado e salvo com sucesso!');
 
