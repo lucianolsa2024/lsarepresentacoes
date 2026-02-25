@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Building, Phone, Mail, MapPin, UserPlus, Save, Tag } from 'lucide-react';
 import { ClientSelector } from './ClientSelector';
+import { useCepLookup } from '@/hooks/useCepLookup';
 
 interface ClientFormProps {
   client: ClientData;
@@ -26,6 +27,8 @@ export function ClientForm({
   selectedClientId,
   onSelectClient 
 }: ClientFormProps) {
+  const { lookupCep, loading: cepLoading } = useCepLookup();
+
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     onChange({ ...client, [field]: value });
   };
@@ -35,6 +38,16 @@ export function ClientForm({
       ...client,
       address: { ...client.address, [field]: value },
     });
+  };
+
+  const handleCepBlur = async () => {
+    const result = await lookupCep(client.address.zipCode);
+    if (result) {
+      onChange({
+        ...client,
+        address: { ...client.address, ...result, number: client.address.number },
+      });
+    }
   };
 
   const handleSelectClient = (selectedClient: Client) => {
@@ -222,10 +235,26 @@ export function ClientForm({
             Endereço
           </Label>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="zipCode" className="text-xs text-muted-foreground">CEP</Label>
+              <div className="relative">
+                <Input
+                  id="zipCode"
+                  placeholder="00000-000"
+                  value={client.address.zipCode}
+                  onChange={(e) => updateAddress('zipCode', e.target.value)}
+                  onBlur={handleCepBlur}
+                  className={cepLoading ? 'pr-8' : ''}
+                />
+                {cepLoading && (
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="street" className="text-xs text-muted-foreground">
-                Rua
-              </Label>
+              <Label htmlFor="street" className="text-xs text-muted-foreground">Rua</Label>
               <Input
                 id="street"
                 placeholder="Rua / Avenida"
@@ -234,9 +263,7 @@ export function ClientForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="number" className="text-xs text-muted-foreground">
-                Número
-              </Label>
+              <Label htmlFor="number" className="text-xs text-muted-foreground">Número</Label>
               <Input
                 id="number"
                 placeholder="Nº"
@@ -244,10 +271,11 @@ export function ClientForm({
                 onChange={(e) => updateAddress('number', e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
             <div className="space-y-2">
-              <Label htmlFor="complement" className="text-xs text-muted-foreground">
-                Complemento
-              </Label>
+              <Label htmlFor="complement" className="text-xs text-muted-foreground">Complemento</Label>
               <Input
                 id="complement"
                 placeholder="Apto, sala..."
@@ -255,13 +283,8 @@ export function ClientForm({
                 onChange={(e) => updateAddress('complement', e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
             <div className="space-y-2">
-              <Label htmlFor="neighborhood" className="text-xs text-muted-foreground">
-                Bairro
-              </Label>
+              <Label htmlFor="neighborhood" className="text-xs text-muted-foreground">Bairro</Label>
               <Input
                 id="neighborhood"
                 placeholder="Bairro"
@@ -270,9 +293,7 @@ export function ClientForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city" className="text-xs text-muted-foreground">
-                Cidade
-              </Label>
+              <Label htmlFor="city" className="text-xs text-muted-foreground">Cidade</Label>
               <Input
                 id="city"
                 placeholder="Cidade"
@@ -281,25 +302,12 @@ export function ClientForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="state" className="text-xs text-muted-foreground">
-                Estado
-              </Label>
+              <Label htmlFor="state" className="text-xs text-muted-foreground">Estado</Label>
               <Input
                 id="state"
                 placeholder="UF"
                 value={client.address.state}
                 onChange={(e) => updateAddress('state', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zipCode" className="text-xs text-muted-foreground">
-                CEP
-              </Label>
-              <Input
-                id="zipCode"
-                placeholder="00000-000"
-                value={client.address.zipCode}
-                onChange={(e) => updateAddress('zipCode', e.target.value)}
               />
             </div>
           </div>

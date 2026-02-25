@@ -44,6 +44,7 @@ import {
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
+import { useCepLookup } from '@/hooks/useCepLookup';
 
 interface ClientManagerProps {
   clients: Client[];
@@ -68,6 +69,7 @@ export function ClientManager({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [branchParentId, setBranchParentId] = useState<string | null>(null);
   const { activeReps: representatives, emailToName } = useRepresentatives();
+  const { lookupCep, loading: cepLoading } = useCepLookup();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
 
@@ -199,6 +201,16 @@ export function ClientManager({
       ...formData,
       address: { ...formData.address, [field]: value },
     });
+  };
+
+  const handleCepBlur = async () => {
+    const result = await lookupCep(formData.address.zipCode);
+    if (result) {
+      setFormData(prev => ({
+        ...prev,
+        address: { ...prev.address, ...result, number: prev.address.number },
+      }));
+    }
   };
 
   const isBranchMode = !!branchParentId;
@@ -432,6 +444,23 @@ export function ClientManager({
                     Endereço {isBranchMode && <span className="text-xs text-muted-foreground">(desta unidade)</span>}
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">CEP</Label>
+                      <div className="relative">
+                        <Input
+                          value={formData.address.zipCode}
+                          onChange={(e) => updateAddress('zipCode', e.target.value)}
+                          onBlur={handleCepBlur}
+                          placeholder="00000-000"
+                          className={cepLoading ? 'pr-8' : ''}
+                        />
+                        {cepLoading && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs text-muted-foreground">Rua</Label>
                       <Input
@@ -448,6 +477,9 @@ export function ClientManager({
                         placeholder="Nº"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Complemento</Label>
                       <Input
@@ -456,9 +488,6 @@ export function ClientManager({
                         placeholder="Apto, sala..."
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Bairro</Label>
                       <Input
@@ -481,14 +510,6 @@ export function ClientManager({
                         value={formData.address.state}
                         onChange={(e) => updateAddress('state', e.target.value)}
                         placeholder="UF"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">CEP</Label>
-                      <Input
-                        value={formData.address.zipCode}
-                        onChange={(e) => updateAddress('zipCode', e.target.value)}
-                        placeholder="00000-000"
                       />
                     </div>
                   </div>
