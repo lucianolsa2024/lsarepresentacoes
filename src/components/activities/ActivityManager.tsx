@@ -56,6 +56,8 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [completeDialog, setCompleteDialog] = useState<string | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [createFollowUp, setCreateFollowUp] = useState(false);
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
@@ -115,14 +117,44 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const handleComplete = (id: string) => {
     setCompleteDialog(id);
     setCompleteNotes('');
+    setCreateFollowUp(false);
+    setFollowUpDate('');
+  };
+
+  const getNextFollowUpTitle = (title: string): string => {
+    // Match trailing " - N" or " N" pattern
+    const match = title.match(/^(.*?)(?:\s*-\s*(\d+)|\s+(\d+))$/);
+    if (match) {
+      const base = match[1];
+      const num = parseInt(match[2] || match[3], 10);
+      return `${base} - ${num + 1}`;
+    }
+    return `${title} - 2`;
   };
 
   const handleConfirmComplete = async () => {
-    if (completeDialog) {
-      await completeActivity(completeDialog, completeNotes || undefined);
-      setCompleteDialog(null);
-      setCompleteNotes('');
+    if (!completeDialog) return;
+    const activity = activities.find(a => a.id === completeDialog);
+    await completeActivity(completeDialog, completeNotes || undefined);
+
+    if (createFollowUp && followUpDate && activity) {
+      const newTitle = getNextFollowUpTitle(activity.title);
+      await addActivity({
+        type: activity.type,
+        title: newTitle,
+        description: activity.description,
+        due_date: followUpDate,
+        due_time: activity.due_time,
+        priority: activity.priority,
+        client_id: activity.client_id,
+        quote_id: activity.quote_id,
+      });
     }
+
+    setCompleteDialog(null);
+    setCompleteNotes('');
+    setCreateFollowUp(false);
+    setFollowUpDate('');
   };
 
   const handleDelete = async () => {
@@ -311,13 +343,48 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
                 rows={3}
               />
             </div>
+            <div className="space-y-3 border-t pt-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="createFollowUp"
+                  checked={createFollowUp}
+                  onChange={(e) => setCreateFollowUp(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <Label htmlFor="createFollowUp" className="cursor-pointer text-sm">
+                  Gerar nova atividade de follow-up
+                </Label>
+              </div>
+              {createFollowUp && (
+                <div className="space-y-2 pl-6">
+                  <Label className="text-sm">Data da próxima atividade</Label>
+                  <input
+                    type="date"
+                    value={followUpDate}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  {completeDialog && (() => {
+                    const act = activities.find(a => a.id === completeDialog);
+                    if (!act) return null;
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        Novo título: <span className="font-medium">{getNextFollowUpTitle(act.title)}</span>
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteDialog(null)}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmComplete}>
-              Concluir
+            <Button onClick={handleConfirmComplete} disabled={createFollowUp && !followUpDate}>
+              {createFollowUp ? 'Concluir e Criar Follow-up' : 'Concluir'}
             </Button>
           </DialogFooter>
         </DialogContent>
