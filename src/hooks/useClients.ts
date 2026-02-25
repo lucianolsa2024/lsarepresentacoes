@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 export interface Client extends ClientData {
   id: string;
+  parentClientId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +23,7 @@ const dbToClient = (row: {
   is_new_client: boolean | null;
   client_type: string | null;
   owner_email: string | null;
+  parent_client_id: string | null;
   street: string | null;
   number: string | null;
   complement: string | null;
@@ -41,6 +43,7 @@ const dbToClient = (row: {
   isNewClient: row.is_new_client || false,
   clientType: (row.client_type as ClientType) || undefined,
   ownerEmail: row.owner_email || undefined,
+  parentClientId: row.parent_client_id || null,
   address: {
     street: row.street || '',
     number: row.number || '',
@@ -64,6 +67,7 @@ const clientToDb = (client: ClientData) => ({
   is_new_client: client.isNewClient,
   client_type: client.clientType || null,
   owner_email: client.ownerEmail || null,
+  parent_client_id: client.parentClientId || null,
   street: client.address.street || null,
   number: client.address.number || null,
   complement: client.address.complement || null,
