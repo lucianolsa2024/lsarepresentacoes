@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
   VisitRoute,
@@ -33,6 +34,8 @@ interface DbClient {
 }
 
 export function useRoutes() {
+  const { user } = useAuth();
+  const userEmail = user?.email;
   const [routes, setRoutes] = useState<RouteWithVisits[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -110,7 +113,8 @@ export function useRoutes() {
           start_date: input.start_date,
           end_date: input.end_date,
           notes: input.notes || null,
-        })
+          owner_email: userEmail || null,
+        } as any)
         .select()
         .single();
 
