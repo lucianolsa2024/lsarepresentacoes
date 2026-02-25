@@ -747,6 +747,15 @@ const Index = () => {
                 setClientDetailId(null);
                 handleEditQuote(quote);
               }}
+              onOpenChecklist={(activity) => {
+                setClientDetailId(null);
+                setActiveTab('activities');
+                // Small delay to let ActivityManager mount, then trigger checklist
+                setTimeout(() => {
+                  const event = new CustomEvent('open-checklist', { detail: activity });
+                  window.dispatchEvent(event);
+                }, 300);
+              }}
             />
           )}
         </DialogContent>

@@ -32,6 +32,7 @@ interface ClientDetailPanelProps {
   onActivityClick?: (activity: Activity) => void;
   onOpportunityClick?: (opp: SalesOpportunity) => void;
   onQuoteClick?: (quote: Quote) => void;
+  onOpenChecklist?: (activity: Activity) => void;
   // Legacy prop kept for backward compat
   clientName?: string;
 }
@@ -75,6 +76,7 @@ export function ClientDetailPanel({
   onActivityClick,
   onOpportunityClick,
   onQuoteClick,
+  onOpenChecklist,
 }: ClientDetailPanelProps) {
   const [tab, setTab] = useState('info');
   const { emailToName } = useRepresentatives();
@@ -107,6 +109,15 @@ export function ClientDetailPanel({
   // Checklists from activities of type checklist_loja
   const checklists = useMemo(() => {
     return clientActivities.filter(a => a.type === 'checklist_loja' && a.description);
+  }, [clientActivities]);
+
+  // Upcoming activities (pending/in-progress, future or today)
+  const upcomingActivities = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return clientActivities
+      .filter(a => (a.status === 'pendente' || a.status === 'em_andamento') && a.due_date >= today)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date))
+      .slice(0, 5);
   }, [clientActivities]);
 
   const activityStats = useMemo(() => {
@@ -260,6 +271,9 @@ export function ClientDetailPanel({
             <TabsTrigger value="activities" className="text-xs">
               <ClipboardList className="h-3.5 w-3.5 mr-1" /> Atividades ({clientActivities.length})
             </TabsTrigger>
+            <TabsTrigger value="checklists" className="text-xs">
+              <ClipboardCheck className="h-3.5 w-3.5 mr-1" /> Checklists ({checklists.length})
+            </TabsTrigger>
             <TabsTrigger value="opportunities" className="text-xs">
               <TrendingUp className="h-3.5 w-3.5 mr-1" /> Negociações ({clientOpportunities.length})
             </TabsTrigger>
@@ -269,11 +283,6 @@ export function ClientDetailPanel({
             <TabsTrigger value="quotes" className="text-xs">
               <FileText className="h-3.5 w-3.5 mr-1" /> Orçamentos ({clientQuotes.length})
             </TabsTrigger>
-            {checklists.length > 0 && (
-              <TabsTrigger value="checklists" className="text-xs">
-                <ClipboardCheck className="h-3.5 w-3.5 mr-1" /> Checklists ({checklists.length})
-              </TabsTrigger>
-            )}
           </TabsList>
           <Button size="sm" onClick={onNewActivity} className="shrink-0">
             <Plus className="h-4 w-4 mr-1" /> Atividade
@@ -305,6 +314,33 @@ export function ClientDetailPanel({
                   </div>
                 </div>
               </div>
+
+              {/* Upcoming activities */}
+              {upcomingActivities.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Próximas Atividades</h4>
+                  <div className="space-y-2">
+                    {upcomingActivities.map(act => {
+                      const TypeIcon = typeIcons[act.type] || MoreHorizontal;
+                      return (
+                        <button
+                          key={act.id}
+                          onClick={() => onActivityClick?.(act)}
+                          className="w-full text-left p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <TypeIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium text-sm flex-1 truncate">{act.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(act.due_date), "dd/MM", { locale: ptBR })}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Recent activity */}
               {clientActivities.length > 0 && (
@@ -489,9 +525,9 @@ export function ClientDetailPanel({
         </TabsContent>
 
         {/* Checklists */}
-        {checklists.length > 0 && (
-          <TabsContent value="checklists" className="mt-3">
-            <ScrollArea className="h-[350px]">
+        <TabsContent value="checklists" className="mt-3">
+          <ScrollArea className="h-[350px]">
+            {checklists.length > 0 ? (
               <div className="space-y-3">
                 {checklists.map(activity => {
                   let checklistData: Record<string, any> | null = null;
@@ -499,16 +535,21 @@ export function ClientDetailPanel({
                     checklistData = JSON.parse(activity.description);
                   } catch {}
 
+                  const checkDate = checklistData?.dataVisita || activity.due_date;
+                  const shareNosso = checklistData?.qtdProdutosNossos != null && checklistData?.qtdProdutosConcorrentes != null
+                    ? Math.round((checklistData.qtdProdutosNossos / (checklistData.qtdProdutosNossos + checklistData.qtdProdutosConcorrentes)) * 100)
+                    : null;
+
                   return (
                     <button
                       key={activity.id}
-                      onClick={() => onActivityClick?.(activity)}
+                      onClick={() => onOpenChecklist?.(activity)}
                       className="w-full text-left p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-sm">{activity.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {format(parseISO(activity.due_date), 'dd/MM/yyyy')}
+                          {format(parseISO(checkDate), 'dd/MM/yyyy')}
                         </span>
                       </div>
                       {checklistData && (
@@ -519,10 +560,10 @@ export function ClientDetailPanel({
                               <span className="font-medium">{checklistData.qtdProdutosNossos}</span>
                             </div>
                           )}
-                          {checklistData.qtdProdutosConcorrentes != null && (
+                          {shareNosso != null && (
                             <div className="p-1.5 rounded bg-muted">
-                              <span className="text-muted-foreground">Concor.:</span>{' '}
-                              <span className="font-medium">{checklistData.qtdProdutosConcorrentes}</span>
+                              <span className="text-muted-foreground">Share:</span>{' '}
+                              <span className="font-bold">{shareNosso}%</span>
                             </div>
                           )}
                           {checklistData.scoreLoja && (
@@ -565,9 +606,14 @@ export function ClientDetailPanel({
                   );
                 })}
               </div>
-            </ScrollArea>
-          </TabsContent>
-        )}
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhum checklist registrado</p>
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
       </Tabs>
     </div>
   );
