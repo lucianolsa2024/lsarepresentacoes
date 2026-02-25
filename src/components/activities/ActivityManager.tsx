@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import { Activity, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
@@ -6,12 +6,13 @@ import { ActivityKanban } from './ActivityKanban';
 import { ActivityFilters } from './ActivityFilters';
 import { ActivityForm } from './ActivityForm';
 import { ActivityReport } from './ActivityReport';
+import { ChecklistReport } from './ChecklistReport';
 import { ActivityCalendarView } from './ActivityCalendarView';
 import { StoreChecklistForm } from './StoreChecklistForm';
 import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2 } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +50,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     startActivity,
   } = useActivities();
 
-  const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
+  const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -138,8 +139,13 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const handleSaveChecklist = async (data: StoreChecklistData) => {
     if (!checklistActivity) return;
+    // Always update dataVisita to current date when saving
+    const dataWithDate = {
+      ...data,
+      dataVisita: new Date().toISOString().split('T')[0],
+    };
     await updateActivity(checklistActivity.id, {
-      description: JSON.stringify(data),
+      description: JSON.stringify(dataWithDate),
     });
 
     // Auto-create assistance card if flagged
@@ -157,6 +163,16 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
     setChecklistActivity(null);
   };
+
+  // Listen for external checklist open events (from ClientDetailPanel)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const activity = (e as CustomEvent).detail as Activity;
+      if (activity) handleOpenChecklist(activity);
+    };
+    window.addEventListener('open-checklist', handler);
+    return () => window.removeEventListener('open-checklist', handler);
+  }, []);
 
   if (loading) {
     return (
@@ -186,6 +202,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
               <TabsTrigger value="report">
                 <BarChart3 className="h-4 w-4" />
               </TabsTrigger>
+              <TabsTrigger value="checklist_report">
+                <ClipboardCheck className="h-4 w-4" />
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
@@ -196,7 +215,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       </div>
 
       {/* Filters */}
-      {view !== 'report' && view !== 'calendar' && (
+      {view !== 'report' && view !== 'calendar' && view !== 'checklist_report' && (
         <ActivityFilters
           search={search}
           onSearchChange={setSearch}
@@ -255,6 +274,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
       {view === 'report' && (
         <ActivityReport activities={activities} />
+      )}
+
+      {view === 'checklist_report' && (
+        <ChecklistReport activities={activities} />
       )}
 
       {/* Form Dialog */}
