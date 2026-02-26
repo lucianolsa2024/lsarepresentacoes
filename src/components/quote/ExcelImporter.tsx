@@ -19,6 +19,7 @@ interface ExcelImporterProps {
 
 interface ParsedProduct {
   name: string;
+  category: string;
   modulations: {
     name: string;
     sizes: {
@@ -183,7 +184,7 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       modulacao: findIndex(h => h.toLowerCase().includes('modul')),
       descricao: findIndex(h => h.toLowerCase().includes('descrição') || h.toLowerCase().includes('descricao')),
       comprimento: findIndex(h => h.toLowerCase().includes('compri')),
-      profundidade: findIndex(h => h.toLowerCase().includes('prof')),
+      profundidade: findIndex(h => h.toLowerCase().includes('prof') || h.toLowerCase().includes('largura')),
       altura: findIndex(h => h.toLowerCase().includes('altura')),
       tecido: findIndex(h => h.toLowerCase().includes('tecido')),
       // CAIXA column only counts if it's a dedicated column header (exact match), not if "CAIXA" appears in description column
@@ -202,41 +203,110 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       throw new Error('Coluna "Modulação" não encontrada na planilha');
     }
 
+    // Table finish column mapping: "Tampo: ..." headers → FX B, C, D, E
+    const TABLE_PRICE_MAPPINGS: { pattern: RegExp; fxKey: string }[] = [
+      { pattern: /tampo.*vidro\s*fosco/i, fxKey: 'FX B' },
+      { pattern: /tampo.*laca.*lamina/i, fxKey: 'FX C' },
+      { pattern: /tampo.*m[aá]rmore\s*especial/i, fxKey: 'FX D' },
+      { pattern: /tampo.*m[aá]rmore\s*normal/i, fxKey: 'FX E' },
+      { pattern: /tampo.*recoro/i, fxKey: 'FX F' },
+    ];
+
     // Find price columns dynamically
     const priceColumns: { name: string; index: number }[] = [];
     headers.forEach((h, i) => {
       if (h == null) return;
-      const headerStr = String(h).toUpperCase().trim();
-      // Match FX B, FX C, ..., FX J, FX 3D, FX COURO, SEM TEC
-      // More flexible pattern matching
-      if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || 
-          headerStr.match(/^FX\s*[A-Z]$/) || // FX B, FX C, etc.
-          headerStr.match(/^FX\s+[A-Z]$/) || // FX B with extra space
-          headerStr === '3D' || headerStr === 'COURO' || 
-          headerStr === 'FX 3D' || headerStr === 'FX COURO') {
-        let normalizedName = headerStr;
-        // Normalize spacing
+      const headerStr = String(h).trim();
+      const headerUpper = headerStr.toUpperCase();
+      
+      // Standard FX / SEM TEC patterns
+      if (headerUpper === 'SEM TEC' || headerUpper === 'SEM TEC/OUTRO' || 
+          headerUpper.match(/^FX\s*[A-Z]$/) ||
+          headerUpper.match(/^FX\s+[A-Z]$/) ||
+          headerUpper === '3D' || headerUpper === 'COURO' || 
+          headerUpper === 'FX 3D' || headerUpper === 'FX COURO') {
+        let normalizedName = headerUpper;
         normalizedName = normalizedName.replace(/FX\s+/, 'FX ');
-        if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
+        if (headerUpper === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
         priceColumns.push({ name: normalizedName, index: i });
+        return;
+      }
+      
+      // Table finish columns: "Tampo: Vidro Fosco..." → mapped to FX keys
+      for (const mapping of TABLE_PRICE_MAPPINGS) {
+        if (mapping.pattern.test(headerStr)) {
+          priceColumns.push({ name: mapping.fxKey, index: i });
+          return;
+        }
       }
     });
 
     console.log('Detected columns:', colIndexes);
     console.log('Price columns:', priceColumns);
 
+    // Helper to extract clean product name from table-style PRODUTO column
+    // "Belga Mesa de Jantar - 1.8x1.2x0.75 - Acabamentos Customizados" → "BELGA"
+    const TABLE_MOD_PATTERNS = [
+      /\s+mesa\s+de\s+jantar\b/i,
+      /\s+mesa\s+de\s+centro\b/i,
+      /\s+mesa\s+lateral\b/i,
+      /\s+mesa\s+de\s+cabeceira\b/i,
+      /\s+mesa\s+home\s+office\b/i,
+      /\s+mesa\b/i,
+      /\s+buffet\b/i,
+      /\s+aparador\b/i,
+    ];
+
+    const extractProductName = (fullName: string, modulationName: string): string => {
+      const upper = fullName.toUpperCase();
+      // Check if the modulation name is inside the product name (table format)
+      const modUpper = modulationName.toUpperCase();
+      if (modUpper && upper.includes(modUpper)) {
+        const idx = upper.indexOf(modUpper);
+        const extracted = upper.substring(0, idx).trim().replace(/\s*-\s*$/, '').trim();
+        if (extracted.length > 0) return extracted;
+      }
+      // Try common patterns
+      for (const pattern of TABLE_MOD_PATTERNS) {
+        const match = upper.match(pattern);
+        if (match && match.index && match.index > 0) {
+          return upper.substring(0, match.index).trim();
+        }
+      }
+      return upper;
+    };
+
+    // Auto-detect category from modulation name
+    const detectCategory = (modulationName: string): string => {
+      const upper = modulationName.toUpperCase();
+      if (upper.includes('MESA DE JANTAR') || upper.includes('MESA JANTAR')) return 'Mesas';
+      if (upper.includes('MESA DE CENTRO')) return 'Mesas de Centro';
+      if (upper.includes('MESA LATERAL')) return 'Mesas Laterais';
+      if (upper.includes('MESA DE CABECEIRA')) return 'Mesas de Cabeceira';
+      if (upper.includes('BUFFET') || upper.includes('APARADOR')) return 'Buffets';
+      if (upper.includes('POLTRONA')) return 'Poltronas';
+      if (upper.includes('CADEIRA')) return 'Cadeiras';
+      if (upper.includes('BANQUETA')) return 'Banquetas';
+      if (upper.includes('PUFF')) return 'Puffs';
+      if (upper.includes('TAPETE')) return 'Tapetes';
+      return '';  // empty = default to 'Sofás' at insert time
+    };
+
     // Group rows by product, modulation, and dimensions
-    const productMap = new Map<string, Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>>>();
+    const productMap = new Map<string, { category: string; modMap: Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>> }>();
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !Array.isArray(row) || row.length === 0) continue;
 
       const rowData = row as (string | number | null | undefined)[];
-      const productName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
+      const rawProductName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
       const modulationName = String(rowData[colIndexes.modulacao] ?? '').trim().toUpperCase();
       
-      if (!productName || !modulationName) continue;
+      if (!rawProductName || !modulationName) continue;
+
+      // Extract clean product name (handles table-format PRODUTO columns)
+      const productName = extractProductName(rawProductName, modulationName);
 
       // Get description from the description column
       let rawDescription = '';
@@ -254,34 +324,30 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       const dimensions = [length, depth].filter(Boolean).join(' x ');
       
       // Use raw description as dimension key (including CAIXA: FX X if present)
-      // This ensures each CAIXA variation is treated as a unique size
-      const dimensionKey = rawDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
+      const dimensionKey = rawDescription || `${rawProductName} ${dimensions}|${height}`;
       
-      // Final description to store (keep complete description including CAIXA info)
+      // Final description to store
       let description = rawDescription;
       if (!description) {
-        description = `${productName} ${modulationName}`;
-        if (dimensions) {
-          description += ` ${dimensions}`;
-        }
-        if (height) {
-          description += ` (H: ${height})`;
+        description = rawProductName;
+        if (!dimensions && !height) {
+          // no dimensions at all
         }
       }
 
       // Get or create nested maps
       if (!productMap.has(productName)) {
-        productMap.set(productName, new Map());
+        const category = detectCategory(modulationName);
+        productMap.set(productName, { category, modMap: new Map() });
       }
-      const modMap = productMap.get(productName)!;
+      const productEntry = productMap.get(productName)!;
+      const modMap = productEntry.modMap;
       
       if (!modMap.has(modulationName)) {
         modMap.set(modulationName, new Map());
       }
       const sizeMap = modMap.get(modulationName)!;
 
-      // Process all rows the same way - each row is a unique size entry
-      // All prices from FX B to FX COURO are imported
       const prices: Record<string, number> = {};
       priceColumns.forEach(({ name, index }) => {
         const rawValue = rowData[index];
@@ -301,9 +367,9 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
     }
 
     // Convert maps to array
-    productMap.forEach((modMap, productName) => {
+    productMap.forEach((productEntry, productName) => {
       const modulations: ParsedProduct['modulations'] = [];
-      modMap.forEach((sizeMap, modName) => {
+      productEntry.modMap.forEach((sizeMap, modName) => {
         const sizes = Array.from(sizeMap.values());
         modulations.push({
           name: modName,
@@ -312,6 +378,7 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
       });
       products.push({
         name: productName,
+        category: productEntry.category,
         modulations,
       });
     });
@@ -391,7 +458,7 @@ export function ExcelImporter({ onImportComplete }: ExcelImporterProps) {
           .from('products')
           .insert({
             name: product.name,
-            category: 'Sofás',
+            category: product.category || 'Sofás',
             code: '',
             description: '',
             has_base: hasBase,
