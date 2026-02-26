@@ -316,6 +316,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('Total', 175, y);
   y += 6;
 
+  // Determine if surcharge should be baked into prices
+  const isSurcharge = quote.payment.discountType === 'percentage' && quote.payment.discountValue < 0;
+  const surchargeMultiplier = isSurcharge ? 1 + Math.abs(quote.payment.discountValue) / 100 : 1;
+  const getDisplayPrice = (price: number) => Math.round(price * surchargeMultiplier * 100) / 100;
+
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
     // Check if we need a new page
@@ -353,9 +358,10 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     const splitDetails = doc.splitTextToSize(details, 90);
     doc.text(splitDetails, 45, y);
 
+    const displayPrice = getDisplayPrice(item.price);
     doc.text(item.quantity.toString(), 140, y);
-    doc.text(formatCurrency(item.price), 155, y);
-    doc.text(formatCurrency(item.price * item.quantity), 175, y);
+    doc.text(formatCurrency(displayPrice), 155, y);
+    doc.text(formatCurrency(displayPrice * item.quantity), 175, y);
 
     // Ensure minimum row height for image
     const textHeight = splitDetails.length * 5 + 2;
@@ -382,9 +388,10 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
-  // Calculate IPI (3.25% on subtotal)
+  // Calculate IPI (3.25% on total after surcharge adjustment)
   const ipiRate = 0.0325;
-  const ipiValue = quote.subtotal * ipiRate;
+  const displaySubtotal = isSurcharge ? quote.total : quote.subtotal;
+  const ipiValue = displaySubtotal * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
 
   // Totals - only show IPI and final total (no subtotal or discount lines)
