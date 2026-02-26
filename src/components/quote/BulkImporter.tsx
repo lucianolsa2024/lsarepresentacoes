@@ -21,6 +21,7 @@ interface BulkImporterProps {
 interface ParsedProduct {
   name: string;
   factory: string;
+  category: string;
   modulations: {
     name: string;
     sizes: {
@@ -104,7 +105,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       modulacao: findIndex(h => h.toLowerCase().includes('modul')),
       descricao: findIndex(h => h.toLowerCase().includes('descrição') || h.toLowerCase().includes('descricao')),
       comprimento: findIndex(h => h.toLowerCase().includes('compri')),
-      profundidade: findIndex(h => h.toLowerCase().includes('prof')),
+      profundidade: findIndex(h => h.toLowerCase().includes('prof') || h.toLowerCase().includes('largura')),
       altura: findIndex(h => h.toLowerCase().includes('altura')),
       tecido: findIndex(h => h.toLowerCase().includes('tecido')),
       fabrica: findIndex(h => {
@@ -121,38 +122,91 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       throw new Error('Coluna "Modulação" não encontrada na planilha');
     }
 
+    // Table finish column mapping
+    const TABLE_PRICE_MAPPINGS: { pattern: RegExp; fxKey: string }[] = [
+      { pattern: /tampo.*vidro\s*fosco/i, fxKey: 'FX B' },
+      { pattern: /tampo.*laca.*lamina/i, fxKey: 'FX C' },
+      { pattern: /tampo.*m[aá]rmore\s*especial/i, fxKey: 'FX D' },
+      { pattern: /tampo.*m[aá]rmore\s*normal/i, fxKey: 'FX E' },
+      { pattern: /tampo.*recoro/i, fxKey: 'FX F' },
+    ];
+
     const priceColumns: { name: string; index: number }[] = [];
     headers.forEach((h, i) => {
       if (h == null) return;
-      const headerStr = String(h).toUpperCase().trim();
-      if (headerStr === 'SEM TEC' || headerStr === 'SEM TEC/OUTRO' || 
-          headerStr.match(/^FX\s*[A-Z]$/) ||
-          headerStr.match(/^FX\s+[A-Z]$/) ||
-          headerStr === '3D' || headerStr === 'COURO' || 
-          headerStr === 'FX 3D' || headerStr === 'FX COURO') {
-        let normalizedName = headerStr;
+      const headerStr = String(h).trim();
+      const headerUpper = headerStr.toUpperCase();
+      if (headerUpper === 'SEM TEC' || headerUpper === 'SEM TEC/OUTRO' || 
+          headerUpper.match(/^FX\s*[A-Z]$/) ||
+          headerUpper.match(/^FX\s+[A-Z]$/) ||
+          headerUpper === '3D' || headerUpper === 'COURO' || 
+          headerUpper === 'FX 3D' || headerUpper === 'FX COURO') {
+        let normalizedName = headerUpper;
         normalizedName = normalizedName.replace(/FX\s+/, 'FX ');
-        if (headerStr === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
+        if (headerUpper === 'SEM TEC/OUTRO') normalizedName = 'SEM TEC';
         priceColumns.push({ name: normalizedName, index: i });
+        return;
+      }
+      for (const mapping of TABLE_PRICE_MAPPINGS) {
+        if (mapping.pattern.test(headerStr)) {
+          priceColumns.push({ name: mapping.fxKey, index: i });
+          return;
+        }
       }
     });
 
-    const productMap = new Map<string, { factory: string; modMap: Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>> }>();
+    // Helper to extract clean product name from table-style PRODUTO column
+    const TABLE_MOD_PATTERNS = [
+      /\s+mesa\s+de\s+jantar\b/i, /\s+mesa\s+de\s+centro\b/i,
+      /\s+mesa\s+lateral\b/i, /\s+mesa\s+de\s+cabeceira\b/i,
+      /\s+mesa\s+home\s+office\b/i, /\s+mesa\b/i, /\s+buffet\b/i, /\s+aparador\b/i,
+    ];
+    const extractProductName = (fullName: string, modulationName: string): string => {
+      const upper = fullName.toUpperCase();
+      const modUpper = modulationName.toUpperCase();
+      if (modUpper && upper.includes(modUpper)) {
+        const idx = upper.indexOf(modUpper);
+        const extracted = upper.substring(0, idx).trim().replace(/\s*-\s*$/, '').trim();
+        if (extracted.length > 0) return extracted;
+      }
+      for (const pattern of TABLE_MOD_PATTERNS) {
+        const match = upper.match(pattern);
+        if (match && match.index && match.index > 0) return upper.substring(0, match.index).trim();
+      }
+      return upper;
+    };
+    const detectCategory = (modulationName: string): string => {
+      const upper = modulationName.toUpperCase();
+      if (upper.includes('MESA DE JANTAR') || upper.includes('MESA JANTAR')) return 'Mesas';
+      if (upper.includes('MESA DE CENTRO')) return 'Mesas de Centro';
+      if (upper.includes('MESA LATERAL')) return 'Mesas Laterais';
+      if (upper.includes('MESA DE CABECEIRA')) return 'Mesas de Cabeceira';
+      if (upper.includes('BUFFET') || upper.includes('APARADOR')) return 'Buffets';
+      if (upper.includes('POLTRONA')) return 'Poltronas';
+      if (upper.includes('CADEIRA')) return 'Cadeiras';
+      if (upper.includes('BANQUETA')) return 'Banquetas';
+      if (upper.includes('PUFF')) return 'Puffs';
+      if (upper.includes('TAPETE')) return 'Tapetes';
+      return '';
+    };
+
+    const productMap = new Map<string, { factory: string; category: string; modMap: Map<string, Map<string, ParsedProduct['modulations'][0]['sizes'][0]>> }>();
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !Array.isArray(row) || row.length === 0) continue;
 
       const rowData = row as (string | number | null | undefined)[];
-      const productName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
+      const rawProductName = String(rowData[colIndexes.produto] ?? '').trim().toUpperCase();
       const modulationName = String(rowData[colIndexes.modulacao] ?? '').trim().toUpperCase();
       
-      // Get factory from column or use default
       const rowFactory = colIndexes.fabrica !== -1 && rowData[colIndexes.fabrica]
         ? String(rowData[colIndexes.fabrica]).trim().toUpperCase()
         : defaultFactory;
       
-      if (!productName || !modulationName) continue;
+      if (!rawProductName || !modulationName) continue;
+
+      const productName = extractProductName(rawProductName, modulationName);
 
       let rawDescription = '';
       if (colIndexes.descricao !== -1 && rowData[colIndexes.descricao]) {
@@ -165,17 +219,16 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       const fabricQty = colIndexes.tecido !== -1 ? (parseFloat(String(rowData[colIndexes.tecido] ?? '0')) || 0) : 0;
       
       const dimensions = [length, depth].filter(Boolean).join(' x ');
-      const dimensionKey = rawDescription || `${productName} ${modulationName} ${dimensions}|${height}`;
+      const dimensionKey = rawDescription || `${rawProductName} ${dimensions}|${height}`;
       
       let description = rawDescription;
       if (!description) {
-        description = `${productName} ${modulationName}`;
-        if (dimensions) description += ` ${dimensions}`;
-        if (height) description += ` (H: ${height})`;
+        description = rawProductName;
       }
 
       if (!productMap.has(productName)) {
-        productMap.set(productName, { factory: rowFactory, modMap: new Map() });
+        const category = detectCategory(modulationName);
+        productMap.set(productName, { factory: rowFactory, category, modMap: new Map() });
       }
       const productEntry = productMap.get(productName)!;
       const modMap = productEntry.modMap;
@@ -209,7 +262,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
         const sizes = Array.from(sizeMap.values());
         modulations.push({ name: modName, sizes });
       });
-      products.push({ name: productName, factory: productEntry.factory, modulations });
+      products.push({ name: productName, factory: productEntry.factory, category: productEntry.category, modulations });
     });
 
     return products;
@@ -302,7 +355,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       if (existingProduct) {
         await supabase
           .from('products')
-          .update({ has_base: hasBase, available_bases: availableBases, factory: product.factory })
+          .update({ has_base: hasBase, available_bases: availableBases, factory: product.factory, category: product.category || undefined })
           .eq('id', existingProduct.id);
           
         await supabase
@@ -315,7 +368,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
           .from('products')
           .insert({
             name: product.name,
-            category: 'Sofás',
+            category: product.category || 'Sofás',
             code: '',
             description: '',
             has_base: hasBase,
