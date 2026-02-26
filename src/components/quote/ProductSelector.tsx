@@ -65,21 +65,12 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       return sizes;
     }
     
-    // For other products, deduplicate by dimensions + base variation (PE, GIRATORIA, etc.)
+    // For other products, deduplicate by full description to preserve unique variants
+    // (e.g., "AP MARMORE", "GIRATÓRIA", different finishes with same dimensions)
     const uniqueSizes = new Map<string, typeof sizes[0]>();
     sizes.forEach(size => {
-      // Extract base variation from description (PE, BASE GIRATORIA, etc.)
-      const descUpper = size.description.toUpperCase();
-      let baseVariation = '';
-      if (descUpper.includes('BASE GIRATORIA') || descUpper.includes('GIRATÓRIA') || descUpper.includes('GIRATORIA')) {
-        baseVariation = 'GIRATORIA';
-      } else if (descUpper.includes(' PE') || descUpper.endsWith(' PE') || descUpper.includes('PÉ')) {
-        baseVariation = 'PE';
-      }
-      
-      // Create unique key combining dimensions and base variation
-      const dimsKey = size.dimensions || size.description;
-      const key = baseVariation ? `${dimsKey}|${baseVariation}` : dimsKey;
+      // Use description as key to preserve all unique variants
+      const key = size.description;
       
       if (!uniqueSizes.has(key)) {
         uniqueSizes.set(key, size);
