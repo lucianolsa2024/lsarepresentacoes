@@ -12,14 +12,17 @@ interface QuoteCartProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onUpdateObservations: (id: string, observations: string) => void;
   onRemoveItem: (id: string) => void;
+  surchargeMultiplier?: number; // When negative discount, multiply prices by this (e.g. 1.10 for 10% surcharge)
 }
 
-export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRemoveItem }: QuoteCartProps) {
+export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRemoveItem, surchargeMultiplier = 1 }: QuoteCartProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const getDisplayPrice = (price: number) => Math.round(price * surchargeMultiplier * 100) / 100;
+
+  const subtotal = items.reduce((acc, item) => acc + getDisplayPrice(item.price) * item.quantity, 0);
 
   return (
     <Card>
@@ -110,10 +113,10 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onRem
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-muted-foreground">
-                      {formatCurrency(item.price)} x {item.quantity}
+                      {formatCurrency(getDisplayPrice(item.price))} x {item.quantity}
                     </div>
                     <div className="font-bold text-primary">
-                      {formatCurrency(item.price * item.quantity)}
+                      {formatCurrency(getDisplayPrice(item.price) * item.quantity)}
                     </div>
                   </div>
                 </div>

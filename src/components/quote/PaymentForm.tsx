@@ -471,26 +471,41 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
         {/* Summary */}
         {subtotal > 0 && (
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            {payment.discountValue !== 0 && (
-              <div className={`flex justify-between text-sm ${payment.discountValue > 0 ? 'text-destructive' : 'text-orange-600'}`}>
-                <span>
-                  {payment.discountValue > 0 ? 'Desconto' : 'Acréscimo'} (
-                  {payment.discountType === 'percentage'
-                    ? `${Math.abs(payment.discountValue)}%`
-                    : formatCurrency(Math.abs(payment.discountValue))}
-                  ){policyCode && ` [${policyCode}]`}:
-                </span>
-                <span>{payment.discountValue > 0 ? '- ' : '+ '}{formatCurrency(Math.abs(calculateDiscount()))}</span>
-              </div>
+            {payment.discountValue < 0 && payment.discountType === 'percentage' ? (
+              <>
+                {/* Negative discount (surcharge): show adjusted subtotal only, surcharge is baked into item prices */}
+                <div className="text-xs text-muted-foreground">
+                  Acréscimo de {Math.abs(payment.discountValue)}% embutido nos preços dos produtos{policyCode && ` [${policyCode}]`}
+                </div>
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total:</span>
+                  <span className="text-primary">{formatCurrency(calculateTotal())}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                {payment.discountValue !== 0 && (
+                  <div className={`flex justify-between text-sm text-destructive`}>
+                    <span>
+                      Desconto (
+                      {payment.discountType === 'percentage'
+                        ? `${Math.abs(payment.discountValue)}%`
+                        : formatCurrency(Math.abs(payment.discountValue))}
+                      ){policyCode && ` [${policyCode}]`}:
+                    </span>
+                    <span>- {formatCurrency(Math.abs(calculateDiscount()))}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total:</span>
+                  <span className="text-primary">{formatCurrency(calculateTotal())}</span>
+                </div>
+              </>
             )}
-            <div className="flex justify-between font-bold text-lg pt-2 border-t">
-              <span>Total:</span>
-              <span className="text-primary">{formatCurrency(calculateTotal())}</span>
-            </div>
             {payment.method !== 'avista' && payment.installmentPlan && (
               <div className="text-sm text-muted-foreground text-right">
                 {payment.method === 'entrada_parcelas' && payment.downPayment > 0 && (

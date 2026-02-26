@@ -496,6 +496,7 @@ const Index = () => {
                           onUpdateQuantity={handleUpdateQuantity}
                           onUpdateObservations={handleUpdateObservations}
                           onRemoveItem={handleRemoveItem}
+                          surchargeMultiplier={payment.discountType === 'percentage' && payment.discountValue < 0 ? 1 + Math.abs(payment.discountValue) / 100 : 1}
                         />
                         <PaymentForm
                           payment={payment}
