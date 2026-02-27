@@ -5,9 +5,10 @@ import { useActivities } from '@/hooks/useActivities';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
+import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { List, Plus, Upload, FileText } from 'lucide-react';
+import { List, Plus, Upload, FileText, FileSpreadsheet } from 'lucide-react';
 import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
@@ -49,12 +50,16 @@ export function OrderManager() {
             Novo Pedido
           </TabsTrigger>
           <TabsTrigger value="import">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Excel
+          </TabsTrigger>
+          <TabsTrigger value="csv">
             <Upload className="h-4 w-4 mr-2" />
-            Importar Excel
+            CSV
           </TabsTrigger>
           <TabsTrigger value="pdf">
             <FileText className="h-4 w-4 mr-2" />
-            Importar PDF
+            PDF
           </TabsTrigger>
         </TabsList>
 
@@ -88,6 +93,23 @@ export function OrderManager() {
             onImport={async (ordersData) => {
               const count = await addOrders(ordersData);
               // Create activities for orders with delivery dates
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
+            onAddClient={addClient}
+            onComplete={() => setActiveTab('list')}
+          />
+        </TabsContent>
+
+        <TabsContent value="csv" className="mt-4">
+          <OrderCsvImporter
+            clients={clients}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
               for (const d of ordersData) {
                 if (d.order.deliveryDate) {
                   await createDeliveryActivity({ ...d.order }, d.clientId);
