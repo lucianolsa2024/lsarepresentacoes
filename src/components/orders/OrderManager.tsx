@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useClients } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
@@ -6,9 +6,10 @@ import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
 import { OrderCsvImporter } from './OrderCsvImporter';
+import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { List, Plus, Upload, FileText, FileSpreadsheet } from 'lucide-react';
+import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste } from 'lucide-react';
 import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
@@ -16,6 +17,17 @@ export function OrderManager() {
   const { clients, addClient } = useClients();
   const { addActivity, activities } = useActivities();
   const [activeTab, setActiveTab] = useState('list');
+
+  // Build a set of existing order keys for deduplication
+  const existingOrderKeys = useMemo(() => {
+    const keys = new Set<string>();
+    orders.forEach(o => {
+      if (o.orderNumber) {
+        keys.add(`${o.clientName.toLowerCase().trim()}::${o.orderNumber.trim()}`);
+      }
+    });
+    return keys;
+  }, [orders]);
 
   const createDeliveryActivity = async (order: { clientName: string; deliveryDate?: string | null; product?: string; orderNumber?: string; id?: string }, clientId?: string | null) => {
     if (!order.deliveryDate) return;
@@ -56,6 +68,10 @@ export function OrderManager() {
           <TabsTrigger value="csv">
             <Upload className="h-4 w-4 mr-2" />
             CSV
+          </TabsTrigger>
+          <TabsTrigger value="paste">
+            <ClipboardPaste className="h-4 w-4 mr-2" />
+            Colar
           </TabsTrigger>
           <TabsTrigger value="pdf">
             <FileText className="h-4 w-4 mr-2" />
@@ -108,6 +124,24 @@ export function OrderManager() {
         <TabsContent value="csv" className="mt-4">
           <OrderCsvImporter
             clients={clients}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
+            onAddClient={addClient}
+            onComplete={() => setActiveTab('list')}
+          />
+        </TabsContent>
+
+        <TabsContent value="paste" className="mt-4">
+          <OrderPasteImporter
+            clients={clients}
+            existingOrderKeys={existingOrderKeys}
             onImport={async (ordersData) => {
               const count = await addOrders(ordersData);
               for (const d of ordersData) {
