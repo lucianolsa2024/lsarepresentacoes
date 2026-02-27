@@ -7,7 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Search, Loader2, FileDown, Package, Calendar, User, Hash } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Trash2, Search, Loader2, FileDown, Package, Calendar, User, Hash, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,20 +20,31 @@ interface Props {
   loading: boolean;
   onDelete: (id: string) => Promise<boolean>;
   onUpdate: (id: string, order: OrderFormData, clientId?: string | null) => Promise<boolean>;
+  onUpdateNf: (id: string, nfNumber: string, nfPdfUrl: string | null, status: string) => Promise<boolean>;
   clients: Client[];
 }
 
-export function OrderList({ orders, loading, onDelete, clients }: Props) {
+const ORDER_STATUSES = ['pendente', 'em_producao', 'faturado', 'entregue'] as const;
+const STATUS_LABELS: Record<string, string> = {
+  pendente: 'Pendente',
+  em_producao: 'Em Produção',
+  faturado: 'Faturado',
+  entregue: 'Entregue',
+};
+
+export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, clients }: Props) {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
   const [repFilter, setRepFilter] = useState('all');
+  const [nfDialog, setNfDialog] = useState<Order | null>(null);
+  const [nfNumber, setNfNumber] = useState('');
+  const [nfFile, setNfFile] = useState<File | null>(null);
+  const [savingNf, setSavingNf] = useState(false);
 
   const handleDownloadPdf = useCallback(async (pdfPath: string) => {
     try {
-      const { data, error } = await supabase.storage
-        .from('pedidos')
-        .createSignedUrl(pdfPath, 300);
+      const { data, error } = await supabase.storage.from('pedidos').createSignedUrl(pdfPath, 300);
       if (error) throw error;
       window.open(data.signedUrl, '_blank');
     } catch {
@@ -39,52 +52,66 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
     }
   }, []);
 
-  const uniqueClients = useMemo(() => {
-    const names = [...new Set(orders.map(o => o.clientName))].sort();
-    return names;
-  }, [orders]);
+  const openNfDialog = (order: Order) => {
+    setNfDialog(order);
+    setNfNumber(order.nfNumber || '');
+    setNfFile(null);
+  };
 
-  const uniqueReps = useMemo(() => {
-    const names = [...new Set(orders.map(o => o.representative).filter(Boolean))].sort();
-    return names;
-  }, [orders]);
+  const handleSaveNf = async () => {
+    if (!nfDialog) return;
+    setSavingNf(true);
+    try {
+      let nfPdfUrl = nfDialog.nfPdfUrl;
+      if (nfFile) {
+        const ext = nfFile.name.split('.').pop();
+        const path = `nf/${nfDialog.id}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from('pedidos').upload(path, nfFile, { upsert: true });
+        if (uploadErr) throw uploadErr;
+        nfPdfUrl = path;
+      }
+      await onUpdateNf(nfDialog.id, nfNumber, nfPdfUrl, 'faturado');
+      setNfDialog(null);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar NF');
+    } finally {
+      setSavingNf(false);
+    }
+  };
+
+  const handleStatusChange = async (order: Order, newStatus: string) => {
+    if (newStatus === 'faturado') {
+      openNfDialog(order);
+    } else {
+      await onUpdateNf(order.id, order.nfNumber || '', order.nfPdfUrl, newStatus);
+    }
+  };
+
+  const uniqueClients = useMemo(() => [...new Set(orders.map(o => o.clientName))].sort(), [orders]);
+  const uniqueReps = useMemo(() => [...new Set(orders.map(o => o.representative).filter(Boolean))].sort(), [orders]);
 
   const filtered = useMemo(() => {
     let result = orders;
-    if (clientFilter !== 'all') {
-      result = result.filter(o => o.clientName === clientFilter);
-    }
-    if (repFilter !== 'all') {
-      result = result.filter(o => o.representative === repFilter);
-    }
+    if (clientFilter !== 'all') result = result.filter(o => o.clientName === clientFilter);
+    if (repFilter !== 'all') result = result.filter(o => o.representative === repFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(o =>
-        o.clientName.toLowerCase().includes(q) ||
-        o.product.toLowerCase().includes(q) ||
-        o.orderNumber.toLowerCase().includes(q) ||
-        o.oc.toLowerCase().includes(q)
+        o.clientName.toLowerCase().includes(q) || o.product.toLowerCase().includes(q) ||
+        o.orderNumber.toLowerCase().includes(q) || o.oc.toLowerCase().includes(q) ||
+        (o.nfNumber || '').toLowerCase().includes(q)
       );
     }
     return result;
   }, [orders, search, clientFilter, repFilter]);
 
   const totalValue = useMemo(() => filtered.reduce((s, o) => s + o.price, 0), [filtered]);
-
-  const formatDate = (d: string | null) => {
-    if (!d) return '-';
-    try { return format(parseISO(d), 'dd/MM/yyyy'); } catch { return d; }
-  };
-
-  const formatCurrency = (v: number) =>
-    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatDate = (d: string | null) => { if (!d) return '-'; try { return format(parseISO(d), 'dd/MM/yyyy'); } catch { return d; } };
+  const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
@@ -93,38 +120,24 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar pedido, produto, OC..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Buscar pedido, produto, OC, NF..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={clientFilter} onValueChange={setClientFilter}>
-          <SelectTrigger className="w-full sm:w-[250px]">
-            <SelectValue placeholder="Todos os clientes" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[250px]"><SelectValue placeholder="Todos os clientes" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os clientes</SelectItem>
-            {uniqueClients.map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
+            {uniqueClients.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={repFilter} onValueChange={setRepFilter}>
-          <SelectTrigger className="w-full sm:w-[220px]">
-            <SelectValue placeholder="Todos os representantes" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[220px]"><SelectValue placeholder="Todos os representantes" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os representantes</SelectItem>
-            {uniqueReps.map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
+            {uniqueReps.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Summary */}
       <div className="flex gap-4 text-sm text-muted-foreground">
         <span>{filtered.length} pedido(s)</span>
         <span>Total: <strong className="text-foreground">{formatCurrency(totalValue)}</strong></span>
@@ -164,19 +177,24 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                     <Package className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs truncate">{order.product || '—'}</span>
                     {order.supplier && <Badge variant="secondary" className="text-[10px]">{order.supplier}</Badge>}
-                    {order.fabric && <span className="text-xs text-muted-foreground">• {order.fabric}</span>}
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(order.issueDate)}
-                    </span>
+                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(order.issueDate)}</span>
                     <span>Entrega: {formatDate(order.deliveryDate)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">{order.orderType}</Badge>
-                      <span className="text-xs text-muted-foreground">Qtd: {order.quantity}</span>
+                      <Select value={order.status} onValueChange={(v) => handleStatusChange(order, v)}>
+                        <SelectTrigger className="h-6 text-[10px] w-auto min-w-[90px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ORDER_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      {order.nfNumber && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" /> NF: {order.nfNumber}
+                        </span>
+                      )}
                     </div>
                     <span className="text-sm font-bold text-primary">{formatCurrency(order.price)}</span>
                   </div>
@@ -198,12 +216,11 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                 <TableHead>OC</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead>Tecido</TableHead>
-                <TableHead>Dimensão</TableHead>
                 <TableHead>Entrega</TableHead>
                 <TableHead className="text-right">Qtd</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Pagamento</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>NF</TableHead>
                 <TableHead>PDF</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -211,9 +228,7 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
-                    Nenhum pedido encontrado
-                  </TableCell>
+                  <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell>
                 </TableRow>
               ) : (
                 filtered.map(order => (
@@ -221,30 +236,48 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
                     <TableCell className="whitespace-nowrap">{formatDate(order.issueDate)}</TableCell>
                     <TableCell className="font-medium">{order.clientName}</TableCell>
                     <TableCell>
-                      {order.supplier ? (
-                        <Badge variant="secondary" className="text-xs">{order.supplier}</Badge>
-                      ) : '-'}
+                      {order.supplier ? <Badge variant="secondary" className="text-xs">{order.supplier}</Badge> : '-'}
                     </TableCell>
                     <TableCell>{order.orderNumber || '-'}</TableCell>
                     <TableCell>{order.oc || '-'}</TableCell>
                     <TableCell>{order.product}</TableCell>
                     <TableCell>{order.fabric || '-'}</TableCell>
-                    <TableCell>{order.dimensions || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">{formatDate(order.deliveryDate)}</TableCell>
                     <TableCell className="text-right">{order.quantity}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">{formatCurrency(order.price)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{order.orderType}</Badge>
+                      <Select value={order.status} onValueChange={(v) => handleStatusChange(order, v)}>
+                        <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ORDER_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
-                    <TableCell>{order.paymentTerms || '-'}</TableCell>
+                    <TableCell>
+                      {order.nfNumber ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">{order.nfNumber}</span>
+                          {order.nfPdfUrl && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownloadPdf(order.nfPdfUrl!)}>
+                              <FileText className="h-3 w-3 text-primary" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openNfDialog(order)}>
+                            <Hash className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => openNfDialog(order)}>
+                          + NF
+                        </Button>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {order.pdfUrl ? (
-                        <Button variant="ghost" size="icon" title="Baixar PDF" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(order.pdfUrl!)}>
                           <FileDown className="h-4 w-4 text-primary" />
                         </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">-</span>
-                      )}
+                      ) : '-'}
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => onDelete(order.id)}>
@@ -258,6 +291,42 @@ export function OrderList({ orders, loading, onDelete, clients }: Props) {
           </Table>
         </div>
       )}
+
+      {/* NF Dialog */}
+      <Dialog open={!!nfDialog} onOpenChange={(open) => !open && setNfDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nota Fiscal - Pedido {nfDialog?.orderNumber || ''}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Número da NF</Label>
+              <Input value={nfNumber} onChange={e => setNfNumber(e.target.value)} placeholder="Ex: 12345" />
+            </div>
+            <div>
+              <Label>PDF da NF</Label>
+              <div className="mt-1">
+                <Input type="file" accept=".pdf" onChange={e => setNfFile(e.target.files?.[0] || null)} />
+              </div>
+              {nfDialog?.nfPdfUrl && !nfFile && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <FileText className="h-3 w-3" /> PDF já anexado
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleDownloadPdf(nfDialog.nfPdfUrl!)}>
+                    Visualizar
+                  </Button>
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNfDialog(null)}>Cancelar</Button>
+            <Button onClick={handleSaveNf} disabled={savingNf || !nfNumber.trim()}>
+              {savingNf ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

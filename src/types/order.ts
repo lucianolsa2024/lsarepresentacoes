@@ -21,6 +21,9 @@ export interface Order {
   rescheduleHistory: string[];
   fabricArrivalDate: string | null;
   ownerEmail: string | null;
+  status: string;
+  nfNumber: string | null;
+  nfPdfUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

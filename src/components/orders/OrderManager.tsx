@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useClients } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
@@ -9,13 +10,16 @@ import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste, Trash2 } from 'lucide-react';
 import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
-  const { orders, loading, addOrder, addOrders, updateOrder, deleteOrder } = useOrders();
+  const { orders, loading, addOrder, addOrders, updateOrder, deleteOrder, deleteAllOrders, updateOrderNf } = useOrders();
   const { clients, addClient } = useClients();
   const { addActivity, activities } = useActivities();
+  const isAdmin = useIsAdmin();
   const [activeTab, setActiveTab] = useState('list');
 
   // Build a set of existing order keys for deduplication
@@ -49,7 +53,33 @@ export function OrderManager() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-foreground">Gestão de Pedidos</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-foreground">Gestão de Pedidos</h2>
+        {isAdmin && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Limpar Base
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Limpar toda a base de pedidos?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação excluirá TODOS os {orders.length} pedidos permanentemente. Não é possível desfazer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteAllOrders} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Excluir Todos
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -85,6 +115,7 @@ export function OrderManager() {
             loading={loading}
             onDelete={deleteOrder}
             onUpdate={updateOrder}
+            onUpdateNf={updateOrderNf}
             clients={clients}
           />
         </TabsContent>

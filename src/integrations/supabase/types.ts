@@ -465,6 +465,8 @@ export type Database = {
           fabric_provided: string | null
           id: string
           issue_date: string
+          nf_number: string | null
+          nf_pdf_url: string | null
           oc: string | null
           order_number: string | null
           order_type: string | null
@@ -477,6 +479,7 @@ export type Database = {
           representative: string | null
           reschedule_date: string | null
           reschedule_history: Json | null
+          status: string
           supplier: string | null
           updated_at: string
         }
@@ -491,6 +494,8 @@ export type Database = {
           fabric_provided?: string | null
           id?: string
           issue_date: string
+          nf_number?: string | null
+          nf_pdf_url?: string | null
           oc?: string | null
           order_number?: string | null
           order_type?: string | null
@@ -503,6 +508,7 @@ export type Database = {
           representative?: string | null
           reschedule_date?: string | null
           reschedule_history?: Json | null
+          status?: string
           supplier?: string | null
           updated_at?: string
         }
@@ -517,6 +523,8 @@ export type Database = {
           fabric_provided?: string | null
           id?: string
           issue_date?: string
+          nf_number?: string | null
+          nf_pdf_url?: string | null
           oc?: string | null
           order_number?: string | null
           order_type?: string | null
@@ -529,6 +537,7 @@ export type Database = {
           representative?: string | null
           reschedule_date?: string | null
           reschedule_history?: Json | null
+          status?: string
           supplier?: string | null
           updated_at?: string
         }
