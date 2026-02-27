@@ -120,19 +120,31 @@ export function useOrders() {
   const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null }[]): Promise<number> => {
     try {
       await loadRepMap();
-      const rows = await Promise.all(ordersData.map(async d => {
+      const allRows = await Promise.all(ordersData.map(async d => {
         const ownerEmail = await resolveOwnerEmail(d.order.representative);
         return orderToDb(d.order, d.clientId, d.pdfUrl, ownerEmail);
       }));
-      const { data, error } = await supabase
-        .from('orders')
-        .insert(rows)
-        .select();
 
-      if (error) throw error;
-      const newOrders = (data || []).map(dbToOrder);
-      setOrders(prev => [...newOrders, ...prev]);
-      return newOrders.length;
+      // Process in batches of 100 to avoid timeouts
+      const BATCH_SIZE = 100;
+      let totalImported = 0;
+      const allNewOrders: Order[] = [];
+
+      for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
+        const batch = allRows.slice(i, i + BATCH_SIZE);
+        const { data, error } = await supabase
+          .from('orders')
+          .insert(batch)
+          .select();
+
+        if (error) throw error;
+        const newOrders = (data || []).map(dbToOrder);
+        allNewOrders.push(...newOrders);
+        totalImported += newOrders.length;
+      }
+
+      setOrders(prev => [...allNewOrders, ...prev]);
+      return totalImported;
     } catch (error) {
       console.error('Error bulk adding orders:', error);
       toast.error('Erro ao importar pedidos');
