@@ -26,6 +26,9 @@ const dbToOrder = (row: any): Order => ({
   rescheduleHistory: Array.isArray(row.reschedule_history) ? row.reschedule_history : [],
   fabricArrivalDate: row.fabric_arrival_date || null,
   ownerEmail: row.owner_email || null,
+  status: row.status || 'pendente',
+  nfNumber: row.nf_number || null,
+  nfPdfUrl: row.nf_pdf_url || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -192,6 +195,40 @@ export function useOrders() {
     return orders.filter(o => o.clientName.toLowerCase() === clientName.toLowerCase());
   };
 
+  const deleteAllOrders = async (): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all
+      if (error) throw error;
+      setOrders([]);
+      toast.success('Todos os pedidos foram excluídos');
+      return true;
+    } catch (error) {
+      console.error('Error deleting all orders:', error);
+      toast.error('Erro ao excluir pedidos');
+      return false;
+    }
+  };
+
+  const updateOrderNf = async (id: string, nfNumber: string, nfPdfUrl: string | null, status: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ nf_number: nfNumber || null, nf_pdf_url: nfPdfUrl || null, status } as any)
+        .eq('id', id);
+      if (error) throw error;
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, nfNumber, nfPdfUrl, status } : o));
+      toast.success('NF atualizada');
+      return true;
+    } catch (error) {
+      console.error('Error updating NF:', error);
+      toast.error('Erro ao atualizar NF');
+      return false;
+    }
+  };
+
   return {
     orders,
     loading,
@@ -199,6 +236,8 @@ export function useOrders() {
     addOrders,
     updateOrder,
     deleteOrder,
+    deleteAllOrders,
+    updateOrderNf,
     getOrdersByClient,
     refetch: fetchOrders,
   };
