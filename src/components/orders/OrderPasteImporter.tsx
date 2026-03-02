@@ -22,7 +22,7 @@ interface Props {
 }
 
 const COLUMN_KEYWORDS: Record<string, string[]> = {
-  issueDate: ['dt emissao', 'data emissao', 'emissao', 'dt ped', 'data pedido'],
+  issueDate: ['dt emissao', 'dt emiss', 'data emissao', 'emissao', 'dt ped', 'data pedido'],
   clientName: ['cliente', 'client', 'razao social', 'empresa'],
   orderNumber: ['numero pedido', 'num ped', 'pedido', 'n ped'],
   oc: ['oc', 'ordem comp', 'o c'],
@@ -92,11 +92,17 @@ function parsePrice(value: string): number {
   const lastComma = str.lastIndexOf(',');
   if (lastDot === -1 && lastComma === -1) return parseFloat(str) || 0;
   if (lastComma > lastDot) {
-    const afterComma = str.substring(lastComma + 1);
-    if (afterComma.length === 3 && !str.includes('.')) str = str.replace(/,/g, '');
-    else str = str.replace(/\./g, '').replace(',', '.');
+    // European/BR format: 1.234,56 or 1234,56
+    str = str.replace(/\./g, '').replace(',', '.');
   } else if (lastDot > lastComma) {
-    str = str.replace(/,/g, '');
+    // Could be US format (1,234.56) or BR thousands-only (9.463 meaning 9463)
+    const afterDot = str.substring(lastDot + 1);
+    if (afterDot.length === 3 && lastComma === -1) {
+      // Brazilian thousands separator: "9.463" = 9463, "21.615" = 21615
+      str = str.replace(/\./g, '');
+    } else {
+      str = str.replace(/,/g, '');
+    }
   }
   return parseFloat(str) || 0;
 }

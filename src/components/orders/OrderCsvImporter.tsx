@@ -151,14 +151,16 @@ function parsePrice(value: string): number {
   if (lastDot === -1 && lastComma === -1) return parseFloat(str) || 0;
 
   if (lastComma > lastDot) {
-    const afterComma = str.substring(lastComma + 1);
-    if (afterComma.length === 3 && !str.includes('.')) {
-      str = str.replace(/,/g, '');
-    } else {
-      str = str.replace(/\./g, '').replace(',', '.');
-    }
+    // European/BR format: 1.234,56 or 1234,56
+    str = str.replace(/\./g, '').replace(',', '.');
   } else if (lastDot > lastComma) {
-    str = str.replace(/,/g, '');
+    const afterDot = str.substring(lastDot + 1);
+    if (afterDot.length === 3 && lastComma === -1) {
+      // Brazilian thousands separator: "9.463" = 9463
+      str = str.replace(/\./g, '');
+    } else {
+      str = str.replace(/,/g, '');
+    }
   }
   return parseFloat(str) || 0;
 }
