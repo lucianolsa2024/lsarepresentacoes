@@ -9,11 +9,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { SERVICE_ORDER_STATUSES, RESPONSIBLE_TYPES, SERVICE_TYPES, calculateNetResult } from '@/types/serviceOrder';
 import type { ServiceOrder, ServiceOrderFormData } from '@/types/serviceOrder';
+import type { ClientData } from '@/types/quote';
 
 interface Props {
   open: boolean;
@@ -21,9 +23,10 @@ interface Props {
   onSubmit: (data: ServiceOrderFormData) => Promise<void>;
   order?: ServiceOrder | null;
   clients: { id: string; company: string }[];
+  onAddClient?: (client: ClientData) => Promise<{ id: string } | null>;
 }
 
-export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients }: Props) {
+export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients, onAddClient }: Props) {
   const [product, setProduct] = useState('');
   const [responsibleType, setResponsibleType] = useState('Fábrica');
   const [responsibleName, setResponsibleName] = useState('');
@@ -42,7 +45,23 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // New client inline form
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientDocument, setNewClientDocument] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientStreet, setNewClientStreet] = useState('');
+  const [newClientNumber, setNewClientNumber] = useState('');
+  const [newClientNeighborhood, setNewClientNeighborhood] = useState('');
+  const [newClientCity, setNewClientCity] = useState('');
+  const [newClientState, setNewClientState] = useState('');
+  const [newClientZip, setNewClientZip] = useState('');
+  const [savingClient, setSavingClient] = useState(false);
+
   const resetForm = () => {
+    setShowNewClient(false);
+    resetNewClientFields();
     if (order) {
       setProduct(order.product || '');
       setResponsibleType(order.responsible_type);
@@ -70,6 +89,13 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
     }
   };
 
+  const resetNewClientFields = () => {
+    setNewClientName(''); setNewClientDocument(''); setNewClientEmail('');
+    setNewClientPhone(''); setNewClientStreet(''); setNewClientNumber('');
+    setNewClientNeighborhood(''); setNewClientCity(''); setNewClientState('');
+    setNewClientZip('');
+  };
+
   const toggleServiceType = (type: string) => {
     setServiceTypes(prev =>
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
@@ -80,6 +106,46 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
     calculateNetResult(laborCost, suppliesCost, freightCost, responsibleType, hasRt, rtPercentage),
     [laborCost, suppliesCost, freightCost, responsibleType, hasRt, rtPercentage]
   );
+
+  const handleSaveNewClient = async () => {
+    if (!newClientName.trim()) { toast.error('Nome/Razão Social é obrigatório'); return; }
+    if (!newClientDocument.trim()) { toast.error('CPF/CNPJ é obrigatório'); return; }
+    if (!newClientEmail.trim()) { toast.error('E-mail é obrigatório'); return; }
+    if (!newClientPhone.trim()) { toast.error('Telefone é obrigatório'); return; }
+    if (!newClientStreet.trim() || !newClientCity.trim() || !newClientState.trim()) {
+      toast.error('Endereço (rua, cidade, estado) é obrigatório'); return;
+    }
+    if (!onAddClient) return;
+
+    setSavingClient(true);
+    const clientData: ClientData = {
+      company: newClientName.trim(),
+      name: newClientName.trim(),
+      document: newClientDocument.trim(),
+      email: newClientEmail.trim(),
+      phone: newClientPhone.trim(),
+      isNewClient: false,
+      clientType: undefined,
+      address: {
+        street: newClientStreet.trim(),
+        number: newClientNumber.trim(),
+        complement: '',
+        neighborhood: newClientNeighborhood.trim(),
+        city: newClientCity.trim(),
+        state: newClientState.trim(),
+        zipCode: newClientZip.trim(),
+      },
+    };
+
+    const result = await onAddClient(clientData);
+    setSavingClient(false);
+    if (result) {
+      setClientId(result.id);
+      setShowNewClient(false);
+      resetNewClientFields();
+      toast.success('Cliente cadastrado com sucesso');
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -106,15 +172,78 @@ export function ServiceOrderForm({ open, onOpenChange, onSubmit, order, clients 
         <div className="grid gap-4 py-2">
           {/* Client */}
           <div>
-            <Label>Cliente</Label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger><SelectValue placeholder="Selecionar cliente" /></SelectTrigger>
-              <SelectContent>
-                {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.company}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Cliente</Label>
+              {onAddClient && !showNewClient && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewClient(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Novo Cliente
+                </Button>
+              )}
+            </div>
+            {!showNewClient ? (
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger><SelectValue placeholder="Selecionar cliente" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="border rounded-md p-3 space-y-3 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Cadastrar novo cliente</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNewClient(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Label className="text-xs">Nome / Razão Social *</Label>
+                    <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Razão Social" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">CPF/CNPJ *</Label>
+                    <Input value={newClientDocument} onChange={e => setNewClientDocument(e.target.value)} placeholder="000.000.000-00" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Telefone *</Label>
+                    <Input value={newClientPhone} onChange={e => setNewClientPhone(e.target.value)} placeholder="(00) 00000-0000" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">E-mail *</Label>
+                    <Input type="email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} placeholder="email@exemplo.com" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">CEP</Label>
+                    <Input value={newClientZip} onChange={e => setNewClientZip(e.target.value)} placeholder="00000-000" className="w-36" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Rua *</Label>
+                    <Input value={newClientStreet} onChange={e => setNewClientStreet(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Número</Label>
+                    <Input value={newClientNumber} onChange={e => setNewClientNumber(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Bairro</Label>
+                    <Input value={newClientNeighborhood} onChange={e => setNewClientNeighborhood(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cidade *</Label>
+                    <Input value={newClientCity} onChange={e => setNewClientCity(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Estado *</Label>
+                    <Input value={newClientState} onChange={e => setNewClientState(e.target.value)} maxLength={2} placeholder="UF" />
+                  </div>
+                </div>
+                <Button type="button" size="sm" onClick={handleSaveNewClient} disabled={savingClient} className="w-full">
+                  {savingClient ? 'Salvando...' : 'Salvar Cliente'}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Service Types - multi-select checkboxes */}

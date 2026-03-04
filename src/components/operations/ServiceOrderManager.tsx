@@ -19,7 +19,7 @@ import type { ServiceOrder, ServiceOrderPhoto, ServiceOrderFormData } from '@/ty
 
 export function ServiceOrderManager() {
   const { orders, loading, createOrder, updateOrder, deleteOrder, fetchPhotos, uploadPhoto, deletePhoto, uploadSuppliesNf } = useServiceOrders();
-  const { clients } = useClients();
+  const { clients, addClient } = useClients();
 
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -267,6 +267,7 @@ export function ServiceOrderManager() {
         onSubmit={handleFormSubmit}
         order={editingOrder}
         clients={clientList}
+        onAddClient={addClient}
       />
 
       {/* Detail dialog */}
