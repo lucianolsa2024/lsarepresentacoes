@@ -44,10 +44,20 @@ export function BulkActionBar({
       
       // Add backoffice
       const backoffice = [
+        { name: 'Joice (Backoffice)', email: 'joice@lsarepresentacoes.com.br' },
+        { name: 'Maíra (Backoffice)', email: 'posicao@lsarepresentacoes.com.br' },
+        { name: 'Marcia (Assistência)', email: 'assistencia@lsarepresentacoes.com.br' },
+        { name: 'Isabella (Backoffice)', email: 'pedidos2@lsarepresentacoes.com.br' },
+        { name: 'Nilva (Backoffice)', email: 'pedidos@lsarepresentacoes.com.br' },
         { name: 'Camila (Backoffice)', email: 'camila@lsarepresentacoes.com.br' },
         { name: 'Milla (Backoffice)', email: 'milla@lsarepresentacoes.com.br' },
       ];
-      setTeamMembers([...members, ...backoffice]);
+      for (const bo of backoffice) {
+        if (!members.find(m => m.email === bo.email)) {
+          members.push(bo);
+        }
+      }
+      setTeamMembers(members);
     };
     load();
   }, []);
