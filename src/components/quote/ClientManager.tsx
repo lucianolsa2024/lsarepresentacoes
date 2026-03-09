@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Client, ClientCurve } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,10 +69,12 @@ export function ClientManager({
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [curveFilter, setCurveFilter] = useState<string>('all');
+  const [repFilter, setRepFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [branchParentId, setBranchParentId] = useState<string | null>(null);
   const { activeReps: representatives, emailToName } = useRepresentatives();
   const { lookupCep, loading: cepLoading } = useCepLookup();
+  const isAdmin = useIsAdmin();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
 
@@ -182,6 +185,11 @@ export function ClientManager({
     if (curveFilter !== 'all') {
       result = result.filter(c => (c.curve || 'D') === curveFilter);
     }
+
+    // Filter by representative
+    if (repFilter !== 'all') {
+      result = result.filter(c => c.ownerEmail === repFilter);
+    }
     
     if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
@@ -199,7 +207,7 @@ export function ClientManager({
       );
       return matchesParent || matchesBranch;
     });
-  }, [parentClients, branchesByParent, searchQuery, curveFilter]);
+  }, [parentClients, branchesByParent, searchQuery, curveFilter, repFilter]);
 
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
@@ -613,6 +621,19 @@ export function ClientManager({
                   <SelectItem value="D">Curva D</SelectItem>
                 </SelectContent>
               </Select>
+              {isAdmin && (
+                <Select value={repFilter} onValueChange={setRepFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Representante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Representantes</SelectItem>
+                    {representatives.map(rep => (
+                      <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="text-sm text-muted-foreground">
