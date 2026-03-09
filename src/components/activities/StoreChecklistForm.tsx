@@ -72,13 +72,25 @@ export function StoreChecklistForm({
   };
 
   const handleSave = async () => {
-    if (data.qtdProdutosNossos == null || data.qtdProdutosConcorrentes == null) {
-      toast.error('Preencha a quantidade de produtos nossos e concorrentes');
+    // Validate all categories have values
+    const hasEmpty = PRODUCT_CATEGORIES.some(cat => {
+      const c = data.qtdPorCategoria[cat.key];
+      return c.nossos == null || c.concorrentes == null;
+    });
+    if (hasEmpty) {
+      toast.error('Preencha a quantidade de produtos nossos e concorrentes em todas as categorias');
       return;
     }
+    // Compute totals for backward compatibility
+    const totals = computeCategoryTotals(data.qtdPorCategoria);
+    const dataToSave: StoreChecklistData = {
+      ...data,
+      qtdProdutosNossos: totals.nossos,
+      qtdProdutosConcorrentes: totals.concorrentes,
+    };
     setSaving(true);
     try {
-      await onSave(data);
+      await onSave(dataToSave);
       onOpenChange(false);
     } finally {
       setSaving(false);
