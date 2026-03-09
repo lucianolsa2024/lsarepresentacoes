@@ -130,7 +130,7 @@ export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
 export const CHECKLIST_SECTIONS = [
   {
     title: '🛋️ Produtos Expostos & Share',
-    fields: ['produtosExpostos', 'concorrentesExpostos', 'qtdProdutosNossos', 'qtdProdutosConcorrentes', 'necessidadeAtualizacao'] as const,
+    fields: ['produtosExpostos', 'concorrentesExpostos', 'qtdPorCategoria', 'necessidadeAtualizacao'] as const,
   },
   {
     title: '📸 Fotos / Evidências',
