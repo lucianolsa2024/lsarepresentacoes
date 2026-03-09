@@ -27,11 +27,11 @@ export function RepShareWidget() {
     if (!user?.email) return;
     const load = async () => {
       setLoading(true);
+      // Checklists may have assigned_to_email set OR may belong to the rep's clients
       const { data } = await supabase
         .from('activities')
         .select('description, due_date')
         .eq('type', 'checklist_loja')
-        .eq('assigned_to_email', user.email)
         .not('description', 'is', null)
         .order('due_date', { ascending: false });
 
