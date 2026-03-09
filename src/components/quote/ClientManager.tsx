@@ -458,6 +458,37 @@ export function ClientManager({
                   </div>
                 )}
 
+                {/* Curva - manual override */}
+                {!isBranchMode && editingClient && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Curva do Cliente
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Select
+                        value={(formData as any).curve || 'D'}
+                        onValueChange={(v) => updateField('curve' as any, v)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">Curva A</SelectItem>
+                          <SelectItem value="B">Curva B</SelectItem>
+                          <SelectItem value="C">Curva C</SelectItem>
+                          <SelectItem value="D">Curva D</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {editingClient.curve && (
+                        <span className="text-xs text-muted-foreground">
+                          Calculada: <Badge className={`text-xs ${getCurveBadgeClass(editingClient.curve)}`}>{editingClient.curve}</Badge>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2">
                   <Label className="flex items-center gap-1 mb-3">
                     <MapPin className="h-3 w-3" />
