@@ -1,12 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesReport } from './SalesReport';
 import { GoalManager } from './GoalManager';
+import { OkrManager } from './OkrManager';
 import { UserManager } from './UserManager';
 import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
