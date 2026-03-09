@@ -26,6 +26,10 @@ export function AdminPanel({ orders }: AdminPanelProps) {
           <Users className="h-4 w-4 mr-2" />
           Usuários
         </TabsTrigger>
+        <TabsTrigger value="positivacao">
+          <UserCheck className="h-4 w-4 mr-2" />
+          Positivação
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
