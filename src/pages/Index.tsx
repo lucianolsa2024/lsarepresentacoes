@@ -120,7 +120,10 @@ const Index = () => {
   };
 
   const calculateSubtotal = () => {
-    return items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    return items.reduce((acc, item) => {
+      const itemMult = 1 - (item.itemDiscountValue || 0) / 100;
+      return acc + item.price * itemMult * item.quantity;
+    }, 0);
   };
 
   const calculateDiscount = () => {
