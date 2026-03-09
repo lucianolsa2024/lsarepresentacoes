@@ -360,6 +360,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           onClearFilters={handleClearFilters}
+          repFilter={repFilter}
+          onRepFilterChange={setRepFilter}
+          representatives={activeReps}
+          showRepFilter={!!isAdmin}
         />
       )}
 
