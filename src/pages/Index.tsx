@@ -72,7 +72,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes: allQuotes, addQuote, updateQuote, updateQuoteStatus, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
-  const { activities, addActivity } = useActivities();
+  const { activities, addActivity, updateActivity } = useActivities();
   const { orders, addOrders } = useOrders();
   const { opportunities, addOpportunity } = useSalesOpportunities();
   const { user, signOut } = useAuth();
