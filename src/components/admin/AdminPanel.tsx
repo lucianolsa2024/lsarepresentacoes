@@ -4,8 +4,9 @@ import { GoalManager } from './GoalManager';
 import { UserManager } from './UserManager';
 import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
+import { ShareLojaReport } from './ShareLojaReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users, UserCheck, TrendingUp } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
@@ -31,6 +32,10 @@ export function AdminPanel({ orders }: AdminPanelProps) {
           <UserCheck className="h-4 w-4 mr-2" />
           Positivação
         </TabsTrigger>
+        <TabsTrigger value="share-loja">
+          <Store className="h-4 w-4 mr-2" />
+          Share de Loja
+        </TabsTrigger>
         <TabsTrigger value="curva">
           <TrendingUp className="h-4 w-4 mr-2" />
           Curva de Clientes
@@ -48,6 +53,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       </TabsContent>
       <TabsContent value="positivacao" className="mt-0">
         <PositivacaoReport />
+      </TabsContent>
+      <TabsContent value="share-loja" className="mt-0">
+        <ShareLojaReport />
       </TabsContent>
       <TabsContent value="curva" className="mt-0">
         <ClientCurveReport />
