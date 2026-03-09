@@ -159,12 +159,21 @@ export function StoreChecklistForm({
   };
 
   const shareNosso = useMemo(() => {
-    const nossos = data.qtdProdutosNossos || 0;
-    const concorrentes = data.qtdProdutosConcorrentes || 0;
-    const total = nossos + concorrentes;
+    const totals = computeCategoryTotals(data.qtdPorCategoria);
+    const total = totals.nossos + totals.concorrentes;
     if (total === 0) return null;
-    return Math.round((nossos / total) * 100);
-  }, [data.qtdProdutosNossos, data.qtdProdutosConcorrentes]);
+    return Math.round((totals.nossos / total) * 100);
+  }, [data.qtdPorCategoria]);
+
+  const categoryShares = useMemo(() => {
+    return PRODUCT_CATEGORIES.map(cat => {
+      const c = data.qtdPorCategoria[cat.key];
+      const n = c?.nossos || 0;
+      const co = c?.concorrentes || 0;
+      const t = n + co;
+      return { key: cat.key, label: cat.label, share: t > 0 ? Math.round((n / t) * 100) : null };
+    });
+  }, [data.qtdPorCategoria]);
 
   const BooleanField = ({ field }: { field: keyof StoreChecklistData }) => (
     <RadioGroup
