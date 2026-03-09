@@ -459,6 +459,42 @@ export type Database = {
           },
         ]
       }
+      okr_goals: {
+        Row: {
+          created_at: string
+          id: string
+          key_result: string
+          metric_type: string
+          month_start: string
+          monthly_target: number
+          owner_email: string
+          strategic_objective: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_result: string
+          metric_type: string
+          month_start: string
+          monthly_target: number
+          owner_email: string
+          strategic_objective: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_result?: string
+          metric_type?: string
+          month_start?: string
+          monthly_target?: number
+          owner_email?: string
+          strategic_objective?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           client_id: string | null
