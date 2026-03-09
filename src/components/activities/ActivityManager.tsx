@@ -56,7 +56,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   } = useActivities();
 
   const isAdmin = useIsAdmin();
+  const { user } = useAuth();
   const { activeReps } = useRepresentatives();
+  const currentEmail = user?.email;
 
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
   const [formOpen, setFormOpen] = useState(false);
