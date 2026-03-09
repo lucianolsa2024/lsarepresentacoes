@@ -2,6 +2,7 @@ import { Activity } from '@/types/activity';
 import { ActivityCard } from './ActivityCard';
 import { isToday, isTomorrow, isPast, parseISO, isThisWeek, startOfDay } from 'date-fns';
 import { AlertTriangle, Calendar, Sun, CalendarDays, CheckCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ActivityListProps {
   activities: Activity[];
@@ -14,6 +15,10 @@ interface ActivityListProps {
   onOpenChecklist?: (activity: Activity) => void;
   onViewQuote?: (quoteId: string) => void;
   showCompleted?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: (ids: string[]) => void;
+  selectionMode?: boolean;
 }
 
 interface GroupedActivities {
@@ -36,6 +41,10 @@ export function ActivityList({
   onOpenChecklist,
   onViewQuote,
   showCompleted = false,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  selectionMode = false,
 }: ActivityListProps) {
   const today = startOfDay(new Date());
 
@@ -69,11 +78,11 @@ export function ActivityList({
 
   const renderGroup = (
     title: string,
-    activities: Activity[],
+    groupActivities: Activity[],
     icon: React.ReactNode,
     variant: 'destructive' | 'warning' | 'default' | 'muted' = 'default'
   ) => {
-    if (activities.length === 0) return null;
+    if (groupActivities.length === 0) return null;
 
     const variants = {
       destructive: 'text-destructive',
@@ -82,28 +91,49 @@ export function ActivityList({
       muted: 'text-muted-foreground',
     };
 
+    const groupIds = groupActivities.map(a => a.id);
+    const allSelected = selectionMode && selectedIds && groupIds.every(id => selectedIds.has(id));
+
     return (
       <div className="space-y-3">
         <div className={`flex items-center gap-2 ${variants[variant]}`}>
+          {selectionMode && onToggleSelectAll && (
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={() => onToggleSelectAll(groupIds)}
+              className="mr-1"
+            />
+          )}
           {icon}
           <h3 className="font-semibold">
-            {title} ({activities.length})
+            {title} ({groupActivities.length})
           </h3>
         </div>
         <div className="space-y-2">
-          {activities.map(activity => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              onComplete={onComplete}
-              onCancel={onCancel}
-              onStart={onStart}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onCreateQuote={onCreateQuote}
-              onOpenChecklist={onOpenChecklist}
-              onViewQuote={onViewQuote}
-            />
+          {groupActivities.map(activity => (
+            <div key={activity.id} className="flex items-start gap-2">
+              {selectionMode && onToggleSelect && (
+                <div className="pt-3">
+                  <Checkbox
+                    checked={selectedIds?.has(activity.id) ?? false}
+                    onCheckedChange={() => onToggleSelect(activity.id)}
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <ActivityCard
+                  activity={activity}
+                  onComplete={onComplete}
+                  onCancel={onCancel}
+                  onStart={onStart}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onCreateQuote={onCreateQuote}
+                  onOpenChecklist={onOpenChecklist}
+                  onViewQuote={onViewQuote}
+                />
+              </div>
+            </div>
           ))}
         </div>
       </div>
