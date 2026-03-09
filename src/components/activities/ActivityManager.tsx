@@ -9,10 +9,12 @@ import { ActivityReport } from './ActivityReport';
 import { ChecklistReport } from './ChecklistReport';
 import { ActivityCalendarView } from './ActivityCalendarView';
 import { StoreChecklistForm } from './StoreChecklistForm';
+import { BulkActionBar } from './BulkActionBar';
 import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
