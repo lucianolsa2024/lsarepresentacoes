@@ -345,14 +345,29 @@ export function QuoteHistory({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold">Histórico de Orçamentos</h2>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por cliente ou data..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por cliente ou data..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {isAdmin && (
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Representante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Representantes</SelectItem>
+                {activeReps.map(rep => (
+                  <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
