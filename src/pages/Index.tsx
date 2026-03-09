@@ -38,6 +38,7 @@ import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
+import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
