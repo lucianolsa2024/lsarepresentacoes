@@ -4,8 +4,9 @@ import { GoalManager } from './GoalManager';
 import { UserManager } from './UserManager';
 import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
+import { ShareLojaReport } from './ShareLojaReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users, UserCheck, TrendingUp } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
