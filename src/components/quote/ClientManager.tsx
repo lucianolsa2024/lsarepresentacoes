@@ -40,6 +40,7 @@ import {
   Map,
   UserCheck,
   GitBranch,
+  TrendingUp,
 } from 'lucide-react';
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
