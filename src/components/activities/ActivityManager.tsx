@@ -64,6 +64,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
 
+  // Bulk selection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // Filters
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all');
