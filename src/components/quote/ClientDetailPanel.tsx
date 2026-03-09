@@ -20,6 +20,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
+import { ClientShareWidget } from './ClientShareWidget';
 
 interface ClientDetailPanelProps {
   clientId: string;
