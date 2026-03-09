@@ -41,6 +41,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       <TabsContent value="users" className="mt-0">
         <UserManager />
       </TabsContent>
+      <TabsContent value="positivacao" className="mt-0">
+        <PositivacaoReport />
+      </TabsContent>
     </Tabs>
   );
 }
