@@ -54,6 +54,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     startActivity,
   } = useActivities();
 
+  const isAdmin = useIsAdmin();
+  const { activeReps } = useRepresentatives();
+
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>();
@@ -75,6 +78,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<ActivityPriority | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | 'all'>('all');
+  const [repFilter, setRepFilter] = useState<string>('all');
 
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
