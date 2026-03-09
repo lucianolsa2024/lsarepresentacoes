@@ -260,6 +260,9 @@ export function ClientDetailPanel({
         </Card>
       </div>
 
+      {/* Share de Loja Widget */}
+      <ClientShareWidget activities={clientActivities} />
+
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center justify-between gap-2">
