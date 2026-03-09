@@ -1,3 +1,28 @@
+export const PRODUCT_CATEGORIES = [
+  { key: 'sofasRetrateis', label: 'Sofás Retráteis' },
+  { key: 'sofasLiving', label: 'Sofás Living' },
+  { key: 'poltronas', label: 'Poltronas' },
+  { key: 'cadeiras', label: 'Cadeiras' },
+  { key: 'mesasJantar', label: 'Mesas de Jantar' },
+] as const;
+
+export type ProductCategoryKey = typeof PRODUCT_CATEGORIES[number]['key'];
+
+export interface CategoryCount {
+  nossos: number | null;
+  concorrentes: number | null;
+}
+
+export type QtdPorCategoria = Record<ProductCategoryKey, CategoryCount>;
+
+export const EMPTY_QTD_POR_CATEGORIA: QtdPorCategoria = {
+  sofasRetrateis: { nossos: null, concorrentes: null },
+  sofasLiving: { nossos: null, concorrentes: null },
+  poltronas: { nossos: null, concorrentes: null },
+  cadeiras: { nossos: null, concorrentes: null },
+  mesasJantar: { nossos: null, concorrentes: null },
+};
+
 export interface StoreChecklistData {
   // Header
   cliente: string;
@@ -8,6 +33,8 @@ export interface StoreChecklistData {
   // Produtos Expostos
   produtosExpostos: string[]; // product names from DB
   concorrentesExpostos: string;
+  qtdPorCategoria: QtdPorCategoria;
+  // Legacy totals - computed on save for backward compat
   qtdProdutosNossos: number | null;
   qtdProdutosConcorrentes: number | null;
   necessidadeAtualizacao: string;
