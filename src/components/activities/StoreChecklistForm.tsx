@@ -67,6 +67,10 @@ export function StoreChecklistForm({
   };
 
   const handleSave = async () => {
+    if (data.qtdProdutosNossos == null || data.qtdProdutosConcorrentes == null) {
+      toast.error('Preencha a quantidade de produtos nossos e concorrentes');
+      return;
+    }
     setSaving(true);
     try {
       await onSave(data);
@@ -301,15 +305,20 @@ export function StoreChecklistForm({
     }
 
     if (field === 'qtdProdutosNossos' || field === 'qtdProdutosConcorrentes') {
+      const isRequired = true;
+      const isEmpty = data[field] == null;
       return (
         <div className="space-y-1.5" key={field}>
-          <Label className="text-sm font-medium">{label}</Label>
+          <Label className="text-sm font-medium">
+            {label} <span className="text-destructive">*</span>
+          </Label>
           <Input
             type="number"
             value={data[field] ?? ''}
             onChange={(e) => update(field, e.target.value ? parseInt(e.target.value) : null)}
-            placeholder="Quantidade"
+            placeholder="Quantidade (obrigatório)"
             readOnly={readOnly}
+            className={isEmpty && !readOnly ? 'border-destructive' : ''}
           />
           {field === 'qtdProdutosConcorrentes' && shareNosso !== null && (
             <p className="text-xs font-medium text-primary">
