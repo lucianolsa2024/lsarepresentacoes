@@ -283,6 +283,11 @@ export function QuoteHistory({
                 </Badge>
               )}
             </div>
+            {quote.payment?.representativeName && (
+              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <span className="font-medium">Rep:</span> {quote.payment.representativeName}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
