@@ -82,7 +82,6 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
-      // Search
       if (search) {
         const searchLower = search.toLowerCase();
         const matchesSearch = 
@@ -91,25 +90,20 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           activity.client?.company.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
-
-      // Type
       if (typeFilter !== 'all' && activity.type !== typeFilter) return false;
-
-      // Priority
       if (priorityFilter !== 'all' && activity.priority !== priorityFilter) return false;
-
-      // Status
       if (statusFilter !== 'all' && activity.status !== statusFilter) return false;
-
+      if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter]);
+  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter]);
 
   const handleClearFilters = () => {
     setSearch('');
     setTypeFilter('all');
     setPriorityFilter('all');
     setStatusFilter('all');
+    setRepFilter('all');
   };
 
   const handleEdit = (activity: Activity) => {
