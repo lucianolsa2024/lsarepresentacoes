@@ -621,6 +621,19 @@ export function ClientManager({
                   <SelectItem value="D">Curva D</SelectItem>
                 </SelectContent>
               </Select>
+              {isAdmin && (
+                <Select value={repFilter} onValueChange={setRepFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Representante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Representantes</SelectItem>
+                    {representatives.map(rep => (
+                      <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="text-sm text-muted-foreground">
