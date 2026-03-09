@@ -129,7 +129,8 @@ export function ClientManager({
       ownerEmail: client.ownerEmail,
       parentClientId: client.parentClientId,
       address: client.address,
-    });
+      curve: client.curve,
+    } as any);
     setIsDialogOpen(true);
   };
 
