@@ -79,6 +79,16 @@ export interface StoreChecklistData {
   assistenciaDescricao: string;
 }
 
+export function computeCategoryTotals(qtd: QtdPorCategoria): { nossos: number; concorrentes: number } {
+  let nossos = 0;
+  let concorrentes = 0;
+  for (const cat of PRODUCT_CATEGORIES) {
+    nossos += qtd[cat.key]?.nossos || 0;
+    concorrentes += qtd[cat.key]?.concorrentes || 0;
+  }
+  return { nossos, concorrentes };
+}
+
 export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
   cliente: '',
   cidade: '',
@@ -86,6 +96,7 @@ export const EMPTY_STORE_CHECKLIST: StoreChecklistData = {
   representante: '',
   produtosExpostos: [],
   concorrentesExpostos: '',
+  qtdPorCategoria: { ...EMPTY_QTD_POR_CATEGORIA },
   qtdProdutosNossos: null,
   qtdProdutosConcorrentes: null,
   necessidadeAtualizacao: '',
