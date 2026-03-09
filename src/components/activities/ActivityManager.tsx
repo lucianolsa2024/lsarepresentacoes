@@ -9,10 +9,12 @@ import { ActivityReport } from './ActivityReport';
 import { ChecklistReport } from './ChecklistReport';
 import { ActivityCalendarView } from './ActivityCalendarView';
 import { StoreChecklistForm } from './StoreChecklistForm';
+import { BulkActionBar } from './BulkActionBar';
 import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +63,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
+
+  // Bulk selection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [search, setSearch] = useState('');
@@ -206,6 +212,77 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     return () => window.removeEventListener('open-checklist', handler);
   }, []);
 
+  // Bulk action handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      if (allSelected) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBulkComplete = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await completeActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} concluída${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkCancel = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await cancelActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} cancelada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkStart = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await startActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} iniciada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkAssign = async (email: string) => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await updateActivity(id, { assigned_to_email: email });
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} designada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -239,12 +316,37 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          {view === 'list' && (
+            <Button
+              variant={selectionMode ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                if (selectionMode) setSelectedIds(new Set());
+              }}
+            >
+              <CheckSquare className="h-4 w-4 mr-1" />
+              Selecionar
+            </Button>
+          )}
           <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Atividade
           </Button>
         </div>
       </div>
+
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onBulkComplete={handleBulkComplete}
+          onBulkCancel={handleBulkCancel}
+          onBulkStart={handleBulkStart}
+          onBulkAssign={handleBulkAssign}
+          onClearSelection={handleClearSelection}
+        />
+      )}
 
       {/* Filters */}
       {view !== 'report' && view !== 'calendar' && view !== 'checklist_report' && (
@@ -274,6 +376,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           onOpenChecklist={handleOpenChecklist}
           onViewQuote={onViewQuote}
           showCompleted={statusFilter === 'concluida' || statusFilter === 'all'}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
         />
       )}
 
