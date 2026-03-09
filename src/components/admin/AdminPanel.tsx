@@ -53,6 +53,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       <TabsContent value="goals" className="mt-0">
         <GoalManager />
       </TabsContent>
+      <TabsContent value="okrs" className="mt-0">
+        <OkrManager />
+      </TabsContent>
       <TabsContent value="users" className="mt-0">
         <UserManager />
       </TabsContent>
