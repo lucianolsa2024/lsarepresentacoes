@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAuth } from '@/hooks/useAuth';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Activity, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
@@ -55,7 +56,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   } = useActivities();
 
   const isAdmin = useIsAdmin();
+  const { user } = useAuth();
   const { activeReps } = useRepresentatives();
+  const currentEmail = user?.email;
 
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
   const [formOpen, setFormOpen] = useState(false);
@@ -82,8 +85,20 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [repFilter, setRepFilter] = useState<string>('all');
 
   const filteredActivities = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const isDeliveryActivity = (a: Activity) =>
+      a.type === 'tarefa' && a.title.includes('Entrega pedido');
+    const isMaira = currentEmail === 'posicao@lsarepresentacoes.com.br';
+
     return activities.filter(activity => {
       if (hiddenIds.has(activity.id)) return false;
+
+      // Delivery activities: only visible to Maíra/admin, unless overdue for reps
+      if (isDeliveryActivity(activity) && !isAdmin && !isMaira) {
+        const isOverdue = activity.status === 'pendente' && activity.due_date < today;
+        if (!isOverdue) return false;
+      }
+
       if (search) {
         const searchLower = search.toLowerCase();
         const matchesSearch = 
@@ -98,7 +113,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds]);
+  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
 
   const handleClearFilters = () => {
     setSearch('');
