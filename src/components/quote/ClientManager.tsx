@@ -185,6 +185,11 @@ export function ClientManager({
     if (curveFilter !== 'all') {
       result = result.filter(c => (c.curve || 'D') === curveFilter);
     }
+
+    // Filter by representative
+    if (repFilter !== 'all') {
+      result = result.filter(c => c.ownerEmail === repFilter);
+    }
     
     if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
@@ -202,7 +207,7 @@ export function ClientManager({
       );
       return matchesParent || matchesBranch;
     });
-  }, [parentClients, branchesByParent, searchQuery, curveFilter]);
+  }, [parentClients, branchesByParent, searchQuery, curveFilter, repFilter]);
 
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
