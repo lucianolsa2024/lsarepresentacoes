@@ -72,6 +72,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   // Bulk selection
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [search, setSearch] = useState('');
