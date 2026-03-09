@@ -69,10 +69,12 @@ export function ClientManager({
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [curveFilter, setCurveFilter] = useState<string>('all');
+  const [repFilter, setRepFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [branchParentId, setBranchParentId] = useState<string | null>(null);
   const { activeReps: representatives, emailToName } = useRepresentatives();
   const { lookupCep, loading: cepLoading } = useCepLookup();
+  const isAdmin = useIsAdmin();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
 
