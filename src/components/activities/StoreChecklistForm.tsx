@@ -14,8 +14,12 @@ import { ClipboardCheck, Save, Search, X, AlertTriangle, Camera, Trash2, Loader2
 import {
   StoreChecklistData,
   EMPTY_STORE_CHECKLIST,
+  EMPTY_QTD_POR_CATEGORIA,
   CHECKLIST_SECTIONS,
   FIELD_LABELS,
+  PRODUCT_CATEGORIES,
+  computeCategoryTotals,
+  type ProductCategoryKey,
 } from '@/types/storeChecklist';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +58,7 @@ export function StoreChecklistForm({
         ...EMPTY_STORE_CHECKLIST,
         ...initialData,
         produtosExpostos: initialData?.produtosExpostos || [],
+        qtdPorCategoria: initialData?.qtdPorCategoria || { ...EMPTY_QTD_POR_CATEGORIA },
         cliente: clientName || initialData?.cliente || '',
         cidade: clientCity || initialData?.cidade || '',
       });
@@ -67,13 +72,25 @@ export function StoreChecklistForm({
   };
 
   const handleSave = async () => {
-    if (data.qtdProdutosNossos == null || data.qtdProdutosConcorrentes == null) {
-      toast.error('Preencha a quantidade de produtos nossos e concorrentes');
+    // Validate all categories have values
+    const hasEmpty = PRODUCT_CATEGORIES.some(cat => {
+      const c = data.qtdPorCategoria[cat.key];
+      return c.nossos == null || c.concorrentes == null;
+    });
+    if (hasEmpty) {
+      toast.error('Preencha a quantidade de produtos nossos e concorrentes em todas as categorias');
       return;
     }
+    // Compute totals for backward compatibility
+    const totals = computeCategoryTotals(data.qtdPorCategoria);
+    const dataToSave: StoreChecklistData = {
+      ...data,
+      qtdProdutosNossos: totals.nossos,
+      qtdProdutosConcorrentes: totals.concorrentes,
+    };
     setSaving(true);
     try {
-      await onSave(data);
+      await onSave(dataToSave);
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -142,12 +159,21 @@ export function StoreChecklistForm({
   };
 
   const shareNosso = useMemo(() => {
-    const nossos = data.qtdProdutosNossos || 0;
-    const concorrentes = data.qtdProdutosConcorrentes || 0;
-    const total = nossos + concorrentes;
+    const totals = computeCategoryTotals(data.qtdPorCategoria);
+    const total = totals.nossos + totals.concorrentes;
     if (total === 0) return null;
-    return Math.round((nossos / total) * 100);
-  }, [data.qtdProdutosNossos, data.qtdProdutosConcorrentes]);
+    return Math.round((totals.nossos / total) * 100);
+  }, [data.qtdPorCategoria]);
+
+  const categoryShares = useMemo(() => {
+    return PRODUCT_CATEGORIES.map(cat => {
+      const c = data.qtdPorCategoria[cat.key];
+      const n = c?.nossos || 0;
+      const co = c?.concorrentes || 0;
+      const t = n + co;
+      return { key: cat.key, label: cat.label, share: t > 0 ? Math.round((n / t) * 100) : null };
+    });
+  }, [data.qtdPorCategoria]);
 
   const BooleanField = ({ field }: { field: keyof StoreChecklistData }) => (
     <RadioGroup
@@ -305,24 +331,83 @@ export function StoreChecklistForm({
     }
 
     if (field === 'qtdProdutosNossos' || field === 'qtdProdutosConcorrentes') {
-      const isRequired = true;
-      const isEmpty = data[field] == null;
+      // These are now computed from qtdPorCategoria, skip individual rendering
+      return null;
+    }
+
+    if (field === 'qtdPorCategoria') {
       return (
-        <div className="space-y-1.5" key={field}>
+        <div className="space-y-3 col-span-full" key={field}>
           <Label className="text-sm font-medium">
-            {label} <span className="text-destructive">*</span>
+            Quantidade de Produtos Expostos por Categoria <span className="text-destructive">*</span>
           </Label>
-          <Input
-            type="number"
-            value={data[field] ?? ''}
-            onChange={(e) => update(field, e.target.value ? parseInt(e.target.value) : null)}
-            placeholder="Quantidade (obrigatório)"
-            readOnly={readOnly}
-            className={isEmpty && !readOnly ? 'border-destructive' : ''}
-          />
-          {field === 'qtdProdutosConcorrentes' && shareNosso !== null && (
-            <p className="text-xs font-medium text-primary">
-              📊 Share nosso: {shareNosso}%
+          <div className="space-y-2">
+            {PRODUCT_CATEGORIES.map(cat => {
+              const catData = data.qtdPorCategoria[cat.key];
+              const nEmpty = catData.nossos == null;
+              const cEmpty = catData.concorrentes == null;
+              const catShare = categoryShares.find(s => s.key === cat.key);
+              return (
+                <div key={cat.key} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{cat.label}</span>
+                    {catShare?.share !== null && catShare?.share !== undefined && (
+                      <Badge variant="outline" className="text-xs">Share {catShare.share}%</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Nossos</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={catData.nossos ?? ''}
+                        onChange={(e) => {
+                          if (readOnly) return;
+                          const val = e.target.value ? parseInt(e.target.value) : null;
+                          setData(prev => ({
+                            ...prev,
+                            qtdPorCategoria: {
+                              ...prev.qtdPorCategoria,
+                              [cat.key]: { ...prev.qtdPorCategoria[cat.key], nossos: val },
+                            },
+                          }));
+                        }}
+                        placeholder="Qtd"
+                        readOnly={readOnly}
+                        className={nEmpty && !readOnly ? 'border-destructive' : ''}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Concorrentes</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={catData.concorrentes ?? ''}
+                        onChange={(e) => {
+                          if (readOnly) return;
+                          const val = e.target.value ? parseInt(e.target.value) : null;
+                          setData(prev => ({
+                            ...prev,
+                            qtdPorCategoria: {
+                              ...prev.qtdPorCategoria,
+                              [cat.key]: { ...prev.qtdPorCategoria[cat.key], concorrentes: val },
+                            },
+                          }));
+                        }}
+                        placeholder="Qtd"
+                        readOnly={readOnly}
+                        className={cEmpty && !readOnly ? 'border-destructive' : ''}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {shareNosso !== null && (
+            <p className="text-sm font-medium text-primary">
+              📊 Share Total: {shareNosso}%
             </p>
           )}
         </div>
