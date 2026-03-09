@@ -279,6 +279,8 @@ export type Database = {
           company: string
           complement: string | null
           created_at: string
+          curve: string | null
+          curve_updated_at: string | null
           document: string | null
           email: string | null
           id: string
@@ -300,6 +302,8 @@ export type Database = {
           company: string
           complement?: string | null
           created_at?: string
+          curve?: string | null
+          curve_updated_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
@@ -321,6 +325,8 @@ export type Database = {
           company?: string
           complement?: string | null
           created_at?: string
+          curve?: string | null
+          curve_updated_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
