@@ -54,6 +54,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       <TabsContent value="positivacao" className="mt-0">
         <PositivacaoReport />
       </TabsContent>
+      <TabsContent value="share-loja" className="mt-0">
+        <ShareLojaReport />
+      </TabsContent>
       <TabsContent value="curva" className="mt-0">
         <ClientCurveReport />
       </TabsContent>
