@@ -414,8 +414,9 @@ const Index = () => {
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
                 {isRep === true && (
-                  <div className="mb-6">
+                  <div className="mb-6 space-y-6">
                     <RepHomeDashboard />
+                    <MyOkrGoals />
                   </div>
                 )}
                 {isRep === true ? (
