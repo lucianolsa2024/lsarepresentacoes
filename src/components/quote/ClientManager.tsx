@@ -558,14 +558,28 @@ export function ClientManager({
 
         <TabsContent value="list" className="mt-4">
           <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por empresa, nome, CNPJ ou email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por empresa, nome, CNPJ ou email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={curveFilter} onValueChange={setCurveFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Curva" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Curvas</SelectItem>
+                  <SelectItem value="A">Curva A</SelectItem>
+                  <SelectItem value="B">Curva B</SelectItem>
+                  <SelectItem value="C">Curva C</SelectItem>
+                  <SelectItem value="D">Curva D</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="text-sm text-muted-foreground">
