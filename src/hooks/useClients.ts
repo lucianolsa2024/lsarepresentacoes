@@ -35,6 +35,8 @@ const dbToClient = (row: {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  curve: string | null;
+  curve_updated_at: string | null;
   created_at: string;
   updated_at: string;
 }): Client => ({
@@ -48,6 +50,8 @@ const dbToClient = (row: {
   clientType: (row.client_type as ClientType) || undefined,
   ownerEmail: row.owner_email || undefined,
   parentClientId: row.parent_client_id || null,
+  curve: (row.curve as ClientCurve) || 'D',
+  curveUpdatedAt: row.curve_updated_at || null,
   address: {
     street: row.street || '',
     number: row.number || '',
