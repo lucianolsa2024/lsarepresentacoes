@@ -14,8 +14,12 @@ import { ClipboardCheck, Save, Search, X, AlertTriangle, Camera, Trash2, Loader2
 import {
   StoreChecklistData,
   EMPTY_STORE_CHECKLIST,
+  EMPTY_QTD_POR_CATEGORIA,
   CHECKLIST_SECTIONS,
   FIELD_LABELS,
+  PRODUCT_CATEGORIES,
+  computeCategoryTotals,
+  type ProductCategoryKey,
 } from '@/types/storeChecklist';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
