@@ -330,7 +330,7 @@ const Index = () => {
                 Sistema LSA
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                Gestão completa de produtos com modulações e acabamentos
+                Gestão LSA
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
