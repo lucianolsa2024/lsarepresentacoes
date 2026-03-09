@@ -251,9 +251,12 @@ export function ClientManager({
                   <Building2 className="h-5 w-5 text-primary" />
                 )}
               </div>
-              <div className="min-w-0">
+                <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold truncate">{client.company}</h3>
+                  <Badge className={`text-xs flex-shrink-0 ${getCurveBadgeClass(client.curve || 'D')}`}>
+                    {client.curve || 'D'}
+                  </Badge>
                   {!isBranch && branches.length > 0 && (
                     <Badge variant="secondary" className="text-xs flex-shrink-0">
                       {branches.length} filial{branches.length > 1 ? 'is' : ''}
