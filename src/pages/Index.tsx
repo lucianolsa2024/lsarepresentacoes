@@ -38,6 +38,7 @@ import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
+import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
@@ -413,8 +414,9 @@ const Index = () => {
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
                 {isRep === true && (
-                  <div className="mb-6">
+                  <div className="mb-6 space-y-6">
                     <RepHomeDashboard />
+                    <MyOkrGoals />
                   </div>
                 )}
                 {isRep === true ? (

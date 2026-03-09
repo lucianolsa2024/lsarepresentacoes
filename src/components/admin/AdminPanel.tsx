@@ -1,12 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesReport } from './SalesReport';
 import { GoalManager } from './GoalManager';
+import { OkrManager } from './OkrManager';
 import { UserManager } from './UserManager';
 import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
@@ -16,13 +17,17 @@ export function AdminPanel({ orders }: AdminPanelProps) {
   return (
     <Tabs defaultValue="sales-report">
       <TabsList className="mb-4 flex-wrap">
-        <TabsTrigger value="sales-report">
+         <TabsTrigger value="sales-report">
           <BarChart3 className="h-4 w-4 mr-2" />
           Relatório de Vendas
         </TabsTrigger>
         <TabsTrigger value="goals">
           <Target className="h-4 w-4 mr-2" />
           Metas
+        </TabsTrigger>
+        <TabsTrigger value="okrs">
+          <Crosshair className="h-4 w-4 mr-2" />
+          OKRs
         </TabsTrigger>
         <TabsTrigger value="users">
           <Users className="h-4 w-4 mr-2" />
@@ -47,6 +52,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       </TabsContent>
       <TabsContent value="goals" className="mt-0">
         <GoalManager />
+      </TabsContent>
+      <TabsContent value="okrs" className="mt-0">
+        <OkrManager />
       </TabsContent>
       <TabsContent value="users" className="mt-0">
         <UserManager />
