@@ -110,13 +110,20 @@ const Index = () => {
     setItems(items.map((item) => (item.id === id ? { ...item, observations } : item)));
   };
 
+  const handleUpdateItemDiscount = (id: string, discountValue: number) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, itemDiscountValue: discountValue } : item)));
+  };
+
   const handleRemoveItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id));
     toast.success('Item removido');
   };
 
   const calculateSubtotal = () => {
-    return items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    return items.reduce((acc, item) => {
+      const itemMult = 1 - (item.itemDiscountValue || 0) / 100;
+      return acc + item.price * itemMult * item.quantity;
+    }, 0);
   };
 
   const calculateDiscount = () => {
@@ -495,6 +502,7 @@ const Index = () => {
                           items={items}
                           onUpdateQuantity={handleUpdateQuantity}
                           onUpdateObservations={handleUpdateObservations}
+                          onUpdateItemDiscount={handleUpdateItemDiscount}
                           onRemoveItem={handleRemoveItem}
                           surchargeMultiplier={payment.discountType === 'percentage' && payment.discountValue < 0 ? 1 + Math.abs(payment.discountValue) / 100 : 1}
                         />

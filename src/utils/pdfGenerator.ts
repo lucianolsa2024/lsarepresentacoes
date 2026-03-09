@@ -319,7 +319,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   // Determine if surcharge should be baked into prices
   const isSurcharge = quote.payment.discountType === 'percentage' && quote.payment.discountValue < 0;
   const surchargeMultiplier = isSurcharge ? 1 + Math.abs(quote.payment.discountValue) / 100 : 1;
-  const getDisplayPrice = (price: number) => Math.round(price * surchargeMultiplier * 100) / 100;
+  const getItemMultiplier = (item: QuoteItem) => {
+    const v = item.itemDiscountValue || 0;
+    return v === 0 ? 1 : 1 - v / 100;
+  };
+  const getDisplayPrice = (item: QuoteItem) => Math.round(item.price * surchargeMultiplier * getItemMultiplier(item) * 100) / 100;
 
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
@@ -358,7 +362,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     const splitDetails = doc.splitTextToSize(details, 90);
     doc.text(splitDetails, 45, y);
 
-    const displayPrice = getDisplayPrice(item.price);
+    const displayPrice = getDisplayPrice(item);
     doc.text(item.quantity.toString(), 140, y);
     doc.text(formatCurrency(displayPrice), 155, y);
     doc.text(formatCurrency(displayPrice * item.quantity), 175, y);
