@@ -2,8 +2,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesReport } from './SalesReport';
 import { GoalManager } from './GoalManager';
 import { UserManager } from './UserManager';
+import { PositivacaoReport } from './PositivacaoReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
