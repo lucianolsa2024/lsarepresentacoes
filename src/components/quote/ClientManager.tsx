@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Client } from '@/hooks/useClients';
+import { Client, ClientCurve } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
