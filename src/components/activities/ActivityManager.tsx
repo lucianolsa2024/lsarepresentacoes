@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAuth } from '@/hooks/useAuth';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { Activity, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
