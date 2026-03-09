@@ -66,7 +66,7 @@ const dbToClient = (row: {
 });
 
 // Convert Client to DB format
-const clientToDb = (client: ClientData) => ({
+const clientToDb = (client: ClientData & { curve?: string }) => ({
   name: client.name || null,
   company: client.company,
   document: client.document || null,
@@ -83,6 +83,7 @@ const clientToDb = (client: ClientData) => ({
   city: client.address.city || null,
   state: client.address.state || null,
   zip_code: client.address.zipCode || null,
+  ...(client.curve ? { curve: client.curve } : {}),
 });
 
 export function useClients() {
