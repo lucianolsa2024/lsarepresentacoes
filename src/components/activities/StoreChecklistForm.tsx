@@ -331,24 +331,83 @@ export function StoreChecklistForm({
     }
 
     if (field === 'qtdProdutosNossos' || field === 'qtdProdutosConcorrentes') {
-      const isRequired = true;
-      const isEmpty = data[field] == null;
+      // These are now computed from qtdPorCategoria, skip individual rendering
+      return null;
+    }
+
+    if (field === 'qtdPorCategoria') {
       return (
-        <div className="space-y-1.5" key={field}>
+        <div className="space-y-3 col-span-full" key={field}>
           <Label className="text-sm font-medium">
-            {label} <span className="text-destructive">*</span>
+            Quantidade de Produtos Expostos por Categoria <span className="text-destructive">*</span>
           </Label>
-          <Input
-            type="number"
-            value={data[field] ?? ''}
-            onChange={(e) => update(field, e.target.value ? parseInt(e.target.value) : null)}
-            placeholder="Quantidade (obrigatório)"
-            readOnly={readOnly}
-            className={isEmpty && !readOnly ? 'border-destructive' : ''}
-          />
-          {field === 'qtdProdutosConcorrentes' && shareNosso !== null && (
-            <p className="text-xs font-medium text-primary">
-              📊 Share nosso: {shareNosso}%
+          <div className="space-y-2">
+            {PRODUCT_CATEGORIES.map(cat => {
+              const catData = data.qtdPorCategoria[cat.key];
+              const nEmpty = catData.nossos == null;
+              const cEmpty = catData.concorrentes == null;
+              const catShare = categoryShares.find(s => s.key === cat.key);
+              return (
+                <div key={cat.key} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{cat.label}</span>
+                    {catShare?.share !== null && catShare?.share !== undefined && (
+                      <Badge variant="outline" className="text-xs">Share {catShare.share}%</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Nossos</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={catData.nossos ?? ''}
+                        onChange={(e) => {
+                          if (readOnly) return;
+                          const val = e.target.value ? parseInt(e.target.value) : null;
+                          setData(prev => ({
+                            ...prev,
+                            qtdPorCategoria: {
+                              ...prev.qtdPorCategoria,
+                              [cat.key]: { ...prev.qtdPorCategoria[cat.key], nossos: val },
+                            },
+                          }));
+                        }}
+                        placeholder="Qtd"
+                        readOnly={readOnly}
+                        className={nEmpty && !readOnly ? 'border-destructive' : ''}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Concorrentes</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={catData.concorrentes ?? ''}
+                        onChange={(e) => {
+                          if (readOnly) return;
+                          const val = e.target.value ? parseInt(e.target.value) : null;
+                          setData(prev => ({
+                            ...prev,
+                            qtdPorCategoria: {
+                              ...prev.qtdPorCategoria,
+                              [cat.key]: { ...prev.qtdPorCategoria[cat.key], concorrentes: val },
+                            },
+                          }));
+                        }}
+                        placeholder="Qtd"
+                        readOnly={readOnly}
+                        className={cEmpty && !readOnly ? 'border-destructive' : ''}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {shareNosso !== null && (
+            <p className="text-sm font-medium text-primary">
+              📊 Share Total: {shareNosso}%
             </p>
           )}
         </div>
