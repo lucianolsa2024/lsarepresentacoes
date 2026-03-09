@@ -215,6 +215,9 @@ export function RepHomeDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Share de Loja */}
+      <RepShareWidget />
     </div>
   );
 }
