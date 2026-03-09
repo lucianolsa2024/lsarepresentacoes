@@ -54,7 +54,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 interface QuoteHistoryProps {
   quotes: Quote[];
   activities?: Activity[];
