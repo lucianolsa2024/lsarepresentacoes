@@ -212,6 +212,77 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     return () => window.removeEventListener('open-checklist', handler);
   }, []);
 
+  // Bulk action handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      if (allSelected) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBulkComplete = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await completeActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} concluída${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkCancel = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await cancelActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} cancelada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkStart = async () => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await startActivity(id);
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} iniciada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
+  const handleBulkAssign = async (email: string) => {
+    const ids = Array.from(selectedIds);
+    let count = 0;
+    for (const id of ids) {
+      const ok = await updateActivity(id, { assigned_to_email: email });
+      if (ok) count++;
+    }
+    toast.success(`${count} atividade${count > 1 ? 's' : ''} designada${count > 1 ? 's' : ''}`);
+    handleClearSelection();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
