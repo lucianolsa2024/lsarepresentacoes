@@ -362,7 +362,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     const splitDetails = doc.splitTextToSize(details, 90);
     doc.text(splitDetails, 45, y);
 
-    const displayPrice = getDisplayPrice(item.price);
+    const displayPrice = getDisplayPrice(item);
     doc.text(item.quantity.toString(), 140, y);
     doc.text(formatCurrency(displayPrice), 155, y);
     doc.text(formatCurrency(displayPrice * item.quantity), 175, y);
