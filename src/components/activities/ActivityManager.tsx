@@ -83,6 +83,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
+      if (hiddenIds.has(activity.id)) return false;
       if (search) {
         const searchLower = search.toLowerCase();
         const matchesSearch = 
@@ -97,7 +98,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter]);
+  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds]);
 
   const handleClearFilters = () => {
     setSearch('');
