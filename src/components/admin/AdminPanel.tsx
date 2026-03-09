@@ -2,8 +2,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesReport } from './SalesReport';
 import { GoalManager } from './GoalManager';
 import { UserManager } from './UserManager';
+import { PositivacaoReport } from './PositivacaoReport';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
@@ -25,6 +26,10 @@ export function AdminPanel({ orders }: AdminPanelProps) {
           <Users className="h-4 w-4 mr-2" />
           Usuários
         </TabsTrigger>
+        <TabsTrigger value="positivacao">
+          <UserCheck className="h-4 w-4 mr-2" />
+          Positivação
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -35,6 +40,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       </TabsContent>
       <TabsContent value="users" className="mt-0">
         <UserManager />
+      </TabsContent>
+      <TabsContent value="positivacao" className="mt-0">
+        <PositivacaoReport />
       </TabsContent>
     </Tabs>
   );
