@@ -282,6 +282,12 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (ok) count++;
     }
     toast.success(`${count} atividade${count > 1 ? 's' : ''} designada${count > 1 ? 's' : ''}`);
+    // Hide assigned activities from current view
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      return next;
+    });
     handleClearSelection();
   };
 
