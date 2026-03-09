@@ -66,6 +66,7 @@ export interface QuoteItem {
   quantity: number;
   observations: string;
   imageUrl?: string | null;
+  itemDiscountValue?: number; // percentage: positive = discount, negative = surcharge
 }
 
 export type ClientType = 'lojista_alto' | 'lojista_medio' | 'corporativo' | 'escritorio_arquitetura';
