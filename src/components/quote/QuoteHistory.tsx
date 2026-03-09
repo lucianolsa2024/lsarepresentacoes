@@ -102,7 +102,11 @@ export function QuoteHistory({
     });
 
   const filteredQuotes = quotes.filter((quote) => {
+    // Rep filter
+    if (repFilter !== 'all' && quote.client.ownerEmail !== repFilter) return false;
+    
     const search = searchTerm.toLowerCase();
+    if (!search) return true;
     const quoteNumber = quote.id.slice(0, 8).toLowerCase();
     return (
       quote.client.name.toLowerCase().includes(search) ||
