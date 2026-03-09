@@ -3,9 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { ClientData } from '@/types/quote';
 import { toast } from 'sonner';
 
+export type ClientCurve = 'A' | 'B' | 'C' | 'D';
+
 export interface Client extends ClientData {
   id: string;
   parentClientId: string | null;
+  curve: ClientCurve;
+  curveUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
