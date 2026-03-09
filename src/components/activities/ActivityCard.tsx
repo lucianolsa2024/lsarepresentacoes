@@ -281,6 +281,12 @@ export function ActivityCard({
                 Preencher Checklist
               </Button>
             )}
+            {activity.quote_id && onViewQuote && (
+              <Button size="sm" variant="outline" onClick={() => onViewQuote(activity.quote_id!)}>
+                <FileText className="h-4 w-4 mr-1" />
+                Ver Orçamento
+              </Button>
+            )}
             <Button size="sm" onClick={() => onComplete(activity.id)}>
               <Check className="h-4 w-4 mr-1" />
               Concluir
