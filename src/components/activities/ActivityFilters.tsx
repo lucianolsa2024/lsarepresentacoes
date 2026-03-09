@@ -14,6 +14,10 @@ interface ActivityFiltersProps {
   statusFilter: ActivityStatus | 'all';
   onStatusFilterChange: (value: ActivityStatus | 'all') => void;
   onClearFilters: () => void;
+  repFilter?: string;
+  onRepFilterChange?: (value: string) => void;
+  representatives?: { name: string; email: string }[];
+  showRepFilter?: boolean;
 }
 
 export function ActivityFilters({
@@ -26,17 +30,22 @@ export function ActivityFilters({
   statusFilter,
   onStatusFilterChange,
   onClearFilters,
+  repFilter = 'all',
+  onRepFilterChange,
+  representatives = [],
+  showRepFilter = false,
 }: ActivityFiltersProps) {
   const hasActiveFilters = 
     search || 
     typeFilter !== 'all' || 
     priorityFilter !== 'all' || 
-    statusFilter !== 'all';
+    statusFilter !== 'all' ||
+    repFilter !== 'all';
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
+    <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
       {/* Search */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={search}
@@ -90,6 +99,21 @@ export function ActivityFilters({
           ))}
         </SelectContent>
       </Select>
+
+      {/* Representative Filter */}
+      {showRepFilter && onRepFilterChange && (
+        <Select value={repFilter} onValueChange={onRepFilterChange}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Representante" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Representantes</SelectItem>
+            {representatives.map(rep => (
+              <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Clear Filters */}
       {hasActiveFilters && (
