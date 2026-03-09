@@ -72,6 +72,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   // Bulk selection
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [search, setSearch] = useState('');
@@ -82,6 +83,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const filteredActivities = useMemo(() => {
     return activities.filter(activity => {
+      if (hiddenIds.has(activity.id)) return false;
       if (search) {
         const searchLower = search.toLowerCase();
         const matchesSearch = 
@@ -96,7 +98,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter]);
+  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds]);
 
   const handleClearFilters = () => {
     setSearch('');
@@ -280,6 +282,12 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (ok) count++;
     }
     toast.success(`${count} atividade${count > 1 ? 's' : ''} designada${count > 1 ? 's' : ''}`);
+    // Hide assigned activities from current view
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      return next;
+    });
     handleClearSelection();
   };
 
