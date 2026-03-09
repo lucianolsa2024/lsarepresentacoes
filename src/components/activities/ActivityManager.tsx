@@ -316,12 +316,37 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          {view === 'list' && (
+            <Button
+              variant={selectionMode ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                if (selectionMode) setSelectedIds(new Set());
+              }}
+            >
+              <CheckSquare className="h-4 w-4 mr-1" />
+              Selecionar
+            </Button>
+          )}
           <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Atividade
           </Button>
         </div>
       </div>
+
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onBulkComplete={handleBulkComplete}
+          onBulkCancel={handleBulkCancel}
+          onBulkStart={handleBulkStart}
+          onBulkAssign={handleBulkAssign}
+          onClearSelection={handleClearSelection}
+        />
+      )}
 
       {/* Filters */}
       {view !== 'report' && view !== 'calendar' && view !== 'checklist_report' && (
@@ -351,6 +376,10 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           onOpenChecklist={handleOpenChecklist}
           onViewQuote={onViewQuote}
           showCompleted={statusFilter === 'concluida' || statusFilter === 'all'}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
         />
       )}
 
