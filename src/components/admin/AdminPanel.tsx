@@ -32,6 +32,10 @@ export function AdminPanel({ orders }: AdminPanelProps) {
           <UserCheck className="h-4 w-4 mr-2" />
           Positivação
         </TabsTrigger>
+        <TabsTrigger value="share-loja">
+          <Store className="h-4 w-4 mr-2" />
+          Share de Loja
+        </TabsTrigger>
         <TabsTrigger value="curva">
           <TrendingUp className="h-4 w-4 mr-2" />
           Curva de Clientes
