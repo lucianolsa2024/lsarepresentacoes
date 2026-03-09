@@ -48,6 +48,7 @@ export function OrderManager() {
       due_date: order.deliveryDate,
       priority: 'media',
       client_id: clientId || undefined,
+      assigned_to_email: 'posicao@lsarepresentacoes.com.br',
     });
   };
 
