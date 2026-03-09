@@ -223,6 +223,16 @@ export function ClientManager({
   const isBranchMode = !!branchParentId;
   const parentForBranch = isBranchMode ? clients.find(c => c.id === branchParentId) : null;
 
+  const getCurveBadgeClass = (curve: ClientCurve): string => {
+    const map: Record<ClientCurve, string> = {
+      A: 'bg-green-800 text-white hover:bg-green-800',
+      B: 'bg-blue-600 text-white hover:bg-blue-600',
+      C: 'bg-yellow-500 text-white hover:bg-yellow-500',
+      D: 'bg-gray-400 text-white hover:bg-gray-400',
+    };
+    return map[curve] || map.D;
+  };
+
   const renderClientCard = (client: Client, isBranch = false) => {
     const branches = branchesByParent[client.id] || [];
 
