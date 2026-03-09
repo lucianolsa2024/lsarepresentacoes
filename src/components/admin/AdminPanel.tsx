@@ -17,13 +17,17 @@ export function AdminPanel({ orders }: AdminPanelProps) {
   return (
     <Tabs defaultValue="sales-report">
       <TabsList className="mb-4 flex-wrap">
-        <TabsTrigger value="sales-report">
+         <TabsTrigger value="sales-report">
           <BarChart3 className="h-4 w-4 mr-2" />
           Relatório de Vendas
         </TabsTrigger>
         <TabsTrigger value="goals">
           <Target className="h-4 w-4 mr-2" />
           Metas
+        </TabsTrigger>
+        <TabsTrigger value="okrs">
+          <Crosshair className="h-4 w-4 mr-2" />
+          OKRs
         </TabsTrigger>
         <TabsTrigger value="users">
           <Users className="h-4 w-4 mr-2" />
