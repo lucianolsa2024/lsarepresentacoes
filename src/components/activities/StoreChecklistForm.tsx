@@ -67,6 +67,10 @@ export function StoreChecklistForm({
   };
 
   const handleSave = async () => {
+    if (data.qtdProdutosNossos == null || data.qtdProdutosConcorrentes == null) {
+      toast.error('Preencha a quantidade de produtos nossos e concorrentes');
+      return;
+    }
     setSaving(true);
     try {
       await onSave(data);
