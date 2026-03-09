@@ -58,6 +58,7 @@ export function StoreChecklistForm({
         ...EMPTY_STORE_CHECKLIST,
         ...initialData,
         produtosExpostos: initialData?.produtosExpostos || [],
+        qtdPorCategoria: initialData?.qtdPorCategoria || { ...EMPTY_QTD_POR_CATEGORIA },
         cliente: clientName || initialData?.cliente || '',
         cidade: clientCity || initialData?.cidade || '',
       });
