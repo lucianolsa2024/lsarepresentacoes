@@ -110,6 +110,10 @@ const Index = () => {
     setItems(items.map((item) => (item.id === id ? { ...item, observations } : item)));
   };
 
+  const handleUpdateItemDiscount = (id: string, discountValue: number) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, itemDiscountValue: discountValue } : item)));
+  };
+
   const handleRemoveItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id));
     toast.success('Item removido');
