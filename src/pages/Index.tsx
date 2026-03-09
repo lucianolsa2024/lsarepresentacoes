@@ -72,7 +72,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct, refetch: refetchProducts } = useProducts();
   const { quotes: allQuotes, addQuote, updateQuote, updateQuoteStatus, deleteQuote, duplicateQuote } = useQuotes();
   const { clients, loading: clientsLoading, addClient, updateClient, deleteClient } = useClients();
-  const { activities, addActivity } = useActivities();
+  const { activities, addActivity, updateActivity } = useActivities();
   const { orders, addOrders } = useOrders();
   const { opportunities, addOpportunity } = useSalesOpportunities();
   const { user, signOut } = useAuth();
@@ -220,14 +220,27 @@ const Index = () => {
 
     syncQuoteToRDStation(quote);
 
-    // Auto-create follow-up activity D+5 only if no pending one exists for this quote
+    // Auto-create or update follow-up activity D+5 — only 1 per quote chain
+    const rootQuoteId = quote.parentQuoteId || quote.id;
+    const allChainIds = quotes
+      .filter(q => q.id === rootQuoteId || q.parentQuoteId === rootQuoteId)
+      .map(q => q.id);
+    // Also include the current new quote id
+    allChainIds.push(quote.id);
     const existingFollowUp = activities.find(
-      (a) => a.quote_id === quote.id && a.type === 'followup' && a.status !== 'concluida'
+      (a) => a.quote_id && allChainIds.includes(a.quote_id) && a.type === 'followup' && a.status !== 'concluida' && a.status !== 'cancelada'
     );
-    if (!existingFollowUp) {
+    const clientLabel = quote.client.company || quote.client.name;
+    if (existingFollowUp) {
+      // Update existing follow-up to point to latest version
+      await updateActivity(existingFollowUp.id, {
+        quote_id: quote.id,
+        title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
+        description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      });
+    } else {
       const followUpDate = new Date();
       followUpDate.setDate(followUpDate.getDate() + 5);
-      const clientLabel = quote.client.company || quote.client.name;
       await addActivity({
         type: 'followup',
         title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
