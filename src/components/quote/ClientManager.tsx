@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Client } from '@/hooks/useClients';
+import { Client, ClientCurve } from '@/hooks/useClients';
 import { ClientData, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,6 +40,7 @@ import {
   Map,
   UserCheck,
   GitBranch,
+  TrendingUp,
 } from 'lucide-react';
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
@@ -66,6 +67,7 @@ export function ClientManager({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [curveFilter, setCurveFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [branchParentId, setBranchParentId] = useState<string | null>(null);
   const { activeReps: representatives, emailToName } = useRepresentatives();
@@ -127,7 +129,8 @@ export function ClientManager({
       ownerEmail: client.ownerEmail,
       parentClientId: client.parentClientId,
       address: client.address,
-    });
+      curve: client.curve,
+    } as any);
     setIsDialogOpen(true);
   };
 
@@ -173,10 +176,16 @@ export function ClientManager({
   };
 
   const filteredParentClients = useMemo(() => {
-    if (!searchQuery.trim()) return parentClients;
+    let result = parentClients;
+    
+    // Filter by curve
+    if (curveFilter !== 'all') {
+      result = result.filter(c => (c.curve || 'D') === curveFilter);
+    }
+    
+    if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    // Search in parents AND their branches
-    return parentClients.filter((c) => {
+    return result.filter((c) => {
       const matchesParent =
         c.company.toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
@@ -190,7 +199,7 @@ export function ClientManager({
       );
       return matchesParent || matchesBranch;
     });
-  }, [parentClients, branchesByParent, searchQuery]);
+  }, [parentClients, branchesByParent, searchQuery, curveFilter]);
 
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
@@ -216,6 +225,16 @@ export function ClientManager({
   const isBranchMode = !!branchParentId;
   const parentForBranch = isBranchMode ? clients.find(c => c.id === branchParentId) : null;
 
+  const getCurveBadgeClass = (curve: ClientCurve): string => {
+    const map: Record<ClientCurve, string> = {
+      A: 'bg-green-800 text-white hover:bg-green-800',
+      B: 'bg-blue-600 text-white hover:bg-blue-600',
+      C: 'bg-yellow-500 text-white hover:bg-yellow-500',
+      D: 'bg-gray-400 text-white hover:bg-gray-400',
+    };
+    return map[curve] || map.D;
+  };
+
   const renderClientCard = (client: Client, isBranch = false) => {
     const branches = branchesByParent[client.id] || [];
 
@@ -234,9 +253,12 @@ export function ClientManager({
                   <Building2 className="h-5 w-5 text-primary" />
                 )}
               </div>
-              <div className="min-w-0">
+                <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold truncate">{client.company}</h3>
+                  <Badge className={`text-xs flex-shrink-0 ${getCurveBadgeClass(client.curve || 'D')}`}>
+                    {client.curve || 'D'}
+                  </Badge>
                   {!isBranch && branches.length > 0 && (
                     <Badge variant="secondary" className="text-xs flex-shrink-0">
                       {branches.length} filial{branches.length > 1 ? 'is' : ''}
@@ -438,6 +460,37 @@ export function ClientManager({
                   </div>
                 )}
 
+                {/* Curva - manual override */}
+                {!isBranchMode && editingClient && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Curva do Cliente
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Select
+                        value={(formData as any).curve || 'D'}
+                        onValueChange={(v) => updateField('curve' as any, v)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">Curva A</SelectItem>
+                          <SelectItem value="B">Curva B</SelectItem>
+                          <SelectItem value="C">Curva C</SelectItem>
+                          <SelectItem value="D">Curva D</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {editingClient.curve && (
+                        <span className="text-xs text-muted-foreground">
+                          Calculada: <Badge className={`text-xs ${getCurveBadgeClass(editingClient.curve)}`}>{editingClient.curve}</Badge>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2">
                   <Label className="flex items-center gap-1 mb-3">
                     <MapPin className="h-3 w-3" />
@@ -538,14 +591,28 @@ export function ClientManager({
 
         <TabsContent value="list" className="mt-4">
           <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por empresa, nome, CNPJ ou email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por empresa, nome, CNPJ ou email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={curveFilter} onValueChange={setCurveFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Curva" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Curvas</SelectItem>
+                  <SelectItem value="A">Curva A</SelectItem>
+                  <SelectItem value="B">Curva B</SelectItem>
+                  <SelectItem value="C">Curva C</SelectItem>
+                  <SelectItem value="D">Curva D</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="text-sm text-muted-foreground">
