@@ -174,10 +174,16 @@ export function ClientManager({
   };
 
   const filteredParentClients = useMemo(() => {
-    if (!searchQuery.trim()) return parentClients;
+    let result = parentClients;
+    
+    // Filter by curve
+    if (curveFilter !== 'all') {
+      result = result.filter(c => (c.curve || 'D') === curveFilter);
+    }
+    
+    if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    // Search in parents AND their branches
-    return parentClients.filter((c) => {
+    return result.filter((c) => {
       const matchesParent =
         c.company.toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
@@ -191,7 +197,7 @@ export function ClientManager({
       );
       return matchesParent || matchesBranch;
     });
-  }, [parentClients, branchesByParent, searchQuery]);
+  }, [parentClients, branchesByParent, searchQuery, curveFilter]);
 
   const updateField = (field: keyof ClientData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
