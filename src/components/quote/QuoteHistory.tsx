@@ -74,9 +74,12 @@ export function QuoteHistory({
   onStatusChange,
 }: QuoteHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [repFilter, setRepFilter] = useState<string>('all');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const isAdmin = useIsAdmin();
+  const { activeReps } = useRepresentatives();
 
   const getFollowUpStatus = (quoteId: string) => {
     const followUps = activities.filter(a => a.quote_id === quoteId && a.type === 'followup');
