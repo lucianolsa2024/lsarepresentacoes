@@ -1072,9 +1072,11 @@ export type Database = {
           id: string
           lost_at: string | null
           lost_reason: string | null
+          next_followup_date: string | null
           notes: string | null
           owner_email: string | null
           stage: string
+          stage_changed_at: string
           title: string
           updated_at: string
           value: number | null
@@ -1092,9 +1094,11 @@ export type Database = {
           id?: string
           lost_at?: string | null
           lost_reason?: string | null
+          next_followup_date?: string | null
           notes?: string | null
           owner_email?: string | null
           stage?: string
+          stage_changed_at?: string
           title: string
           updated_at?: string
           value?: number | null
@@ -1112,9 +1116,11 @@ export type Database = {
           id?: string
           lost_at?: string | null
           lost_reason?: string | null
+          next_followup_date?: string | null
           notes?: string | null
           owner_email?: string | null
           stage?: string
+          stage_changed_at?: string
           title?: string
           updated_at?: string
           value?: number | null
