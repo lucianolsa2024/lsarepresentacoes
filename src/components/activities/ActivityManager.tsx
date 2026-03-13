@@ -114,7 +114,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
+  }, [activities, search, categoryFilter, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
 
   const handleClearFilters = () => {
     setSearch('');
