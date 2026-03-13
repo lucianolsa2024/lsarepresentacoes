@@ -273,61 +273,31 @@ export function CommissionManager() {
     setImporting(true);
 
     try {
-      const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(await file.arrayBuffer());
-      const ws = wb.worksheets[0];
-      if (!ws) throw new Error('Planilha vazia');
+      const result = await importarPedidosExcel(file);
 
-      const rows: any[][] = [];
-      ws.eachRow((row) => rows.push(row.values as any[]));
-      if (rows.length < 2) throw new Error('Sem dados');
-
-      const headers = rows[0].map((h: any) => cellVal(h).toUpperCase().trim());
-
-      const colMap: Record<string, number> = {};
-
-      headers.forEach((h, i) => {
-        if (h.includes('TIPO PEDIDO')) colMap['TIPO PEDIDO'] = i;
-        if (h.includes('TABELA DE PRE')) colMap['TABELA DE PRECO'] = i;
-        if (h.includes('DT EMISSAO') || h.includes('DT EMISSÃO')) colMap['DT EMISSAO'] = i;
-        if (h === 'DT FAT' || h.includes('DT FAT')) colMap['DT FAT'] = i;
-        if (h === 'CLIENTE' || h.includes('CLIENTE')) colMap['CLIENTE'] = i;
-        if (h.includes('COND PGTO') || h.includes('COND. PGTO')) colMap['COND PGTO'] = i;
-        if (h.includes('NUMERO PEDIDO') || h.includes('NÚMERO PEDIDO')) colMap['NUMERO PEDIDO'] = i;
-        if (h.includes('NUMERO NF') || h.includes('NÚMERO NF')) colMap['NUMERO NF'] = i;
-        if (h.includes('REPRESENTANTE PF')) colMap['REPRESENTANTE PF'] = i;
-        if (h.includes('PRODUTO COMPLETO')) colMap['PRODUTO COMPLETO'] = i;
-        if (h.includes('VALOR')) colMap['VALOR'] = i;
-      });
-
-      const missing = ['DT FAT', 'CLIENTE', 'NUMERO PEDIDO', 'NUMERO NF', 'REPRESENTANTE PF', 'PRODUTO COMPLETO', 'VALOR']
-        .filter(k => colMap[k] === undefined);
-      if (missing.length > 0) throw new Error(`Colunas não encontradas: ${missing.join(', ')}`);
-
-      const parsed: CommissionEntry[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const nf = cellVal(row[colMap['NUMERO NF']]);
-        const dtFat = parseExcelDate(row[colMap['DT FAT']]);
-        if (!nf || !dtFat) continue;
-
-        parsed.push({
-          tipo_pedido: cellVal(row[colMap['TIPO PEDIDO']]),
-          tabela_preco: cellVal(row[colMap['TABELA DE PRECO']]),
-          dt_emissao: parseExcelDate(row[colMap['DT EMISSAO']]),
-          dt_fat: dtFat,
-          cliente: cellVal(row[colMap['CLIENTE']]),
-          cond_pgto: cellVal(row[colMap['COND PGTO']]),
-          numero_pedido: cellVal(row[colMap['NUMERO PEDIDO']]),
-          numero_nf: nf,
-          representante_pf: cellVal(row[colMap['REPRESENTANTE PF']]),
-          produto_completo: cellVal(row[colMap['PRODUTO COMPLETO']]),
-          valor: parsePrice(row[colMap['VALOR']]),
-        });
+      if (result.erros.length > 0) {
+        console.warn('[CommissionManager] Erros no parsing:', result.erros);
       }
 
+      // Convert PedidoLinha[] to CommissionEntry[] (only lines with NF + dt_fat)
+      const parsed: CommissionEntry[] = result.linhas
+        .filter(l => l.numero_nf !== null && l.dt_fat !== null)
+        .map(l => ({
+          tipo_pedido: l.tipo_pedido,
+          tabela_preco: l.tabela_preco,
+          dt_emissao: l.dt_emissao || '',
+          dt_fat: l.dt_fat!,
+          cliente: l.cliente,
+          cond_pgto: l.cond_pgto,
+          numero_pedido: String(l.numero_pedido),
+          numero_nf: String(l.numero_nf),
+          representante_pf: l.representante,
+          produto_completo: l.produto_completo,
+          valor: l.valor,
+        }));
+
       if (parsed.length === 0) {
-        toast.warning('Nenhum registro elegível (NF + DT FAT preenchidos).');
+        toast.warning(`Nenhum registro elegível (NF + DT FAT preenchidos). ${result.erros.length > 0 ? `${result.erros.length} linha(s) com erro.` : ''}`);
         setImporting(false);
         return;
       }
