@@ -103,14 +103,20 @@ export function ActivityForm({
   useEffect(() => {
     if (open) {
       if (activity) {
-        setCategory(activity.activity_category || 'tarefa');
+        const cat = activity.activity_category || 'tarefa';
+        setCategory(cat);
         setType(activity.type);
         setTitle(activity.title);
         setDescription(activity.description || '');
         setDueDate(activity.due_date);
         setDueTime(activity.due_time || '');
         setPriority(activity.priority);
-        setStatus(activity.status);
+        // Ensure status is compatible with category
+        const validStatuses = cat === 'crm'
+          ? CRM_STATUS_OPTIONS.map(o => o.value)
+          : TAREFA_STATUS_OPTIONS.map(o => o.value);
+        const actStatus = activity.status;
+        setStatus(validStatuses.includes(actStatus) ? actStatus : validStatuses[0]);
         setClientId(activity.client_id || '');
         setReminderMinutes(null);
         setAssignedToEmail(activity.assigned_to_email || '');
