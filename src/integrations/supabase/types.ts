@@ -294,6 +294,27 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
       client_influencers: {
         Row: {
           client_id: string
