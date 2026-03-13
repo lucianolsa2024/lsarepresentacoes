@@ -34,7 +34,7 @@ export function ActivityWidget({ activities, onViewAll, onActivityClick }: Activ
   const today = new Date().toISOString().split('T')[0];
   
   const overdue = activities.filter(a => 
-    a.status === 'pendente' && a.due_date < today
+    (a.status === 'pendente' || a.status === 'agendada') && a.due_date < today
   );
   
   const todayActivities = activities.filter(a => 
