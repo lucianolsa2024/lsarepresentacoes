@@ -65,28 +65,21 @@ function toFloat(value: unknown): number | null {
 function toDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
 
-  let date: Date | null = null;
+  let iso: string;
 
-  if (value instanceof Date) {
-    date = value;
-  } else if (typeof value === 'number') {
-    // Excel serializa datas como números (dias desde 1900)
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (parsed) {
-      date = new Date(parsed.y, parsed.m - 1, parsed.d);
-    }
-  } else if (typeof value === 'string') {
-    date = new Date(value);
+  if (typeof value === 'number') {
+    // Data serial do Excel → converter para ISO
+    // Fórmula: (serial - 25569) dias desde 01/01/1970
+    const ms = (value - 25569) * 86400 * 1000;
+    iso = new Date(ms).toISOString().split('T')[0];
+  } else {
+    const d = new Date(value as string);
+    if (isNaN(d.getTime())) return null;
+    iso = d.toISOString().split('T')[0];
   }
 
-  if (!date || isNaN(date.getTime())) return null;
-
-  const iso = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
-
-  // 2027-12-31 é um placeholder de "sem data definida" — tratar como null
-  if (iso === '2027-12-31') return null;
-
-  return iso;
+  // 2027-12-31 é placeholder de "sem data" no ERP — tratar como null
+  return iso === '2027-12-31' ? null : iso;
 }
 
 /**
