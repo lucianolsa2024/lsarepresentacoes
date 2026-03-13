@@ -68,6 +68,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [completeNotes, setCompleteNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  const [createDeal, setCreateDeal] = useState(false);
+  const [dealTitle, setDealTitle] = useState('');
+  const [dealValue, setDealValue] = useState('');
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
