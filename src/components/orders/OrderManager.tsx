@@ -113,6 +113,7 @@ export function OrderManager() {
             <Receipt className="h-4 w-4 mr-2" />
             Faturados
           </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="list" className="mt-4">
           <OrderList
