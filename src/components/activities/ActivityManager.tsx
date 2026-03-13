@@ -210,6 +210,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     if (data.assistenciaIdentificada && data.assistenciaProduto) {
       const clientName = checklistActivity.client?.company || data.cliente || '';
       await addActivity({
+        activity_category: 'tarefa',
         type: 'assistencia',
         title: `Assistência - ${clientName} - ${data.assistenciaProduto}`,
         description: `Produto: ${data.assistenciaProduto}\nDefeito: ${data.assistenciaDefeito}\n${data.assistenciaDescricao ? `Detalhes: ${data.assistenciaDescricao}` : ''}\n\nIdentificado no checklist de visita em ${data.dataVisita}`,
