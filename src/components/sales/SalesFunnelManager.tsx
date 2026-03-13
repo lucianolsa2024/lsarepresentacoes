@@ -192,8 +192,16 @@ export function SalesFunnelManager() {
 
   const stageGroups = useMemo(() => {
     const groups: Record<string, SalesOpportunity[]> = {};
+    const firstStageKey = activeStages[0]?.key || 'prospeccao';
     activeStages.forEach(s => { groups[s.key] = []; });
-    periodFilteredOpps.forEach(o => { if (groups[o.stage]) groups[o.stage].push(o); });
+    periodFilteredOpps.forEach(o => {
+      if (groups[o.stage]) {
+        groups[o.stage].push(o);
+      } else if (!['ganho', 'perdido'].includes(o.stage)) {
+        // Opportunities with unrecognized stages go to the first column
+        groups[firstStageKey].push(o);
+      }
+    });
     return groups;
   }, [periodFilteredOpps, activeStages]);
 
