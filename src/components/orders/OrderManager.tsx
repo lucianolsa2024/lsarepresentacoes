@@ -208,7 +208,10 @@ export function OrderManager() {
             onComplete={() => setActiveTab('list')}
           />
         </TabsContent>
+
+        <TabsContent value="faturados" className="mt-4">
+          <FaturadosImporter onComplete={() => setActiveTab('list')} />
+        </TabsContent>
       </Tabs>
-    </div>
   );
 }
