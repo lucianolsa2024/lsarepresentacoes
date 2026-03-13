@@ -81,8 +81,9 @@ export function SalesReport({ orders }: SalesReportProps) {
     const supArr = Array.from(suppliers).sort();
     return { rows: Object.entries(map).map(([rep, sups]) => ({ rep, ...sups })).sort((a, b) => a.rep.localeCompare(b.rep)), suppliers: supArr };
   }, [filtered]);
-
-  const totalRevenue = filtered.reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalVenda = filtered.filter(o => o.status !== 'faturado' && o.status !== 'entregue').reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalFaturado = filtered.filter(o => o.status === 'faturado' || o.status === 'entregue').reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalRevenue = totalVenda + totalFaturado;
 
   return (
     <div className="space-y-6">
