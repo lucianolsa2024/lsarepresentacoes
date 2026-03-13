@@ -138,9 +138,9 @@ export function OrderManager() {
         <TabsContent value="import" className="mt-4">
           <OrderImporter
             clients={clients}
+            existingOrderKeys={existingOrderKeys}
             onImport={async (ordersData) => {
               const count = await addOrders(ordersData);
-              // Create activities for orders with delivery dates
               for (const d of ordersData) {
                 if (d.order.deliveryDate) {
                   await createDeliveryActivity({ ...d.order }, d.clientId);
