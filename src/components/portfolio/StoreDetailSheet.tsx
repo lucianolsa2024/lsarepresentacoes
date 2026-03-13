@@ -39,6 +39,7 @@ export function StoreDetailSheet({
   onAddTraining, onAddNps, onRegisterVisit, influencers,
 }: Props) {
   const { representatives } = useRepresentatives();
+  const { activities } = useActivities();
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [showNpsForm, setShowNpsForm] = useState(false);
@@ -50,8 +51,6 @@ export function StoreDetailSheet({
   const { client, curve, npsAverage } = portfolioClient;
   const activeReps = representatives.filter(r => r.active);
 
-  // Get visit history from activities
-  const { activities } = useActivities();
   const visitActivities = (activities || [])
     .filter(a => a.client_id === client.id && a.type === 'visita' && ['realizada', 'concluida'].includes(a.status))
     .sort((a, b) => b.due_date.localeCompare(a.due_date));
