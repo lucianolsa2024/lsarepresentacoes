@@ -66,7 +66,7 @@ export interface QuoteItem {
   quantity: number;
   observations: string;
   imageUrl?: string | null;
-  itemDiscountValue?: number; // percentage: positive = discount, negative = surcharge
+  itemDiscountValue?: number;
 }
 
 export type ClientType = 'lojista_alto' | 'lojista_medio' | 'corporativo' | 'escritorio_arquitetura';
@@ -78,6 +78,15 @@ export const CLIENT_TYPE_OPTIONS: { value: ClientType; label: string }[] = [
   { value: 'escritorio_arquitetura', label: 'Escritório de Arquitetura' },
 ];
 
+export interface ClientInfluencer {
+  id?: string;
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  notes: string;
+}
+
 export interface ClientData {
   name: string;
   company: string;
@@ -88,6 +97,13 @@ export interface ClientData {
   clientType?: ClientType;
   ownerEmail?: string;
   parentClientId?: string | null;
+  inscricaoEstadual?: string;
+  site?: string;
+  segment?: string;
+  defaultPaymentTerms?: string;
+  notes?: string;
+  representativeEmails?: string[];
+  influencers?: ClientInfluencer[];
   address: {
     street: string;
     number: string;
@@ -113,7 +129,7 @@ export const DISCOUNT_TIER_OPTIONS: { value: DiscountTier; label: string; prefix
 export interface PaymentConditions {
   method: 'avista' | 'parcelado' | 'entrada_parcelas';
   installments: number;
-  installmentPlan: string; // e.g., "30/60/90" for display
+  installmentPlan: string;
   downPayment: number;
   discountTier?: DiscountTier;
   discountType: 'percentage' | 'fixed';
@@ -158,6 +174,13 @@ export const INITIAL_CLIENT: ClientData = {
   isNewClient: false,
   clientType: undefined,
   ownerEmail: undefined,
+  inscricaoEstadual: '',
+  site: '',
+  segment: '',
+  defaultPaymentTerms: '',
+  notes: '',
+  representativeEmails: [],
+  influencers: [],
   address: {
     street: '',
     number: '',

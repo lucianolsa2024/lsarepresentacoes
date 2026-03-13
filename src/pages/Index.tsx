@@ -597,6 +597,18 @@ const Index = () => {
                       onUpdate={updateClient}
                       onDelete={deleteClient}
                       onViewDetail={handleViewClientDetail}
+                      lastContactByClient={(() => {
+                        const map: Record<string, string> = {};
+                        activities.forEach(a => {
+                          if (a.client_id && (a.status === 'realizada' || a.status === 'concluida' || a.completed_at)) {
+                            const date = a.completed_at || a.due_date;
+                            if (!map[a.client_id] || date > map[a.client_id]) {
+                              map[a.client_id] = date;
+                            }
+                          }
+                        });
+                        return map;
+                      })()}
                     />
                   </TabsContent>
 

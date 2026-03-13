@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Client, ClientCurve } from '@/hooks/useClients';
-import { ClientData, INITIAL_CLIENT } from '@/types/quote';
+import { ClientData, ClientInfluencer, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, 
   Trash2, 
@@ -42,11 +44,23 @@ import {
   UserCheck,
   GitBranch,
   TrendingUp,
+  Globe,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import { ClientMap } from './ClientMap';
 import { toast } from 'sonner';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { useCepLookup } from '@/hooks/useCepLookup';
+import { useClientSegments } from '@/hooks/useClientSegments';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface ClientManagerProps {
   clients: Client[];
@@ -55,6 +69,7 @@ interface ClientManagerProps {
   onUpdate: (id: string, client: ClientData) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   onViewDetail?: (clientId: string) => void;
+  lastContactByClient?: Record<string, string>;
 }
 
 export function ClientManager({
@@ -64,16 +79,19 @@ export function ClientManager({
   onUpdate,
   onDelete,
   onViewDetail,
+  lastContactByClient = {},
 }: ClientManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [curveFilter, setCurveFilter] = useState<string>('all');
+  const [segmentFilter, setSegmentFilter] = useState<string>('all');
   const [repFilter, setRepFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [branchParentId, setBranchParentId] = useState<string | null>(null);
+  const [newSegmentInput, setNewSegmentInput] = useState('');
   const { activeReps: representatives, emailToName } = useRepresentatives();
   const { lookupCep, loading: cepLoading } = useCepLookup();
+  const { segments, addSegment } = useClientSegments();
   const isAdmin = useIsAdmin();
 
   const [formData, setFormData] = useState<ClientData>(INITIAL_CLIENT);
@@ -99,6 +117,7 @@ export function ClientManager({
     setFormData(INITIAL_CLIENT);
     setEditingClient(null);
     setBranchParentId(null);
+    setNewSegmentInput('');
   };
 
   const openNewDialog = () => {
@@ -109,13 +128,13 @@ export function ClientManager({
   const openNewBranchDialog = (parentClient: Client) => {
     resetForm();
     setBranchParentId(parentClient.id);
-    // Pre-fill company name with parent's name
     setFormData({
       ...INITIAL_CLIENT,
       company: parentClient.company,
       ownerEmail: parentClient.ownerEmail,
       document: parentClient.document,
       parentClientId: parentClient.id,
+      representativeEmails: parentClient.representativeEmails || [],
     });
     setIsDialogOpen(true);
   };
@@ -131,6 +150,13 @@ export function ClientManager({
       isNewClient: client.isNewClient,
       ownerEmail: client.ownerEmail,
       parentClientId: client.parentClientId,
+      inscricaoEstadual: client.inscricaoEstadual || '',
+      site: client.site || '',
+      segment: client.segment || '',
+      defaultPaymentTerms: client.defaultPaymentTerms || '',
+      notes: client.notes || '',
+      representativeEmails: client.representativeEmails || [],
+      influencers: client.influencers || [],
       address: client.address,
       curve: client.curve,
     } as any);
@@ -148,10 +174,10 @@ export function ClientManager({
       parentClientId: branchParentId || formData.parentClientId || null,
     };
 
-    // For branches, inherit ownerEmail from parent
     if (dataToSave.parentClientId) {
       const parent = clients.find(c => c.id === dataToSave.parentClientId);
-      if (parent?.ownerEmail) {
+      if (parent?.representativeEmails?.length) {
+        dataToSave.representativeEmails = parent.representativeEmails;
         dataToSave.ownerEmail = parent.ownerEmail;
       }
     }
@@ -181,14 +207,15 @@ export function ClientManager({
   const filteredParentClients = useMemo(() => {
     let result = parentClients;
     
-    // Filter by curve
-    if (curveFilter !== 'all') {
-      result = result.filter(c => (c.curve || 'D') === curveFilter);
+    if (segmentFilter !== 'all') {
+      result = result.filter(c => c.segment === segmentFilter);
     }
 
-    // Filter by representative
     if (repFilter !== 'all') {
-      result = result.filter(c => c.ownerEmail === repFilter);
+      result = result.filter(c => 
+        c.ownerEmail === repFilter || 
+        (c.representativeEmails || []).includes(repFilter)
+      );
     }
     
     if (!searchQuery.trim()) return result;
@@ -207,9 +234,9 @@ export function ClientManager({
       );
       return matchesParent || matchesBranch;
     });
-  }, [parentClients, branchesByParent, searchQuery, curveFilter, repFilter]);
+  }, [parentClients, branchesByParent, searchQuery, segmentFilter, repFilter]);
 
-  const updateField = (field: keyof ClientData, value: string | boolean) => {
+  const updateField = (field: keyof ClientData, value: any) => {
     setFormData({ ...formData, [field]: value });
   };
 
@@ -230,8 +257,53 @@ export function ClientManager({
     }
   };
 
+  const toggleRep = (email: string) => {
+    const current = formData.representativeEmails || [];
+    if (current.includes(email)) {
+      updateField('representativeEmails', current.filter(e => e !== email));
+    } else {
+      updateField('representativeEmails', [...current, email]);
+    }
+  };
+
+  const addInfluencer = () => {
+    const current = formData.influencers || [];
+    updateField('influencers', [...current, { name: '', role: '', phone: '', email: '', notes: '' }]);
+  };
+
+  const updateInfluencer = (index: number, field: keyof ClientInfluencer, value: string) => {
+    const current = [...(formData.influencers || [])];
+    current[index] = { ...current[index], [field]: value };
+    updateField('influencers', current);
+  };
+
+  const removeInfluencer = (index: number) => {
+    const current = [...(formData.influencers || [])];
+    current.splice(index, 1);
+    updateField('influencers', current);
+  };
+
+  const handleAddSegment = async () => {
+    if (!newSegmentInput.trim()) return;
+    const result = await addSegment(newSegmentInput.trim());
+    if (result) {
+      updateField('segment', result.name);
+      setNewSegmentInput('');
+      toast.success('Segmento adicionado');
+    } else {
+      toast.error('Erro ao adicionar segmento');
+    }
+  };
+
   const isBranchMode = !!branchParentId;
   const parentForBranch = isBranchMode ? clients.find(c => c.id === branchParentId) : null;
+
+  const getRepNames = (client: Client): string => {
+    const emails = client.representativeEmails?.length 
+      ? client.representativeEmails 
+      : client.ownerEmail ? [client.ownerEmail] : [];
+    return emails.map(e => emailToName[e] || e).join(', ');
+  };
 
   const getCurveBadgeClass = (curve: ClientCurve): string => {
     const map: Record<ClientCurve, string> = {
@@ -243,128 +315,12 @@ export function ClientManager({
     return map[curve] || map.D;
   };
 
-  const renderClientCard = (client: Client, isBranch = false) => {
-    const branches = branchesByParent[client.id] || [];
-
-    return (
-      <Card key={client.id} className={`hover:shadow-md transition-shadow ${isBranch ? 'border-l-4 border-l-primary/30' : ''}`}>
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-3">
-            <div
-              className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
-              onClick={() => onViewDetail?.(client.id)}
-            >
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${isBranch ? 'bg-accent' : 'bg-primary/10'}`}>
-                {isBranch ? (
-                  <GitBranch className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Building2 className="h-5 w-5 text-primary" />
-                )}
-              </div>
-                <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold truncate">{client.company}</h3>
-                  <Badge className={`text-xs flex-shrink-0 ${getCurveBadgeClass(client.curve || 'D')}`}>
-                    {client.curve || 'D'}
-                  </Badge>
-                  {!isBranch && branches.length > 0 && (
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">
-                      {branches.length} filial{branches.length > 1 ? 'is' : ''}
-                    </Badge>
-                  )}
-                  {isBranch && (
-                    <Badge variant="outline" className="text-xs flex-shrink-0">Filial</Badge>
-                  )}
-                </div>
-                {client.name && (
-                  <p className="text-sm text-muted-foreground truncate">{client.name}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-1 flex-shrink-0">
-              {onViewDetail && (
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onViewDetail(client.id); }} title="Ver histórico">
-                  <Eye className="h-4 w-4" />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEditDialog(client); }}>
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(client.id); }}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-1 text-sm text-muted-foreground">
-            {client.document && <p className="truncate">{client.document}</p>}
-            {client.phone && (
-              <p className="flex items-center gap-1"><Phone className="h-3 w-3" />{client.phone}</p>
-            )}
-            {client.email && (
-              <p className="flex items-center gap-1 truncate"><Mail className="h-3 w-3" />{client.email}</p>
-            )}
-            {client.address.city && client.address.state && (
-              <p className="flex items-center gap-1"><MapPin className="h-3 w-3" />{client.address.city} - {client.address.state}</p>
-            )}
-            {client.ownerEmail && (
-              <p className="flex items-center gap-1 text-primary"><UserCheck className="h-3 w-3" />{emailToName[client.ownerEmail] || client.ownerEmail}</p>
-            )}
-          </div>
-
-          {/* Branch action + branch list for parent clients */}
-          {!isBranch && (
-            <div className="mt-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={(e) => { e.stopPropagation(); openNewBranchDialog(client); }}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Adicionar Filial
-              </Button>
-
-              {branches.length > 0 && (
-                <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
-                  {branches.map(branch => (
-                    <div
-                      key={branch.id}
-                      className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => onViewDetail?.(branch.id)}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <GitBranch className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm font-medium truncate">{branch.name || 'Filial'}</span>
-                          {branch.address.city && (
-                            <span className="text-xs text-muted-foreground">• {branch.address.city}{branch.address.state ? ` - ${branch.address.state}` : ''}</span>
-                          )}
-                        </div>
-                        {branch.address.street && (
-                          <p className="text-xs text-muted-foreground truncate ml-4.5">
-                            {branch.address.street}{branch.address.number ? `, ${branch.address.number}` : ''}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(branch); }}>
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(branch.id); }}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+  // Unique segments from data
+  const allSegments = useMemo(() => {
+    const fromClients = new Set(clients.map(c => c.segment).filter(Boolean));
+    const fromDb = new Set(segments.map(s => s.name));
+    return Array.from(new Set([...fromClients, ...fromDb])).sort();
+  }, [clients, segments]);
 
   return (
     <div className="space-y-6">
@@ -378,7 +334,7 @@ export function ClientManager({
                 Novo Cliente
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingClient
@@ -392,118 +348,86 @@ export function ClientManager({
               {isBranchMode && (
                 <div className="bg-primary/10 text-primary text-sm px-3 py-2 rounded-md flex items-center gap-2">
                   <GitBranch className="h-4 w-4" />
-                  <span>Esta filial ficará vinculada à matriz <strong>{parentForBranch?.company}</strong>. O responsável será herdado automaticamente.</span>
+                  <span>Filial vinculada à matriz <strong>{parentForBranch?.company}</strong>.</span>
                 </div>
               )}
 
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{isBranchMode ? 'Nome da Filial / Unidade *' : 'Empresa *'}</Label>
-                    <Input
-                      value={formData.company}
-                      onChange={(e) => updateField('company', e.target.value)}
-                      placeholder={isBranchMode ? 'Ex: Loeil - Unidade Centro' : 'Nome da empresa'}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nome do Contato</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="Nome do contato"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>CPF / CNPJ</Label>
-                    <Input
-                      value={formData.document}
-                      onChange={(e) => updateField('document', e.target.value)}
-                      placeholder="000.000.000-00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      placeholder="email@exemplo.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Responsável - hidden for branches */}
-                {!isBranchMode && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <UserCheck className="h-3 w-3" />
-                      Responsável
-                    </Label>
-                    <Select
-                      value={formData.ownerEmail || 'none'}
-                      onValueChange={(v) => updateField('ownerEmail', v === 'none' ? undefined as any : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o responsável..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Não definido</SelectItem>
-                        {representatives.map(r => (
-                          <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Curva - manual override */}
-                {!isBranchMode && editingClient && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Curva do Cliente
-                    </Label>
-                    <div className="flex items-center gap-3">
-                      <Select
-                        value={(formData as any).curve || 'D'}
-                        onValueChange={(v) => updateField('curve' as any, v)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A">Curva A</SelectItem>
-                          <SelectItem value="B">Curva B</SelectItem>
-                          <SelectItem value="C">Curva C</SelectItem>
-                          <SelectItem value="D">Curva D</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {editingClient.curve && (
-                        <span className="text-xs text-muted-foreground">
-                          Calculada: <Badge className={`text-xs ${getCurveBadgeClass(editingClient.curve)}`}>{editingClient.curve}</Badge>
-                        </span>
-                      )}
+              <div className="space-y-5 py-4">
+                {/* ===== DADOS CADASTRAIS ===== */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Dados Cadastrais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isBranchMode ? 'Nome da Filial *' : 'Nome / Razão Social *'}</Label>
+                      <Input
+                        value={formData.company}
+                        onChange={(e) => updateField('company', e.target.value)}
+                        placeholder={isBranchMode ? 'Ex: Loja Centro' : 'Razão social da empresa'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome do Contato</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        placeholder="Nome do contato principal"
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className="pt-2">
-                  <Label className="flex items-center gap-1 mb-3">
-                    <MapPin className="h-3 w-3" />
-                    Endereço {isBranchMode && <span className="text-xs text-muted-foreground">(desta unidade)</span>}
-                  </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <div className="space-y-2">
+                      <Label>CNPJ / CPF</Label>
+                      <Input
+                        value={formData.document}
+                        onChange={(e) => updateField('document', e.target.value)}
+                        placeholder="00.000.000/0000-00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Inscrição Estadual</Label>
+                      <Input
+                        value={formData.inscricaoEstadual || ''}
+                        onChange={(e) => updateField('inscricaoEstadual', e.target.value)}
+                        placeholder="Inscrição estadual"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>E-mail</Label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => updateField('email', e.target.value)}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1"><Phone className="h-3 w-3" />Telefone / WhatsApp</Label>
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => updateField('phone', e.target.value)}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="flex items-center gap-1"><Globe className="h-3 w-3" />Site</Label>
+                      <Input
+                        value={formData.site || ''}
+                        onChange={(e) => updateField('site', e.target.value)}
+                        placeholder="https://www.exemplo.com.br"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ===== ENDEREÇO ===== */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> Endereço
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">CEP</Label>
@@ -523,7 +447,7 @@ export function ClientManager({
                       </div>
                     </div>
                     <div className="md:col-span-2 space-y-2">
-                      <Label className="text-xs text-muted-foreground">Rua</Label>
+                      <Label className="text-xs text-muted-foreground">Logradouro</Label>
                       <Input
                         value={formData.address.street}
                         onChange={(e) => updateAddress('street', e.target.value)}
@@ -539,7 +463,6 @@ export function ClientManager({
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Complemento</Label>
@@ -576,6 +499,150 @@ export function ClientManager({
                   </div>
                 </div>
 
+                {/* ===== CLASSIFICAÇÃO COMERCIAL ===== */}
+                {!isBranchMode && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Classificação Comercial</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Segmento</Label>
+                        <Select
+                          value={formData.segment || 'none'}
+                          onValueChange={(v) => updateField('segment', v === 'none' ? '' : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o segmento..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não definido</SelectItem>
+                            {allSegments.map(seg => (
+                              <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            placeholder="Novo segmento..."
+                            value={newSegmentInput}
+                            onChange={(e) => setNewSegmentInput(e.target.value)}
+                            className="text-xs h-8"
+                          />
+                          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleAddSegment} disabled={!newSegmentInput.trim()}>
+                            <Plus className="h-3 w-3 mr-1" /> Adicionar
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Condição de Pagamento Padrão</Label>
+                        <Input
+                          value={formData.defaultPaymentTerms || ''}
+                          onChange={(e) => updateField('defaultPaymentTerms', e.target.value)}
+                          placeholder="Ex: 30/60/90 DDL"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Curva - manual override */}
+                    {editingClient && (
+                      <div className="mt-3 space-y-2">
+                        <Label className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Curva do Cliente
+                        </Label>
+                        <div className="flex items-center gap-3">
+                          <Select
+                            value={(formData as any).curve || 'D'}
+                            onValueChange={(v) => updateField('curve' as any, v)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="A">Curva A</SelectItem>
+                              <SelectItem value="B">Curva B</SelectItem>
+                              <SelectItem value="C">Curva C</SelectItem>
+                              <SelectItem value="D">Curva D</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {editingClient.curve && (
+                            <span className="text-xs text-muted-foreground">
+                              Calculada: <Badge className={`text-xs ${getCurveBadgeClass(editingClient.curve)}`}>{editingClient.curve}</Badge>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ===== RESPONSÁVEIS ===== */}
+                {!isBranchMode && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" /> Responsáveis (Representantes)
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {representatives.map(rep => {
+                        const isSelected = (formData.representativeEmails || []).includes(rep.email);
+                        return (
+                          <label
+                            key={rep.email}
+                            className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                              isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-accent'
+                            }`}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleRep(rep.email)}
+                            />
+                            <span className="text-sm">{rep.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ===== INFLUENCIADORES ===== */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Influenciadores
+                  </h3>
+                  {(formData.influencers || []).map((inf, idx) => (
+                    <div key={idx} className="border rounded-md p-3 mb-3 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-muted-foreground">Influenciador {idx + 1}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeInfluencer(idx)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input placeholder="Nome" value={inf.name} onChange={(e) => updateInfluencer(idx, 'name', e.target.value)} />
+                        <Input placeholder="Cargo" value={inf.role} onChange={(e) => updateInfluencer(idx, 'role', e.target.value)} />
+                        <Input placeholder="Telefone / WhatsApp" value={inf.phone} onChange={(e) => updateInfluencer(idx, 'phone', e.target.value)} />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Input placeholder="E-mail" value={inf.email} onChange={(e) => updateInfluencer(idx, 'email', e.target.value)} />
+                        <Input placeholder="Observação" value={inf.notes} onChange={(e) => updateInfluencer(idx, 'notes', e.target.value)} />
+                      </div>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addInfluencer}>
+                    <UserPlus className="h-3 w-3 mr-1" /> Adicionar Influenciador
+                  </Button>
+                </div>
+
+                {/* ===== OBSERVAÇÕES ===== */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Observações</h3>
+                  <Textarea
+                    value={formData.notes || ''}
+                    onChange={(e) => updateField('notes', e.target.value)}
+                    placeholder="Anotações gerais sobre o cliente..."
+                    rows={3}
+                  />
+                </div>
+
                 <Button onClick={handleSubmit} className="w-full">
                   {editingClient ? 'Salvar Alterações' : isBranchMode ? 'Cadastrar Filial' : 'Cadastrar Cliente'}
                 </Button>
@@ -599,8 +666,8 @@ export function ClientManager({
 
         <TabsContent value="list" className="mt-4">
           <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
+            <div className="flex gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por empresa, nome, CNPJ ou email..."
@@ -609,16 +676,15 @@ export function ClientManager({
                   className="pl-10"
                 />
               </div>
-              <Select value={curveFilter} onValueChange={setCurveFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Curva" />
+              <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Segmento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas Curvas</SelectItem>
-                  <SelectItem value="A">Curva A</SelectItem>
-                  <SelectItem value="B">Curva B</SelectItem>
-                  <SelectItem value="C">Curva C</SelectItem>
-                  <SelectItem value="D">Curva D</SelectItem>
+                  <SelectItem value="all">Todos Segmentos</SelectItem>
+                  {allSegments.map(seg => (
+                    <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {isAdmin && (
@@ -637,10 +703,7 @@ export function ClientManager({
             </div>
 
             <div className="text-sm text-muted-foreground">
-              {parentClients.length} empresa{parentClients.length !== 1 ? 's' : ''}
-              {Object.values(branchesByParent).flat().length > 0 && (
-                <> • {Object.values(branchesByParent).flat().length} filial{Object.values(branchesByParent).flat().length !== 1 ? 'is' : ''}</>
-              )}
+              {filteredParentClients.length} cliente{filteredParentClients.length !== 1 ? 's' : ''}
             </div>
 
             {loading ? (
@@ -653,13 +716,129 @@ export function ClientManager({
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum cliente cadastrado</p>
-                  <p className="text-sm">Clique em "Novo Cliente" para começar</p>
+                  <p>Nenhum cliente encontrado</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredParentClients.map((client) => renderClientCard(client))}
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome / Razão Social</TableHead>
+                      <TableHead>Segmento</TableHead>
+                      <TableHead>Cond. Pagamento</TableHead>
+                      <TableHead>Responsável(eis)</TableHead>
+                      <TableHead>Último Contato</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredParentClients.map((client) => {
+                      const branches = branchesByParent[client.id] || [];
+                      const lastContact = lastContactByClient?.[client.id];
+                      return (
+                        <>
+                          <TableRow
+                            key={client.id}
+                            className="cursor-pointer hover:bg-accent/50"
+                            onClick={() => onViewDetail?.(client.id)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+                                <div>
+                                  <span className="font-medium">{client.company}</span>
+                                  {client.isNewClient && (
+                                    <Badge variant="secondary" className="ml-2 text-xs">Novo</Badge>
+                                  )}
+                                  {branches.length > 0 && (
+                                    <Badge variant="outline" className="ml-1 text-xs">{branches.length} filial{branches.length > 1 ? 'is' : ''}</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {client.segment ? (
+                                <Badge variant="outline" className="text-xs">{client.segment}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{client.defaultPaymentTerms || '—'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{getRepNames(client) || '—'}</span>
+                            </TableCell>
+                            <TableCell>
+                              {lastContact ? (
+                                <span className="text-sm">{new Date(lastContact).toLocaleDateString('pt-BR')}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                {onViewDetail && (
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewDetail(client.id)} title="Ver detalhes">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(client)} title="Editar">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openNewBranchDialog(client)} title="Adicionar filial">
+                                  <GitBranch className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(client.id)} title="Excluir">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {/* Inline branch rows */}
+                          {branches.map(branch => (
+                            <TableRow
+                              key={branch.id}
+                              className="cursor-pointer hover:bg-accent/50 bg-muted/30"
+                              onClick={() => onViewDetail?.(branch.id)}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2 pl-6">
+                                  <GitBranch className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm">{branch.name || branch.company}</span>
+                                  {branch.address.city && (
+                                    <span className="text-xs text-muted-foreground">• {branch.address.city}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell />
+                              <TableCell />
+                              <TableCell />
+                              <TableCell>
+                                {lastContactByClient?.[branch.id] ? (
+                                  <span className="text-sm">{new Date(lastContactByClient[branch.id]).toLocaleDateString('pt-BR')}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(branch)}>
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(branch.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -678,7 +857,7 @@ export function ClientManager({
               Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
               {deleteId && branchesByParent[deleteId]?.length > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  Atenção: este cliente possui {branchesByParent[deleteId].length} filial(is) que ficarão desvinculadas.
+                  Atenção: este cliente possui {branchesByParent[deleteId].length} filial(is) que serão excluídas.
                 </span>
               )}
             </AlertDialogDescription>
