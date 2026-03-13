@@ -51,6 +51,7 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<{ order: OrderFormData; nfNumber: string | null; isFaturado: boolean }[]>([]);
   const [stats, setStats] = useState<{ total: number; faturados: number; duplicatas: number; erros: string[] } | null>(null);
+  const [rawDebug, setRawDebug] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { nameToEmail } = useRepresentatives();
   const normalizedNameToEmail = useMemo(() => {
