@@ -141,6 +141,19 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
           </SelectContent>
         </Select>
       </div>
+      <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs whitespace-nowrap">Emissão de</Label>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40 h-9" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs whitespace-nowrap">até</Label>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40 h-9" />
+        </div>
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Limpar datas</Button>
+        )}
+      </div>
 
       <div className="flex gap-4 text-sm text-muted-foreground">
         <span>{filtered.length} pedido(s)</span>
