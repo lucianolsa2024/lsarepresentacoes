@@ -31,31 +31,41 @@ export function SalesReport({ orders }: SalesReportProps) {
   }, [orders, startDate, endDate]);
 
   const bySupplier = useMemo(() => {
-    const map: Record<string, { revenue: number; volume: number; orders: number }> = {};
+    const map: Record<string, { venda: number; faturado: number; volume: number; orders: number }> = {};
     filtered.forEach((o) => {
       const key = o.supplier || 'SEM FORNECEDOR';
-      if (!map[key]) map[key] = { revenue: 0, volume: 0, orders: 0 };
-      map[key].revenue += o.price * o.quantity;
+      if (!map[key]) map[key] = { venda: 0, faturado: 0, volume: 0, orders: 0 };
+      const val = o.price * o.quantity;
+      if (o.status === 'faturado' || o.status === 'entregue') {
+        map[key].faturado += val;
+      } else {
+        map[key].venda += val;
+      }
       map[key].volume += o.quantity;
       map[key].orders += 1;
     });
     return Object.entries(map)
-      .map(([name, d]) => ({ name, ...d, ticket: d.orders ? d.revenue / d.orders : 0 }))
-      .sort((a, b) => b.revenue - a.revenue);
+      .map(([name, d]) => ({ name, ...d, total: d.venda + d.faturado, ticket: d.orders ? (d.venda + d.faturado) / d.orders : 0 }))
+      .sort((a, b) => b.total - a.total);
   }, [filtered]);
 
   const byRep = useMemo(() => {
-    const map: Record<string, { revenue: number; volume: number; orders: number }> = {};
+    const map: Record<string, { venda: number; faturado: number; volume: number; orders: number }> = {};
     filtered.forEach((o) => {
       const key = o.representative || 'SEM VENDEDOR';
-      if (!map[key]) map[key] = { revenue: 0, volume: 0, orders: 0 };
-      map[key].revenue += o.price * o.quantity;
+      if (!map[key]) map[key] = { venda: 0, faturado: 0, volume: 0, orders: 0 };
+      const val = o.price * o.quantity;
+      if (o.status === 'faturado' || o.status === 'entregue') {
+        map[key].faturado += val;
+      } else {
+        map[key].venda += val;
+      }
       map[key].volume += o.quantity;
       map[key].orders += 1;
     });
     return Object.entries(map)
-      .map(([name, d]) => ({ name, ...d, ticket: d.orders ? d.revenue / d.orders : 0 }))
-      .sort((a, b) => b.revenue - a.revenue);
+      .map(([name, d]) => ({ name, ...d, total: d.venda + d.faturado, ticket: d.orders ? (d.venda + d.faturado) / d.orders : 0 }))
+      .sort((a, b) => b.total - a.total);
   }, [filtered]);
 
   const crossData = useMemo(() => {
@@ -71,8 +81,9 @@ export function SalesReport({ orders }: SalesReportProps) {
     const supArr = Array.from(suppliers).sort();
     return { rows: Object.entries(map).map(([rep, sups]) => ({ rep, ...sups })).sort((a, b) => a.rep.localeCompare(b.rep)), suppliers: supArr };
   }, [filtered]);
-
-  const totalRevenue = filtered.reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalVenda = filtered.filter(o => o.status !== 'faturado' && o.status !== 'entregue').reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalFaturado = filtered.filter(o => o.status === 'faturado' || o.status === 'entregue').reduce((s, o) => s + o.price * o.quantity, 0);
+  const totalRevenue = totalVenda + totalFaturado;
 
   return (
     <div className="space-y-6">
@@ -91,9 +102,12 @@ export function SalesReport({ orders }: SalesReportProps) {
               <Label>Até</Label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-44" />
             </div>
-            <div className="text-sm text-muted-foreground">
-              {filtered.length} pedidos | Total: <strong>{formatCurrency(totalRevenue)}</strong>
-            </div>
+             <div className="text-sm text-muted-foreground space-x-3">
+               <span>{filtered.length} pedidos</span>
+               <span>Venda: <strong className="text-foreground">{formatCurrency(totalVenda)}</strong></span>
+               <span>Faturado: <strong className="text-foreground">{formatCurrency(totalFaturado)}</strong></span>
+               <span>Total: <strong className="text-foreground">{formatCurrency(totalRevenue)}</strong></span>
+             </div>
           </div>
         </CardContent>
       </Card>
@@ -101,16 +115,18 @@ export function SalesReport({ orders }: SalesReportProps) {
       {/* Chart by Supplier */}
       {bySupplier.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Faturamento por Fornecedor</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bySupplier} layout="vertical" margin={{ left: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="revenue" name="Faturamento" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+           <CardHeader><CardTitle className="text-lg">Venda e Faturamento por Fornecedor</CardTitle></CardHeader>
+           <CardContent>
+             <div className="h-72">
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={bySupplier} layout="vertical" margin={{ left: 80 }}>
+                   <CartesianGrid strokeDasharray="3 3" />
+                   <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                   <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                   <Legend />
+                   <Bar dataKey="venda" name="Venda" fill="hsl(var(--chart-2))" stackId="a" radius={[0, 0, 0, 0]} />
+                   <Bar dataKey="faturado" name="Faturado" fill="hsl(var(--primary))" stackId="a" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -125,18 +141,22 @@ export function SalesReport({ orders }: SalesReportProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
-                <TableHead className="text-right">Volume</TableHead>
-                <TableHead className="text-right">Pedidos</TableHead>
-                <TableHead className="text-right">Ticket Médio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bySupplier.map((r) => (
-                <TableRow key={r.name}>
-                  <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
-                  <TableCell className="text-right">{formatCurrency(r.revenue)}</TableCell>
+               <TableHead>Fornecedor</TableHead>
+                 <TableHead className="text-right">Venda</TableHead>
+                 <TableHead className="text-right">Faturado</TableHead>
+                 <TableHead className="text-right">Total</TableHead>
+                 <TableHead className="text-right">Volume</TableHead>
+                 <TableHead className="text-right">Pedidos</TableHead>
+                 <TableHead className="text-right">Ticket Médio</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {bySupplier.map((r) => (
+                 <TableRow key={r.name}>
+                   <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.venda)}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.faturado)}</TableCell>
+                   <TableCell className="text-right font-semibold">{formatCurrency(r.total)}</TableCell>
                   <TableCell className="text-right">{r.volume}</TableCell>
                   <TableCell className="text-right">{r.orders}</TableCell>
                   <TableCell className="text-right">{formatCurrency(r.ticket)}</TableCell>
@@ -150,16 +170,18 @@ export function SalesReport({ orders }: SalesReportProps) {
       {/* Chart by Rep */}
       {byRep.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Faturamento por Vendedor</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byRep} layout="vertical" margin={{ left: 100 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="revenue" name="Faturamento" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+           <CardHeader><CardTitle className="text-lg">Venda e Faturamento por Vendedor</CardTitle></CardHeader>
+           <CardContent>
+             <div className="h-72">
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={byRep} layout="vertical" margin={{ left: 100 }}>
+                   <CartesianGrid strokeDasharray="3 3" />
+                   <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                   <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                   <Legend />
+                   <Bar dataKey="venda" name="Venda" fill="hsl(var(--chart-2))" stackId="a" radius={[0, 0, 0, 0]} />
+                   <Bar dataKey="faturado" name="Faturado" fill="hsl(var(--primary))" stackId="a" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -174,18 +196,22 @@ export function SalesReport({ orders }: SalesReportProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vendedor</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
-                <TableHead className="text-right">Volume</TableHead>
-                <TableHead className="text-right">Pedidos</TableHead>
-                <TableHead className="text-right">Ticket Médio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {byRep.map((r) => (
-                <TableRow key={r.name}>
-                  <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
-                  <TableCell className="text-right">{formatCurrency(r.revenue)}</TableCell>
+                 <TableHead>Vendedor</TableHead>
+                 <TableHead className="text-right">Venda</TableHead>
+                 <TableHead className="text-right">Faturado</TableHead>
+                 <TableHead className="text-right">Total</TableHead>
+                 <TableHead className="text-right">Volume</TableHead>
+                 <TableHead className="text-right">Pedidos</TableHead>
+                 <TableHead className="text-right">Ticket Médio</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {byRep.map((r) => (
+                 <TableRow key={r.name}>
+                   <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.venda)}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.faturado)}</TableCell>
+                   <TableCell className="text-right font-semibold">{formatCurrency(r.total)}</TableCell>
                   <TableCell className="text-right">{r.volume}</TableCell>
                   <TableCell className="text-right">{r.orders}</TableCell>
                   <TableCell className="text-right">{formatCurrency(r.ticket)}</TableCell>

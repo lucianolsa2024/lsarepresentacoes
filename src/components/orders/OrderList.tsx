@@ -37,6 +37,8 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
   const [repFilter, setRepFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [nfDialog, setNfDialog] = useState<Order | null>(null);
   const [nfNumber, setNfNumber] = useState('');
   const [nfFile, setNfFile] = useState<File | null>(null);
@@ -95,6 +97,8 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
     let result = orders;
     if (clientFilter !== 'all') result = result.filter(o => o.clientName === clientFilter);
     if (repFilter !== 'all') result = result.filter(o => o.representative === repFilter);
+    if (dateFrom) result = result.filter(o => o.issueDate >= dateFrom);
+    if (dateTo) result = result.filter(o => o.issueDate <= dateTo);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(o =>
@@ -104,7 +108,7 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
       );
     }
     return result;
-  }, [orders, search, clientFilter, repFilter]);
+  }, [orders, search, clientFilter, repFilter, dateFrom, dateTo]);
 
   const totalValue = useMemo(() => filtered.reduce((s, o) => s + o.price, 0), [filtered]);
   const formatDate = (d: string | null) => { if (!d) return '-'; try { return format(parseISO(d), 'dd/MM/yyyy'); } catch { return d; } };
@@ -136,6 +140,19 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
             {uniqueReps.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs whitespace-nowrap">Emissão de</Label>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40 h-9" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs whitespace-nowrap">até</Label>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40 h-9" />
+        </div>
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Limpar datas</Button>
+        )}
       </div>
 
       <div className="flex gap-4 text-sm text-muted-foreground">
