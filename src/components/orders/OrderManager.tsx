@@ -9,10 +9,11 @@ import { OrderImporter } from './OrderImporter';
 import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
+import { FaturadosImporter } from './FaturadosImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste, Trash2 } from 'lucide-react';
+import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste, Trash2, Receipt } from 'lucide-react';
 import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
@@ -107,6 +108,10 @@ export function OrderManager() {
           <TabsTrigger value="pdf">
             <FileText className="h-4 w-4 mr-2" />
             PDF
+          </TabsTrigger>
+          <TabsTrigger value="faturados">
+            <Receipt className="h-4 w-4 mr-2" />
+            Faturados
           </TabsTrigger>
         </TabsList>
 
@@ -203,6 +208,10 @@ export function OrderManager() {
             onAddClient={addClient}
             onComplete={() => setActiveTab('list')}
           />
+        </TabsContent>
+
+        <TabsContent value="faturados" className="mt-4">
+          <FaturadosImporter onComplete={() => setActiveTab('list')} />
         </TabsContent>
       </Tabs>
     </div>

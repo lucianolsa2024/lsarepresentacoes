@@ -400,6 +400,69 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_installments: {
+        Row: {
+          cliente: string
+          comissao_calculada: number
+          cond_pgto: string | null
+          created_at: string
+          dt_fat: string
+          id: string
+          numero_nf: string
+          numero_pedido: string
+          parcela_idx: number
+          representante: string
+          status_conciliacao: string
+          status_parcela: string
+          tabela_preco: string | null
+          taxa_comissao: number
+          total_parcelas: number
+          updated_at: string
+          valor_parcela: number
+          vencimento: string
+        }
+        Insert: {
+          cliente: string
+          comissao_calculada?: number
+          cond_pgto?: string | null
+          created_at?: string
+          dt_fat: string
+          id?: string
+          numero_nf: string
+          numero_pedido: string
+          parcela_idx: number
+          representante: string
+          status_conciliacao?: string
+          status_parcela?: string
+          tabela_preco?: string | null
+          taxa_comissao?: number
+          total_parcelas: number
+          updated_at?: string
+          valor_parcela?: number
+          vencimento: string
+        }
+        Update: {
+          cliente?: string
+          comissao_calculada?: number
+          cond_pgto?: string | null
+          created_at?: string
+          dt_fat?: string
+          id?: string
+          numero_nf?: string
+          numero_pedido?: string
+          parcela_idx?: number
+          representante?: string
+          status_conciliacao?: string
+          status_parcela?: string
+          tabela_preco?: string | null
+          taxa_comissao?: number
+          total_parcelas?: number
+          updated_at?: string
+          valor_parcela?: number
+          vencimento?: string
+        }
+        Relationships: []
+      }
       discount_policies: {
         Row: {
           avg_days: number
