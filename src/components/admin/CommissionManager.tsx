@@ -1,0 +1,734 @@
+import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { toast } from '@/components/ui/sonner';
+import { Upload, DollarSign, TrendingUp, Clock, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import ExcelJS from 'exceljs';
+import { format, addDays, startOfMonth, endOfMonth, parseISO, isBefore } from 'date-fns';
+
+// ── Types ──
+
+interface CommissionEntry {
+  id?: string;
+  tipo_pedido: string;
+  tabela_preco: string;
+  dt_emissao: string;
+  dt_fat: string;
+  cliente: string;
+  cond_pgto: string;
+  numero_pedido: string;
+  numero_nf: string;
+  representante_pf: string;
+  produto_completo: string;
+  valor: number;
+}
+
+interface Installment {
+  index: number;
+  total: number;
+  dueDate: Date;
+  value: number;
+  rate: number;
+  commission: number;
+}
+
+interface GroupedOrder {
+  key: string;
+  numero_pedido: string;
+  numero_nf: string;
+  cliente: string;
+  representante_pf: string;
+  tabela_preco: string;
+  dt_fat: string;
+  cond_pgto: string;
+  valor_total: number;
+  installments: Installment[];
+  total_commission: number;
+}
+
+interface DuplicateInfo {
+  numero_pedido: string;
+  numero_nf: string;
+  produto_completo: string;
+  valor: number;
+}
+
+// ── Constants ──
+
+const COMMISSION_RATES: Record<string, number> = {
+  DIAMANTE: 0.10,
+  OURO: 0.08,
+  PRATA: 0.06,
+  BRONZE: 0.04,
+};
+
+const TABLE_BADGE_COLORS: Record<string, string> = {
+  DIAMANTE: 'bg-purple-500 text-white',
+  OURO: 'bg-yellow-500 text-black',
+  PRATA: 'bg-gray-400 text-white',
+  BRONZE: 'bg-orange-500 text-white',
+};
+
+// ── Helpers ──
+
+function getRate(tabela: string): number {
+  const key = (tabela || '').toUpperCase().trim();
+  for (const [name, rate] of Object.entries(COMMISSION_RATES)) {
+    if (key.includes(name)) return rate;
+  }
+  return 0;
+}
+
+function parseInstallments(condPgto: string, dtFat: string, valorTotal: number, rate: number): Installment[] {
+  const cond = (condPgto || '').toUpperCase().trim();
+  const fatDate = parseISO(dtFat);
+
+  if (cond.includes('A VISTA') || cond.includes('100%') || cond === 'BLU A VISTA' || cond.includes('100% PEDIDO')) {
+    const value = valorTotal;
+    return [{ index: 1, total: 1, dueDate: fatDate, value, rate, commission: value * rate }];
+  }
+
+  const numbers = cond.match(/\d+/g);
+  if (!numbers || numbers.length === 0) {
+    return [{ index: 1, total: 1, dueDate: fatDate, value: valorTotal, rate, commission: valorTotal * rate }];
+  }
+
+  const days = numbers.map(Number);
+  const n = days.length;
+  const parcValue = valorTotal / n;
+
+  return days.map((d, i) => ({
+    index: i + 1,
+    total: n,
+    dueDate: addDays(fatDate, d),
+    value: parcValue,
+    rate,
+    commission: parcValue * rate,
+  }));
+}
+
+function cellVal(val: any): string {
+  if (val == null) return '';
+  if (typeof val === 'object' && val.result !== undefined) return String(val.result ?? '');
+  if (typeof val === 'object' && val.richText) return val.richText.map((r: any) => r.text).join('');
+  if (val instanceof Date) return format(val, 'yyyy-MM-dd');
+  return String(val).trim();
+}
+
+function parseExcelDate(val: any): string {
+  if (!val) return '';
+  if (val instanceof Date) return format(val, 'yyyy-MM-dd');
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return format(d, 'yyyy-MM-dd');
+  }
+  const s = String(val).trim();
+  const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  return s;
+}
+
+function parsePrice(val: any): number {
+  if (typeof val === 'number') return val;
+  const s = String(val).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+  return parseFloat(s) || 0;
+}
+
+const fmt = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const fmtPct = (v: number) => `${(v * 100).toFixed(0)}%`;
+
+// ── Component ──
+
+export function CommissionManager() {
+  const [entries, setEntries] = useState<CommissionEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+
+  // Filters
+  const now = new Date();
+  const [dateFrom, setDateFrom] = useState(format(startOfMonth(now), 'yyyy-MM-dd'));
+  const [dateTo, setDateTo] = useState(format(endOfMonth(now), 'yyyy-MM-dd'));
+  const [filterRep, setFilterRep] = useState<string>('__all__');
+  const [filterTabela, setFilterTabela] = useState<string>('__all__');
+  const [filterStatus, setFilterStatus] = useState<string>('__all__');
+
+  // Duplicates dialog
+  const [dupsDialogOpen, setDupsDialogOpen] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [pendingImport, setPendingImport] = useState<CommissionEntry[]>([]);
+
+  // Expanded rows
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // ── Load data ──
+  const fetchEntries = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('commission_entries' as any)
+      .select('*')
+      .order('dt_fat', { ascending: false });
+    if (data) {
+      setEntries((data as any[]).map((r: any) => ({
+        id: r.id,
+        tipo_pedido: r.tipo_pedido || '',
+        tabela_preco: r.tabela_preco || '',
+        dt_emissao: r.dt_emissao || '',
+        dt_fat: r.dt_fat || '',
+        cliente: r.cliente || '',
+        cond_pgto: r.cond_pgto || '',
+        numero_pedido: r.numero_pedido || '',
+        numero_nf: r.numero_nf || '',
+        representante_pf: r.representante_pf || '',
+        produto_completo: r.produto_completo || '',
+        valor: Number(r.valor) || 0,
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchEntries(); }, []);
+
+  // ── Excel import ──
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+
+    try {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await file.arrayBuffer());
+      const ws = wb.worksheets[0];
+      if (!ws) throw new Error('Planilha vazia');
+
+      const rows: any[][] = [];
+      ws.eachRow((row) => rows.push(row.values as any[]));
+      if (rows.length < 2) throw new Error('Sem dados');
+
+      const headers = rows[0].map((h: any) => cellVal(h).toUpperCase().trim());
+
+      const colMap: Record<string, number> = {};
+      const REQUIRED = [
+        'TIPO PEDIDO', 'TABELA DE PREÇO', 'TABELA DE PRECO', 'DT EMISSAO', 'DT FAT',
+        'CLIENTE', 'COND PGTO', 'NUMERO PEDIDO', 'NUMERO NF',
+        'REPRESENTANTE PF', 'PRODUTO COMPLETO', 'VALOR ( R$ )', 'VALOR (R$)', 'VALOR(R$)', 'VALOR'
+      ];
+
+      headers.forEach((h, i) => {
+        if (h.includes('TIPO PEDIDO')) colMap['TIPO PEDIDO'] = i;
+        if (h.includes('TABELA DE PRE')) colMap['TABELA DE PRECO'] = i;
+        if (h.includes('DT EMISSAO') || h.includes('DT EMISSÃO')) colMap['DT EMISSAO'] = i;
+        if (h === 'DT FAT' || h.includes('DT FAT')) colMap['DT FAT'] = i;
+        if (h === 'CLIENTE' || h.includes('CLIENTE')) colMap['CLIENTE'] = i;
+        if (h.includes('COND PGTO') || h.includes('COND. PGTO')) colMap['COND PGTO'] = i;
+        if (h.includes('NUMERO PEDIDO') || h.includes('NÚMERO PEDIDO')) colMap['NUMERO PEDIDO'] = i;
+        if (h.includes('NUMERO NF') || h.includes('NÚMERO NF')) colMap['NUMERO NF'] = i;
+        if (h.includes('REPRESENTANTE PF')) colMap['REPRESENTANTE PF'] = i;
+        if (h.includes('PRODUTO COMPLETO')) colMap['PRODUTO COMPLETO'] = i;
+        if (h.includes('VALOR')) colMap['VALOR'] = i;
+      });
+
+      const missing = ['DT FAT', 'CLIENTE', 'NUMERO PEDIDO', 'NUMERO NF', 'REPRESENTANTE PF', 'PRODUTO COMPLETO', 'VALOR']
+        .filter(k => colMap[k] === undefined);
+      if (missing.length > 0) throw new Error(`Colunas não encontradas: ${missing.join(', ')}`);
+
+      const parsed: CommissionEntry[] = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const nf = cellVal(row[colMap['NUMERO NF']]);
+        const dtFat = parseExcelDate(row[colMap['DT FAT']]);
+        if (!nf || !dtFat) continue;
+
+        parsed.push({
+          tipo_pedido: cellVal(row[colMap['TIPO PEDIDO']]),
+          tabela_preco: cellVal(row[colMap['TABELA DE PRECO']]),
+          dt_emissao: parseExcelDate(row[colMap['DT EMISSAO']]),
+          dt_fat: dtFat,
+          cliente: cellVal(row[colMap['CLIENTE']]),
+          cond_pgto: cellVal(row[colMap['COND PGTO']]),
+          numero_pedido: cellVal(row[colMap['NUMERO PEDIDO']]),
+          numero_nf: nf,
+          representante_pf: cellVal(row[colMap['REPRESENTANTE PF']]),
+          produto_completo: cellVal(row[colMap['PRODUTO COMPLETO']]),
+          valor: parsePrice(row[colMap['VALOR']]),
+        });
+      }
+
+      if (parsed.length === 0) {
+        toast.warning('Nenhum registro elegível (NF + DT FAT preenchidos).');
+        setImporting(false);
+        return;
+      }
+
+      // Check duplicates against existing DB entries
+      const existingKeys = new Set(
+        entries.map(e => `${e.numero_pedido}|${e.numero_nf}|${e.produto_completo}|${e.valor}|${e.representante_pf}`)
+      );
+
+      const dups: DuplicateInfo[] = [];
+      const unique: CommissionEntry[] = [];
+
+      for (const p of parsed) {
+        const key = `${p.numero_pedido}|${p.numero_nf}|${p.produto_completo}|${p.valor}|${p.representante_pf}`;
+        if (existingKeys.has(key)) {
+          dups.push({ numero_pedido: p.numero_pedido, numero_nf: p.numero_nf, produto_completo: p.produto_completo, valor: p.valor });
+        } else {
+          existingKeys.add(key); // also dedupe within file
+          unique.push(p);
+        }
+      }
+
+      if (dups.length > 0 && unique.length > 0) {
+        setDuplicates(dups);
+        setPendingImport(unique);
+        setDupsDialogOpen(true);
+        setImporting(false);
+        return;
+      }
+
+      if (dups.length > 0 && unique.length === 0) {
+        toast.warning(`Todos os ${dups.length} registros já existem no banco.`);
+        setImporting(false);
+        return;
+      }
+
+      await doImport(unique, 0);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao importar');
+      setImporting(false);
+    }
+  };
+
+  const doImport = async (records: CommissionEntry[], dupsCount: number) => {
+    setImporting(true);
+    const BATCH = 100;
+    let imported = 0;
+    for (let i = 0; i < records.length; i += BATCH) {
+      const batch = records.slice(i, i + BATCH).map(r => ({
+        tipo_pedido: r.tipo_pedido,
+        tabela_preco: r.tabela_preco,
+        dt_emissao: r.dt_emissao || null,
+        dt_fat: r.dt_fat,
+        cliente: r.cliente,
+        cond_pgto: r.cond_pgto,
+        numero_pedido: r.numero_pedido,
+        numero_nf: r.numero_nf,
+        representante_pf: r.representante_pf,
+        produto_completo: r.produto_completo,
+        valor: r.valor,
+      }));
+      const { error } = await supabase.from('commission_entries' as any).insert(batch);
+      if (!error) imported += batch.length;
+    }
+    toast.success(`${imported} registros importados${dupsCount > 0 ? `, ${dupsCount} duplicatas ignoradas` : ''}.`);
+    await fetchEntries();
+    setImporting(false);
+  };
+
+  const handleDupsConfirm = () => {
+    setDupsDialogOpen(false);
+    doImport(pendingImport, duplicates.length);
+  };
+
+  // ── Filter + group ──
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter(e => {
+      if (e.dt_fat < dateFrom || e.dt_fat > dateTo) return false;
+      if (filterRep !== '__all__' && e.representante_pf !== filterRep) return false;
+      if (filterTabela !== '__all__') {
+        const upper = (e.tabela_preco || '').toUpperCase();
+        if (!upper.includes(filterTabela)) return false;
+      }
+      // Rate = 0 means "Outros" → skip
+      if (getRate(e.tabela_preco) === 0) return false;
+      return true;
+    });
+  }, [entries, dateFrom, dateTo, filterRep, filterTabela]);
+
+  const groupedOrders = useMemo(() => {
+    const map = new Map<string, CommissionEntry[]>();
+    for (const e of filteredEntries) {
+      const key = `${e.numero_pedido}|${e.numero_nf}|${e.dt_fat}|${e.cond_pgto}|${e.representante_pf}|${e.cliente}|${e.tabela_preco}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+
+    const result: GroupedOrder[] = [];
+    for (const [key, items] of map) {
+      const first = items[0];
+      const valorTotal = items.reduce((s, i) => s + i.valor, 0);
+      const rate = getRate(first.tabela_preco);
+      const installments = parseInstallments(first.cond_pgto, first.dt_fat, valorTotal, rate);
+      result.push({
+        key,
+        numero_pedido: first.numero_pedido,
+        numero_nf: first.numero_nf,
+        cliente: first.cliente,
+        representante_pf: first.representante_pf,
+        tabela_preco: first.tabela_preco,
+        dt_fat: first.dt_fat,
+        cond_pgto: first.cond_pgto,
+        valor_total: valorTotal,
+        installments,
+        total_commission: installments.reduce((s, inst) => s + inst.commission, 0),
+      });
+    }
+    return result;
+  }, [filteredEntries]);
+
+  // Apply installment status filter
+  const displayOrders = useMemo(() => {
+    if (filterStatus === '__all__') return groupedOrders;
+    return groupedOrders.filter(o => {
+      return o.installments.some(inst => {
+        const due = format(inst.dueDate, 'yyyy-MM-dd');
+        if (filterStatus === 'vencer') return due >= today;
+        if (filterStatus === 'vencidas') return due < today;
+        return true;
+      });
+    });
+  }, [groupedOrders, filterStatus, today]);
+
+  // ── Summary cards ──
+  const allInstallments = useMemo(() =>
+    displayOrders.flatMap(o => o.installments), [displayOrders]);
+
+  const totalFaturado = allInstallments.reduce((s, i) => s + i.value, 0);
+  const totalComissao = allInstallments.reduce((s, i) => s + i.commission, 0);
+  const aVencer = allInstallments.filter(i => format(i.dueDate, 'yyyy-MM-dd') >= today);
+  const vencidas = allInstallments.filter(i => format(i.dueDate, 'yyyy-MM-dd') < today);
+
+  // ── Reps list ──
+  const reps = useMemo(() => [...new Set(entries.map(e => e.representante_pf))].sort(), [entries]);
+
+  // ── Rep summary ──
+  const repSummary = useMemo(() => {
+    const map = new Map<string, { pedidos: Set<string>; faturado: number; comissaoTotal: number; rateSum: number; rateCount: number }>();
+    for (const o of displayOrders) {
+      if (!map.has(o.representante_pf)) map.set(o.representante_pf, { pedidos: new Set(), faturado: 0, comissaoTotal: 0, rateSum: 0, rateCount: 0 });
+      const m = map.get(o.representante_pf)!;
+      m.pedidos.add(`${o.numero_pedido}|${o.numero_nf}`);
+      m.faturado += o.valor_total;
+      m.comissaoTotal += o.total_commission;
+      const rate = getRate(o.tabela_preco);
+      m.rateSum += rate;
+      m.rateCount += 1;
+    }
+    return [...map.entries()].map(([rep, m]) => ({
+      rep,
+      pedidos: m.pedidos.size,
+      faturado: m.faturado,
+      taxaMedia: m.rateCount > 0 ? m.rateSum / m.rateCount : 0,
+      comissao: m.comissaoTotal,
+    })).sort((a, b) => b.faturado - a.faturado);
+  }, [displayOrders]);
+
+  const toggleExpanded = (key: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const getTabelaBadge = (tabela: string) => {
+    const upper = (tabela || '').toUpperCase();
+    for (const [name, cls] of Object.entries(TABLE_BADGE_COLORS)) {
+      if (upper.includes(name)) return <Badge className={cls}>{name}</Badge>;
+    }
+    return <Badge variant="outline">{tabela || '—'}</Badge>;
+  };
+
+  // ── Footer totals ──
+  const footerValorTotal = displayOrders.reduce((s, o) => s + o.valor_total, 0);
+  const footerComissaoTotal = displayOrders.reduce((s, o) => s + o.total_commission, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Import button */}
+      <div className="flex items-center gap-4">
+        <Button disabled={importing} asChild variant="outline">
+          <label className="cursor-pointer">
+            <Upload className="h-4 w-4 mr-2" />
+            {importing ? 'Importando...' : 'Importar Excel'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileSelect} disabled={importing} />
+          </label>
+        </Button>
+        {loading && <span className="text-sm text-muted-foreground">Carregando...</span>}
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Faturado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              {fmt(totalFaturado)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total de Comissão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              {fmt(totalComissao)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Parcelas a Vencer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <Clock className="h-5 w-5 text-yellow-600" />
+              {aVencer.length}
+            </div>
+            <p className="text-xs text-muted-foreground">{fmt(aVencer.reduce((s, i) => s + i.value, 0))}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Parcelas Vencidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              {vencidas.length}
+            </div>
+            <p className="text-xs text-muted-foreground">{fmt(vencidas.reduce((s, i) => s + i.value, 0))}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 items-end">
+        <div>
+          <Label className="text-xs">Data Inicial</Label>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
+        </div>
+        <div>
+          <Label className="text-xs">Data Final</Label>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
+        </div>
+        <div>
+          <Label className="text-xs">Representante</Label>
+          <Select value={filterRep} onValueChange={setFilterRep}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos</SelectItem>
+              {reps.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Tabela</Label>
+          <Select value={filterTabela} onValueChange={setFilterTabela}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="DIAMANTE">Diamante</SelectItem>
+              <SelectItem value="OURO">Ouro</SelectItem>
+              <SelectItem value="PRATA">Prata</SelectItem>
+              <SelectItem value="BRONZE">Bronze</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Status Parcela</Label>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="vencer">A Vencer</SelectItem>
+              <SelectItem value="vencidas">Vencidas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Main table */}
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8"></TableHead>
+              <TableHead>Nº Pedido</TableHead>
+              <TableHead>NF</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Representante</TableHead>
+              <TableHead>Tabela</TableHead>
+              <TableHead>Dt. Faturamento</TableHead>
+              <TableHead>Cond. Pgto</TableHead>
+              <TableHead className="text-right">Valor Total</TableHead>
+              <TableHead className="text-center">Parcelas</TableHead>
+              <TableHead className="text-right">Comissão</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayOrders.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                  Nenhum registro encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+            {displayOrders.map(order => {
+              const isOpen = expanded.has(order.key);
+              return (
+                <Collapsible key={order.key} open={isOpen} onOpenChange={() => toggleExpanded(order.key)} asChild>
+                  <>
+                    <CollapsibleTrigger asChild>
+                      <TableRow className="cursor-pointer hover:bg-muted/50">
+                        <TableCell>
+                          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </TableCell>
+                        <TableCell className="font-medium">{order.numero_pedido}</TableCell>
+                        <TableCell>{order.numero_nf}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{order.cliente}</TableCell>
+                        <TableCell>{order.representante_pf}</TableCell>
+                        <TableCell>{getTabelaBadge(order.tabela_preco)}</TableCell>
+                        <TableCell>{order.dt_fat ? format(parseISO(order.dt_fat), 'dd/MM/yyyy') : '—'}</TableCell>
+                        <TableCell>{order.cond_pgto}</TableCell>
+                        <TableCell className="text-right font-medium">{fmt(order.valor_total)}</TableCell>
+                        <TableCell className="text-center">{order.installments.length}</TableCell>
+                        <TableCell className="text-right font-medium">{fmt(order.total_commission)}</TableCell>
+                      </TableRow>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent asChild>
+                      <TableRow>
+                        <TableCell colSpan={11} className="bg-muted/30 p-0">
+                          <div className="p-4">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Parcela</TableHead>
+                                  <TableHead>Vencimento</TableHead>
+                                  <TableHead className="text-right">Valor</TableHead>
+                                  <TableHead className="text-center">Taxa</TableHead>
+                                  <TableHead className="text-right">Comissão</TableHead>
+                                  <TableHead className="text-center">Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {order.installments.map(inst => {
+                                  const dueDateStr = format(inst.dueDate, 'yyyy-MM-dd');
+                                  const isOverdue = dueDateStr < today;
+                                  return (
+                                    <TableRow key={inst.index}>
+                                      <TableCell>{inst.index}/{inst.total}</TableCell>
+                                      <TableCell>{format(inst.dueDate, 'dd/MM/yyyy')}</TableCell>
+                                      <TableCell className="text-right">{fmt(inst.value)}</TableCell>
+                                      <TableCell className="text-center">{fmtPct(inst.rate)}</TableCell>
+                                      <TableCell className="text-right">{fmt(inst.commission)}</TableCell>
+                                      <TableCell className="text-center">
+                                        {isOverdue
+                                          ? <Badge variant="destructive">🔴 Vencida</Badge>
+                                          : <Badge className="bg-yellow-500 text-black">🟡 A vencer</Badge>
+                                        }
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </CollapsibleContent>
+                  </>
+                </Collapsible>
+              );
+            })}
+          </TableBody>
+          {displayOrders.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={8} className="font-bold">TOTAL</TableCell>
+                <TableCell className="text-right font-bold">{fmt(footerValorTotal)}</TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-right font-bold">{fmt(footerComissaoTotal)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
+      </div>
+
+      {/* Rep summary */}
+      {repSummary.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">Resumo por Representante</h3>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Representante</TableHead>
+                  <TableHead className="text-center">Pedidos</TableHead>
+                  <TableHead className="text-right">Total Faturado</TableHead>
+                  <TableHead className="text-center">Taxa Média</TableHead>
+                  <TableHead className="text-right">Total Comissão</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {repSummary.map(r => (
+                  <TableRow key={r.rep}>
+                    <TableCell className="font-medium">{r.rep}</TableCell>
+                    <TableCell className="text-center">{r.pedidos}</TableCell>
+                    <TableCell className="text-right">{fmt(r.faturado)}</TableCell>
+                    <TableCell className="text-center">{fmtPct(r.taxaMedia)}</TableCell>
+                    <TableCell className="text-right font-medium">{fmt(r.comissao)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicates dialog */}
+      <Dialog open={dupsDialogOpen} onOpenChange={setDupsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Duplicatas encontradas</DialogTitle>
+            <DialogDescription>
+              {duplicates.length} registro(s) já existem no banco e serão ignorados.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-60 overflow-auto text-sm space-y-1">
+            {duplicates.slice(0, 20).map((d, i) => (
+              <div key={i} className="flex justify-between border-b py-1">
+                <span>Pedido {d.numero_pedido} / NF {d.numero_nf}</span>
+                <span className="text-muted-foreground truncate ml-2 max-w-[200px]">{d.produto_completo}</span>
+              </div>
+            ))}
+            {duplicates.length > 20 && <p className="text-muted-foreground">...e mais {duplicates.length - 20}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDupsDialogOpen(false)}>Cancelar importação</Button>
+            <Button onClick={handleDupsConfirm}>
+              Ignorar duplicatas e importar ({pendingImport.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
