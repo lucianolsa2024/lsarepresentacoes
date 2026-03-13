@@ -115,16 +115,18 @@ export function SalesReport({ orders }: SalesReportProps) {
       {/* Chart by Supplier */}
       {bySupplier.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Faturamento por Fornecedor</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bySupplier} layout="vertical" margin={{ left: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="revenue" name="Faturamento" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+           <CardHeader><CardTitle className="text-lg">Venda e Faturamento por Fornecedor</CardTitle></CardHeader>
+           <CardContent>
+             <div className="h-72">
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={bySupplier} layout="vertical" margin={{ left: 80 }}>
+                   <CartesianGrid strokeDasharray="3 3" />
+                   <XAxis type="number" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                   <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                   <Legend />
+                   <Bar dataKey="venda" name="Venda" fill="hsl(var(--chart-2))" stackId="a" radius={[0, 0, 0, 0]} />
+                   <Bar dataKey="faturado" name="Faturado" fill="hsl(var(--primary))" stackId="a" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
