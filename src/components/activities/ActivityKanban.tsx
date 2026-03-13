@@ -16,7 +16,7 @@ interface ActivityKanbanProps {
   onStatusChange?: (id: string, status: ActivityStatus) => void;
 }
 
-const columns: ActivityStatus[] = ['pendente', 'em_andamento', 'concluida', 'cancelada'];
+const columns: ActivityStatus[] = ['pendente', 'agendada', 'em_andamento', 'concluida', 'realizada', 'cancelada'];
 
 export function ActivityKanban({
   activities,
