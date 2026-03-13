@@ -163,7 +163,7 @@ export function useActivities() {
       
       const { data, error } = await supabase
         .from('activities')
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single();
 
