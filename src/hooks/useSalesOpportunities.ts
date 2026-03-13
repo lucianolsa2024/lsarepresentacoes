@@ -174,15 +174,15 @@ export function useSalesOpportunities() {
         }
       }
       if (data.value !== undefined) updateData.value = data.value;
-      if (data.expectedCloseDate !== undefined) updateData.expected_close_date = data.expectedCloseDate;
-      if (data.contactName !== undefined) updateData.contact_name = data.contactName;
-      if (data.contactPhone !== undefined) updateData.contact_phone = data.contactPhone;
-      if (data.contactEmail !== undefined) updateData.contact_email = data.contactEmail;
-      if (data.notes !== undefined) updateData.notes = data.notes;
-      if (data.clientId !== undefined) updateData.client_id = data.clientId;
-      if (data.ownerEmail !== undefined) updateData.owner_email = data.ownerEmail;
-      if (data.nextFollowupDate !== undefined) updateData.next_followup_date = data.nextFollowupDate;
-      if (data.lostReason !== undefined) updateData.lost_reason = data.lostReason;
+      if (data.expectedCloseDate !== undefined) updateData.expected_close_date = data.expectedCloseDate || null;
+      if (data.contactName !== undefined) updateData.contact_name = data.contactName || null;
+      if (data.contactPhone !== undefined) updateData.contact_phone = data.contactPhone || null;
+      if (data.contactEmail !== undefined) updateData.contact_email = data.contactEmail || null;
+      if (data.notes !== undefined) updateData.notes = data.notes || null;
+      if (data.clientId !== undefined) updateData.client_id = data.clientId || null;
+      if (data.ownerEmail !== undefined) updateData.owner_email = data.ownerEmail || null;
+      if (data.nextFollowupDate !== undefined) updateData.next_followup_date = data.nextFollowupDate || null;
+      if (data.lostReason !== undefined) updateData.lost_reason = data.lostReason || null;
 
       const { error } = await supabase
         .from('sales_opportunities')
