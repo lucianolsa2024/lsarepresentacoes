@@ -109,11 +109,10 @@ export function PortfolioManager() {
         description: data.description,
         due_date: data.date,
         client_id: clientId,
-        status: 'realizada',
         result: data.result as any,
         next_step: data.nextStep || undefined,
         assigned_to_email: user?.email || undefined,
-      });
+      } as any);
       await refetch();
       toast.success('Visita registrada');
       return true;
