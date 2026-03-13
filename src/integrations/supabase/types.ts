@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          activity_category: string
           assigned_to_email: string | null
           client_id: string | null
           completed_at: string | null
@@ -25,12 +26,16 @@ export type Database = {
           due_date: string
           due_time: string | null
           id: string
+          next_contact_date: string | null
+          next_step: string | null
+          order_id: string | null
           parent_activity_id: string | null
           priority: string | null
           quote_id: string | null
           recurrence_rule: Json | null
           reminder_at: string | null
           reminder_sent: boolean | null
+          result: string | null
           route_visit_id: string | null
           status: string | null
           template_id: string | null
@@ -40,6 +45,7 @@ export type Database = {
           watcher_emails: string[]
         }
         Insert: {
+          activity_category?: string
           assigned_to_email?: string | null
           client_id?: string | null
           completed_at?: string | null
@@ -49,12 +55,16 @@ export type Database = {
           due_date: string
           due_time?: string | null
           id?: string
+          next_contact_date?: string | null
+          next_step?: string | null
+          order_id?: string | null
           parent_activity_id?: string | null
           priority?: string | null
           quote_id?: string | null
           recurrence_rule?: Json | null
           reminder_at?: string | null
           reminder_sent?: boolean | null
+          result?: string | null
           route_visit_id?: string | null
           status?: string | null
           template_id?: string | null
@@ -64,6 +74,7 @@ export type Database = {
           watcher_emails?: string[]
         }
         Update: {
+          activity_category?: string
           assigned_to_email?: string | null
           client_id?: string | null
           completed_at?: string | null
@@ -73,12 +84,16 @@ export type Database = {
           due_date?: string
           due_time?: string | null
           id?: string
+          next_contact_date?: string | null
+          next_step?: string | null
+          order_id?: string | null
           parent_activity_id?: string | null
           priority?: string | null
           quote_id?: string | null
           recurrence_rule?: Json | null
           reminder_at?: string | null
           reminder_sent?: boolean | null
+          result?: string | null
           route_visit_id?: string | null
           status?: string | null
           template_id?: string | null
@@ -93,6 +108,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {

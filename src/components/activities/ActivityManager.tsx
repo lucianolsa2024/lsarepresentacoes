@@ -3,7 +3,7 @@ import { useActivities } from '@/hooks/useActivities';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
-import { Activity, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
+import { Activity, ActivityCategory, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
 import { ActivityKanban } from './ActivityKanban';
 import { ActivityFilters } from './ActivityFilters';
@@ -79,6 +79,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   // Filters
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<ActivityCategory | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<ActivityPriority | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | 'all'>('all');
@@ -106,16 +107,18 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           activity.client?.company.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
+      if (categoryFilter !== 'all' && activity.activity_category !== categoryFilter) return false;
       if (typeFilter !== 'all' && activity.type !== typeFilter) return false;
       if (priorityFilter !== 'all' && activity.priority !== priorityFilter) return false;
       if (statusFilter !== 'all' && activity.status !== statusFilter) return false;
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
+  }, [activities, search, categoryFilter, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
 
   const handleClearFilters = () => {
     setSearch('');
+    setCategoryFilter('all');
     setTypeFilter('all');
     setPriorityFilter('all');
     setStatusFilter('all');
@@ -162,6 +165,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     if (createFollowUp && followUpDate && activity) {
       const newTitle = getNextFollowUpTitle(activity.title);
       await addActivity({
+        activity_category: activity.activity_category,
         type: activity.type,
         title: newTitle,
         description: activity.description,
@@ -206,6 +210,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     if (data.assistenciaIdentificada && data.assistenciaProduto) {
       const clientName = checklistActivity.client?.company || data.cliente || '';
       await addActivity({
+        activity_category: 'tarefa',
         type: 'assistencia',
         title: `Assistência - ${clientName} - ${data.assistenciaProduto}`,
         description: `Produto: ${data.assistenciaProduto}\nDefeito: ${data.assistenciaDefeito}\n${data.assistenciaDescricao ? `Detalhes: ${data.assistenciaDescricao}` : ''}\n\nIdentificado no checklist de visita em ${data.dataVisita}`,
@@ -375,6 +380,8 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
         <ActivityFilters
           search={search}
           onSearchChange={setSearch}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
           typeFilter={typeFilter}
           onTypeFilterChange={setTypeFilter}
           priorityFilter={priorityFilter}

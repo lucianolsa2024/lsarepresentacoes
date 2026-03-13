@@ -1,11 +1,16 @@
-export type ActivityType = 'followup' | 'ligacao' | 'email' | 'visita' | 'reuniao' | 'tarefa' | 'treinamento' | 'assistencia' | 'relacionamento' | 'checklist_loja' | 'outros';
+export type ActivityCategory = 'crm' | 'tarefa';
+export type CrmActivityType = 'visita' | 'ligacao' | 'whatsapp' | 'email' | 'reuniao' | 'proposta_enviada' | 'followup' | 'outro_crm';
+export type TarefaActivityType = 'tarefa' | 'treinamento' | 'assistencia' | 'checklist_loja' | 'outros';
+export type ActivityType = CrmActivityType | TarefaActivityType;
 export type ActivityPriority = 'baixa' | 'media' | 'alta' | 'urgente';
-export type ActivityStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
+export type ActivityStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada' | 'realizada' | 'agendada';
+export type ActivityResult = 'positivo' | 'neutro' | 'negativo';
 export type ReminderType = 'email' | 'push' | 'both';
 export type ReminderStatus = 'pending' | 'sent' | 'failed';
 
 export interface Activity {
   id: string;
+  activity_category: ActivityCategory;
   type: ActivityType;
   title: string;
   description?: string;
@@ -27,6 +32,11 @@ export interface Activity {
   watcher_emails?: string[];
   created_at: string;
   updated_at: string;
+  // CRM-specific fields
+  result?: ActivityResult;
+  next_step?: string;
+  next_contact_date?: string;
+  order_id?: string;
   // Populated data
   client?: {
     id: string;
@@ -69,6 +79,7 @@ export interface RecurrenceRule {
 }
 
 export interface CreateActivityInput {
+  activity_category: ActivityCategory;
   type: ActivityType;
   title: string;
   description?: string;
@@ -83,9 +94,15 @@ export interface CreateActivityInput {
   recurrence_rule?: RecurrenceRule;
   assigned_to_email?: string;
   watcher_emails?: string[];
+  // CRM-specific
+  result?: ActivityResult;
+  next_step?: string;
+  next_contact_date?: string;
+  order_id?: string;
 }
 
 export interface UpdateActivityInput {
+  activity_category?: ActivityCategory;
   type?: ActivityType;
   title?: string;
   description?: string;
@@ -99,20 +116,34 @@ export interface UpdateActivityInput {
   reminder_at?: string;
   assigned_to_email?: string;
   watcher_emails?: string[];
+  result?: ActivityResult;
+  next_step?: string;
+  next_contact_date?: string;
+  order_id?: string;
 }
 
-export const ACTIVITY_TYPE_CONFIG: Record<ActivityType, { label: string; icon: string; color: string }> = {
-  followup: { label: 'Followup', icon: 'RefreshCcw', color: 'blue' },
-  ligacao: { label: 'Ligação', icon: 'Phone', color: 'green' },
-  email: { label: 'Email', icon: 'Mail', color: 'purple' },
+export const CRM_TYPE_CONFIG: Record<CrmActivityType, { label: string; icon: string; color: string }> = {
   visita: { label: 'Visita', icon: 'MapPin', color: 'orange' },
+  ligacao: { label: 'Ligação', icon: 'Phone', color: 'green' },
+  whatsapp: { label: 'WhatsApp', icon: 'MessageCircle', color: 'emerald' },
+  email: { label: 'Email', icon: 'Mail', color: 'purple' },
   reuniao: { label: 'Reunião', icon: 'Users', color: 'indigo' },
+  proposta_enviada: { label: 'Proposta Enviada', icon: 'FileText', color: 'blue' },
+  followup: { label: 'Follow-up', icon: 'RefreshCcw', color: 'cyan' },
+  outro_crm: { label: 'Outro', icon: 'MoreHorizontal', color: 'slate' },
+};
+
+export const TAREFA_TYPE_CONFIG: Record<TarefaActivityType, { label: string; icon: string; color: string }> = {
   tarefa: { label: 'Tarefa', icon: 'ClipboardList', color: 'gray' },
   treinamento: { label: 'Treinamento', icon: 'GraduationCap', color: 'cyan' },
   assistencia: { label: 'Assistência', icon: 'Wrench', color: 'amber' },
-  relacionamento: { label: 'Relacionamento', icon: 'Heart', color: 'pink' },
   checklist_loja: { label: 'Checklist Loja', icon: 'ClipboardCheck', color: 'teal' },
   outros: { label: 'Outros', icon: 'MoreHorizontal', color: 'slate' },
+};
+
+export const ACTIVITY_TYPE_CONFIG: Record<ActivityType, { label: string; icon: string; color: string }> = {
+  ...CRM_TYPE_CONFIG,
+  ...TAREFA_TYPE_CONFIG,
 };
 
 export const ACTIVITY_PRIORITY_CONFIG: Record<ActivityPriority, { label: string; color: string }> = {
@@ -127,6 +158,27 @@ export const ACTIVITY_STATUS_CONFIG: Record<ActivityStatus, { label: string; col
   em_andamento: { label: 'Em Andamento', color: 'blue' },
   concluida: { label: 'Concluída', color: 'green' },
   cancelada: { label: 'Cancelada', color: 'red' },
+  realizada: { label: 'Realizada', color: 'green' },
+  agendada: { label: 'Agendada', color: 'blue' },
+};
+
+export const CRM_STATUS_OPTIONS: { value: ActivityStatus; label: string }[] = [
+  { value: 'agendada', label: 'Agendada' },
+  { value: 'realizada', label: 'Realizada' },
+  { value: 'cancelada', label: 'Cancelada' },
+];
+
+export const TAREFA_STATUS_OPTIONS: { value: ActivityStatus; label: string }[] = [
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'em_andamento', label: 'Em Andamento' },
+  { value: 'concluida', label: 'Concluída' },
+  { value: 'cancelada', label: 'Cancelada' },
+];
+
+export const ACTIVITY_RESULT_CONFIG: Record<ActivityResult, { label: string; color: string }> = {
+  positivo: { label: 'Positivo', color: 'green' },
+  neutro: { label: 'Neutro', color: 'yellow' },
+  negativo: { label: 'Negativo', color: 'red' },
 };
 
 export const REMINDER_OPTIONS = [

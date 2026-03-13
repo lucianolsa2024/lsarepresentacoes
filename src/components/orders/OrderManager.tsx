@@ -43,6 +43,7 @@ export function OrderManager() {
     if (exists) return;
 
     await addActivity({
+      activity_category: 'tarefa',
       type: 'tarefa',
       title: `Entrega pedido ${order.orderNumber ? `#${order.orderNumber}` : ''} - ${order.clientName}`,
       description: `Acompanhamento de entrega${order.product ? ` do produto: ${order.product}` : ''}`,

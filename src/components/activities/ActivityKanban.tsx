@@ -16,7 +16,7 @@ interface ActivityKanbanProps {
   onStatusChange?: (id: string, status: ActivityStatus) => void;
 }
 
-const columns: ActivityStatus[] = ['pendente', 'em_andamento', 'concluida', 'cancelada'];
+const columns: ActivityStatus[] = ['pendente', 'agendada', 'em_andamento', 'concluida', 'realizada', 'cancelada'];
 
 export function ActivityKanban({
   activities,
@@ -35,8 +35,10 @@ export function ActivityKanban({
 
   const columnColors: Record<ActivityStatus, string> = {
     pendente: 'border-t-gray-400',
+    agendada: 'border-t-blue-400',
     em_andamento: 'border-t-blue-500',
     concluida: 'border-t-green-500',
+    realizada: 'border-t-green-500',
     cancelada: 'border-t-red-500',
   };
 

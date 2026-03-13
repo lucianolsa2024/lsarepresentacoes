@@ -8,7 +8,7 @@ interface ClientInfo {
   phone?: string;
 }
 
-const messageTemplates: Record<ActivityType, (clientName: string, activityDate?: string) => string> = {
+const messageTemplates: Record<string, (clientName: string, activityDate?: string) => string> = {
   followup: (clientName, _date) => 
     `Olá ${clientName}! Passando para verificar sobre o orçamento que enviamos. Podemos conversar?`,
   ligacao: (clientName, _date) => 
@@ -29,6 +29,12 @@ const messageTemplates: Record<ActivityType, (clientName: string, activityDate?:
     `Olá ${clientName}! Tudo bem? Estou passando para saber como estão as coisas!`,
   checklist_loja: (clientName, _date) => 
     `Olá ${clientName}! Tudo bem? Estou entrando em contato sobre o checklist da loja.`,
+  whatsapp: (clientName, _date) => 
+    `Olá ${clientName}! Tudo bem?`,
+  proposta_enviada: (clientName, _date) => 
+    `Olá ${clientName}! Enviei uma proposta, conseguiu analisar? Fico à disposição!`,
+  outro_crm: (clientName, _date) => 
+    `Olá ${clientName}! Tudo bem?`,
   outros: (clientName, _date) => 
     `Olá ${clientName}! Tudo bem?`,
 };
@@ -45,7 +51,8 @@ export function generateWhatsAppMessage(activity: Activity, client: ClientInfo):
     }
   }
   
-  return messageTemplates[activity.type](clientName, formattedDate);
+  const template = messageTemplates[activity.type] || messageTemplates.outros;
+  return template(clientName, formattedDate);
 }
 
 export function openWhatsAppForActivity(activity: Activity, client: ClientInfo): void {

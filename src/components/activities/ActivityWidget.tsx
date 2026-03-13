@@ -13,7 +13,7 @@ interface ActivityWidgetProps {
   onActivityClick?: (activity: Activity) => void;
 }
 
-const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: string }>> = {
+const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   followup: RefreshCcw,
   ligacao: Phone,
   email: Mail,
@@ -25,13 +25,16 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   relacionamento: Heart,
   checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
+  whatsapp: Phone,
+  proposta_enviada: ClipboardList,
+  outro_crm: MoreHorizontal,
 };
 
 export function ActivityWidget({ activities, onViewAll, onActivityClick }: ActivityWidgetProps) {
   const today = new Date().toISOString().split('T')[0];
   
   const overdue = activities.filter(a => 
-    a.status === 'pendente' && a.due_date < today
+    (a.status === 'pendente' || a.status === 'agendada') && a.due_date < today
   );
   
   const todayActivities = activities.filter(a => 

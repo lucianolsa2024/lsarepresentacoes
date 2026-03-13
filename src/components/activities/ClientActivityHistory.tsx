@@ -16,7 +16,7 @@ interface ClientActivityHistoryProps {
   onActivityClick?: (activity: Activity) => void;
 }
 
-const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: string }>> = {
+const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   followup: RefreshCcw,
   ligacao: Phone,
   email: Mail,
@@ -28,12 +28,17 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   relacionamento: Heart,
   checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
+  whatsapp: Phone,
+  proposta_enviada: ClipboardList,
+  outro_crm: MoreHorizontal,
 };
 
-const statusIcons: Record<Activity['status'], React.ComponentType<{ className?: string }>> = {
+const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   pendente: Clock,
+  agendada: Clock,
   em_andamento: Clock,
   concluida: CheckCircle,
+  realizada: CheckCircle,
   cancelada: XCircle,
 };
 
@@ -51,8 +56,8 @@ export function ClientActivityHistory({
 
   const stats = useMemo(() => {
     const total = clientActivities.length;
-    const completed = clientActivities.filter(a => a.status === 'concluida').length;
-    const pending = clientActivities.filter(a => a.status === 'pendente').length;
+    const completed = clientActivities.filter(a => a.status === 'concluida' || a.status === 'realizada').length;
+    const pending = clientActivities.filter(a => a.status === 'pendente' || a.status === 'agendada').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     
     return { total, completed, pending, completionRate };
@@ -73,10 +78,12 @@ export function ClientActivityHistory({
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [clientActivities]);
 
-  const statusColors: Record<Activity['status'], string> = {
+  const statusColors: Record<string, string> = {
     pendente: 'text-gray-500',
+    agendada: 'text-blue-400',
     em_andamento: 'text-blue-500',
     concluida: 'text-green-500',
+    realizada: 'text-green-500',
     cancelada: 'text-red-500',
   };
 

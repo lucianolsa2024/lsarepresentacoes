@@ -63,7 +63,7 @@ export function generateActivityCalendarUrl(activity: Activity): string {
 }
 
 function getTypeEmoji(type: Activity['type']): string {
-  const emojis: Record<Activity['type'], string> = {
+  const emojis: Record<string, string> = {
     followup: '🔄',
     ligacao: '📞',
     email: '📧',
@@ -75,8 +75,11 @@ function getTypeEmoji(type: Activity['type']): string {
     relacionamento: '💝',
     checklist_loja: '✅',
     outros: '📌',
+    whatsapp: '💬',
+    proposta_enviada: '📄',
+    outro_crm: '📌',
   };
-  return emojis[type];
+  return emojis[type] || '📌';
 }
 
 export function openActivityInOutlook(activity: Activity): void {
