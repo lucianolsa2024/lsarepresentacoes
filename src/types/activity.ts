@@ -1,6 +1,6 @@
 export type ActivityCategory = 'crm' | 'tarefa';
-export type CrmActivityType = 'visita' | 'ligacao' | 'whatsapp' | 'email' | 'reuniao' | 'proposta_enviada' | 'followup' | 'outro_crm';
-export type TarefaActivityType = 'tarefa' | 'treinamento' | 'assistencia' | 'checklist_loja' | 'outros';
+export type CrmActivityType = 'visita' | 'ligacao' | 'whatsapp' | 'email' | 'reuniao' | 'proposta_enviada' | 'followup' | 'treinamento' | 'checklist_loja' | 'outro_crm';
+export type TarefaActivityType = 'tarefa' | 'assistencia' | 'outros';
 export type ActivityType = CrmActivityType | TarefaActivityType;
 export type ActivityPriority = 'baixa' | 'media' | 'alta' | 'urgente';
 export type ActivityStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada' | 'realizada' | 'agendada';
