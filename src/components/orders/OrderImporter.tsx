@@ -68,6 +68,17 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
     if (!file) return;
 
     try {
+      // ── Raw debug: read columns and first row before processing ──
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { raw: true, defval: null });
+      const columns = rawRows.length > 0 ? Object.keys(rawRows[0]) : [];
+      const firstRow = rawRows.length > 0 ? rawRows[0] : {};
+      setRawDebug(
+        `Colunas encontradas: ${JSON.stringify(columns)}\n\nPrimeira linha bruta: ${JSON.stringify(firstRow, null, 2)}`
+      );
+
       const result = await importarPedidosExcel(file);
 
       if (result.erros.length > 0) {
