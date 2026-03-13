@@ -380,6 +380,8 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
         <ActivityFilters
           search={search}
           onSearchChange={setSearch}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
           typeFilter={typeFilter}
           onTypeFilterChange={setTypeFilter}
           priorityFilter={priorityFilter}
