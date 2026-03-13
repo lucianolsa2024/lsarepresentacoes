@@ -3,6 +3,7 @@ import { useActivities } from '@/hooks/useActivities';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
+import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
 import { Activity, ActivityCategory, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
 import { ActivityKanban } from './ActivityKanban';
@@ -16,7 +17,7 @@ import { BulkActionBar } from './BulkActionBar';
 import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -58,6 +59,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const isAdmin = useIsAdmin();
   const { user } = useAuth();
   const { activeReps } = useRepresentatives();
+  const { addOpportunity } = useSalesOpportunities();
   const currentEmail = user?.email;
 
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
@@ -68,6 +70,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [completeNotes, setCompleteNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  const [createDeal, setCreateDeal] = useState(false);
+  const [dealTitle, setDealTitle] = useState('');
+  const [dealValue, setDealValue] = useState('');
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistActivity, setChecklistActivity] = useState<Activity | null>(null);
@@ -144,6 +149,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     setCompleteNotes('');
     setCreateFollowUp(false);
     setFollowUpDate('');
+    setCreateDeal(false);
+    setDealTitle('');
+    setDealValue('');
   };
 
   const getNextFollowUpTitle = (title: string): string => {
@@ -177,10 +185,26 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       });
     }
 
+    if (createDeal && activity) {
+      await addOpportunity({
+        clientId: activity.client_id || null,
+        title: dealTitle.trim() || `Negociação — ${activity.client?.company || activity.title}`,
+        description: `Originada da atividade: ${activity.title}`,
+        funnelType: 'corporativo',
+        stage: 'prospeccao',
+        value: parseFloat(dealValue) || 0,
+        ownerEmail: activity.assigned_to_email || currentEmail,
+      });
+      toast.success('Negociação criada!');
+    }
+
     setCompleteDialog(null);
     setCompleteNotes('');
     setCreateFollowUp(false);
     setFollowUpDate('');
+    setCreateDeal(false);
+    setDealTitle('');
+    setDealValue('');
   };
 
   const handleDelete = async () => {
@@ -517,13 +541,64 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
                 </div>
               )}
             </div>
+
+            {/* Create Deal option (only for CRM activities) */}
+            {completeDialog && (() => {
+              const act = activities.find(a => a.id === completeDialog);
+              if (!act || act.activity_category !== 'crm') return null;
+              return (
+                <div className="space-y-3 border-t pt-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="createDeal"
+                      checked={createDeal}
+                      onChange={(e) => setCreateDeal(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    <Label htmlFor="createDeal" className="cursor-pointer text-sm flex items-center gap-1">
+                      <Handshake className="h-4 w-4" />
+                      Criar negociação a partir desta atividade
+                    </Label>
+                  </div>
+                  {createDeal && (
+                    <div className="space-y-2 pl-6">
+                      <div className="space-y-1">
+                        <Label className="text-sm">Título da Negociação</Label>
+                        <input
+                          type="text"
+                          value={dealTitle}
+                          onChange={(e) => setDealTitle(e.target.value)}
+                          placeholder={`Negociação — ${act.client?.company || ''}`}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-sm">Valor estimado (R$)</Label>
+                        <input
+                          type="number"
+                          value={dealValue}
+                          onChange={(e) => setDealValue(e.target.value)}
+                          placeholder="0,00"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteDialog(null)}>
               Cancelar
             </Button>
             <Button onClick={handleConfirmComplete} disabled={createFollowUp && !followUpDate}>
-              {createFollowUp ? 'Concluir e Criar Follow-up' : 'Concluir'}
+              {createFollowUp && createDeal ? 'Concluir, Follow-up e Negociação' :
+               createFollowUp ? 'Concluir e Criar Follow-up' :
+               createDeal ? 'Concluir e Criar Negociação' : 'Concluir'}
             </Button>
           </DialogFooter>
         </DialogContent>
