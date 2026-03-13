@@ -258,7 +258,7 @@ export function SalesFunnelManager() {
             <SelectTrigger className="w-[200px]"><SelectValue placeholder="Representante" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.representative_name}</SelectItem>)}
+              {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}

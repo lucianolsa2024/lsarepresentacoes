@@ -54,7 +54,7 @@ export function CorporateOpportunityForm({ clients, representatives, initial, on
             <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Selecionar...</SelectItem>
-              {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.representative_name}</SelectItem>)}
+              {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
