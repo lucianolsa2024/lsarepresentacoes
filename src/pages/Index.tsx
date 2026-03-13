@@ -242,6 +242,7 @@ const Index = () => {
       const followUpDate = new Date();
       followUpDate.setDate(followUpDate.getDate() + 5);
       await addActivity({
+        activity_category: 'crm',
         type: 'followup',
         title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
         description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,

@@ -196,6 +196,7 @@ export function AssistanceManager() {
 
     const clientName = selectedClient?.company || '';
     await addActivity({
+      activity_category: 'tarefa',
       type: 'assistencia',
       title: `Assistência - ${clientName} - ${form.product}`,
       description: `Produto: ${form.product}\nDefeito: ${form.defect}\n${form.description ? `Detalhes: ${form.description}` : ''}`,

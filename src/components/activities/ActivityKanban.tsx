@@ -35,8 +35,10 @@ export function ActivityKanban({
 
   const columnColors: Record<ActivityStatus, string> = {
     pendente: 'border-t-gray-400',
+    agendada: 'border-t-blue-400',
     em_andamento: 'border-t-blue-500',
     concluida: 'border-t-green-500',
+    realizada: 'border-t-green-500',
     cancelada: 'border-t-red-500',
   };
 

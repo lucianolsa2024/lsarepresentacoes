@@ -78,10 +78,12 @@ export function ClientActivityHistory({
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [clientActivities]);
 
-  const statusColors: Record<Activity['status'], string> = {
+  const statusColors: Record<string, string> = {
     pendente: 'text-gray-500',
+    agendada: 'text-blue-400',
     em_andamento: 'text-blue-500',
     concluida: 'text-green-500',
+    realizada: 'text-green-500',
     cancelada: 'text-red-500',
   };
 

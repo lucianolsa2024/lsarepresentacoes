@@ -51,7 +51,8 @@ export function generateWhatsAppMessage(activity: Activity, client: ClientInfo):
     }
   }
   
-  return messageTemplates[activity.type](clientName, formattedDate);
+  const template = messageTemplates[activity.type] || messageTemplates.outros;
+  return template(clientName, formattedDate);
 }
 
 export function openWhatsAppForActivity(activity: Activity, client: ClientInfo): void {
