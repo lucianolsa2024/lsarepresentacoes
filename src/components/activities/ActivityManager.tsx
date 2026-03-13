@@ -18,6 +18,7 @@ import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare, Handshake } from 'lucide-react';
+import { CalendarSubscription } from './CalendarSubscription';
 import { toast } from 'sonner';
 import {
   AlertDialog,
