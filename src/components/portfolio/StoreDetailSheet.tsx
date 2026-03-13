@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, Link as LinkIcon } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { PortfolioClient, StoreTraining, NpsResponse } from '@/hooks/usePortfolio';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
