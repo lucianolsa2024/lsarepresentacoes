@@ -67,13 +67,17 @@ export function StoreDetailSheet({
 
   const handleTrainingSubmit = async () => {
     if (!trainingForm.trainerEmail) { toast.error('Selecione o representante'); return; }
-    const ok = await onAddTraining({
+    const result = await onAddTraining({
       clientId: client.id,
       ...trainingForm,
     });
-    if (ok) {
+    if (result.success) {
       setShowTrainingForm(false);
       setTrainingForm({ trainingDate: new Date().toISOString().split('T')[0], trainerEmail: '', collection: '', observations: '', participants: [] });
+      if (result.npsToken) {
+        const link = `${window.location.origin}/nps/${result.npsToken}`;
+        setNpsLink(link);
+      }
     }
   };
 
