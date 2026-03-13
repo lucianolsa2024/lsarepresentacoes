@@ -294,6 +294,94 @@ export type Database = {
         }
         Relationships: []
       }
+      client_influencers: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_influencers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_representatives: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          representative_email: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          representative_email: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          representative_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_representatives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_segments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           city: string | null
@@ -303,16 +391,21 @@ export type Database = {
           created_at: string
           curve: string | null
           curve_updated_at: string | null
+          default_payment_terms: string | null
           document: string | null
           email: string | null
           id: string
+          inscricao_estadual: string | null
           is_new_client: boolean | null
           name: string | null
           neighborhood: string | null
+          notes: string | null
           number: string | null
           owner_email: string | null
           parent_client_id: string | null
           phone: string | null
+          segment: string | null
+          site: string | null
           state: string | null
           street: string | null
           updated_at: string
@@ -326,16 +419,21 @@ export type Database = {
           created_at?: string
           curve?: string | null
           curve_updated_at?: string | null
+          default_payment_terms?: string | null
           document?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_new_client?: boolean | null
           name?: string | null
           neighborhood?: string | null
+          notes?: string | null
           number?: string | null
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
+          segment?: string | null
+          site?: string | null
           state?: string | null
           street?: string | null
           updated_at?: string
@@ -349,16 +447,21 @@ export type Database = {
           created_at?: string
           curve?: string | null
           curve_updated_at?: string | null
+          default_payment_terms?: string | null
           document?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_new_client?: boolean | null
           name?: string | null
           neighborhood?: string | null
+          notes?: string | null
           number?: string | null
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
+          segment?: string | null
+          site?: string | null
           state?: string | null
           street?: string | null
           updated_at?: string
