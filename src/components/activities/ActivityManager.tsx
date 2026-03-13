@@ -165,6 +165,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     if (createFollowUp && followUpDate && activity) {
       const newTitle = getNextFollowUpTitle(activity.title);
       await addActivity({
+        activity_category: activity.activity_category,
         type: activity.type,
         title: newTitle,
         description: activity.description,
