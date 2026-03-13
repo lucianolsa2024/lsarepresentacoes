@@ -65,23 +65,29 @@ function detectMapping(headers: string[]): Record<string, number> {
 
 function parseDate(value: string): string {
   if (!value) return '';
-  const str = value.trim();
-  // Handle serial date numbers from Excel (days since 1900-01-01)
-  if (/^\d{5}$/.test(str)) {
-    const serial = parseInt(str);
-    const epoch = new Date(1899, 11, 30);
-    const date = new Date(epoch.getTime() + serial * 86400000);
-    return date.toISOString().split('T')[0];
+  const str = String(value).trim();
+
+  // Formato brasileiro DD/MM/AAAA (vindo do paste do Excel)
+  const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brMatch) {
+    const day   = brMatch[1].padStart(2, '0');
+    const month = brMatch[2].padStart(2, '0');
+    const year  = brMatch[3];
+    const iso   = `${year}-${month}-${day}`;
+    return iso === '2027-12-31' ? '' : iso;
   }
-  const slashParts = str.split('/');
-  if (slashParts.length === 3) {
-    let [a, b, c] = slashParts;
-    let year = c.length === 2 ? `20${c}` : c;
-    if (parseInt(a) > 12) return `${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
-    return `${year}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
+
+  // Serial numérico do Excel (upload de arquivo .xlsx)
+  if (!isNaN(Number(str)) && Number(str) > 1000) {
+    const ms  = (Number(str) - 25569) * 86400 * 1000;
+    const iso = new Date(ms).toISOString().split('T')[0];
+    return iso === '2027-12-31' ? '' : iso;
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0, 10);
-  return str;
+
+  // ISO ou outro formato reconhecido pelo JS
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().split('T')[0];
 }
 
 function parsePrice(value: string): number {
