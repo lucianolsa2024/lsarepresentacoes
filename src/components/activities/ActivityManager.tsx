@@ -118,6 +118,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const handleClearFilters = () => {
     setSearch('');
+    setCategoryFilter('all');
     setTypeFilter('all');
     setPriorityFilter('all');
     setStatusFilter('all');
