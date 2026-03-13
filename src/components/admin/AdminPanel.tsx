@@ -6,8 +6,9 @@ import { UserManager } from './UserManager';
 import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
+import { CommissionManager } from './CommissionManager';
 import { Order } from '@/types/order';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair } from 'lucide-react';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent } from 'lucide-react';
 
 interface AdminPanelProps {
   orders: Order[];
