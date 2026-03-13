@@ -310,6 +310,23 @@ export function StoreDetailSheet({
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* NPS Link Dialog */}
+            <Dialog open={!!npsLink} onOpenChange={open => { if (!open) setNpsLink(null); }}>
+              <DialogContent>
+                <DialogHeader><DialogTitle className="flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Link NPS do Treinamento</DialogTitle></DialogHeader>
+                <p className="text-sm text-muted-foreground">Compartilhe este link com os participantes para que respondam o formulário NPS:</p>
+                <div className="flex items-center gap-2">
+                  <Input value={npsLink || ''} readOnly className="text-xs" />
+                  <Button size="sm" variant="outline" onClick={() => {
+                    navigator.clipboard.writeText(npsLink || '');
+                    toast.success('Link copiado!');
+                  }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* ABA 4 - NPS */}
