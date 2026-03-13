@@ -21,6 +21,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/nps/:token" element={<NpsForm />} />
             <Route
               path="/"
               element={
