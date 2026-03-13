@@ -108,6 +108,21 @@ export function SalesFunnelManager() {
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
 
+  // Listen for external edit-opportunity events (from ClientDetailPanel)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const opp = (e as CustomEvent).detail as SalesOpportunity;
+      if (opp) {
+        if (opp.funnelType === 'lojista') setFunnelType('lojista');
+        else setFunnelType('corporativo');
+        setEditingOpp(opp);
+        setShowForm(true);
+      }
+    };
+    window.addEventListener('edit-opportunity', handler);
+    return () => window.removeEventListener('edit-opportunity', handler);
+  }, []);
+
   // Show Portfolio for lojistas tab
   if (funnelType === 'lojista') {
     return (
