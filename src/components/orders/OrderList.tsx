@@ -37,6 +37,8 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
   const [repFilter, setRepFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [nfDialog, setNfDialog] = useState<Order | null>(null);
   const [nfNumber, setNfNumber] = useState('');
   const [nfFile, setNfFile] = useState<File | null>(null);
