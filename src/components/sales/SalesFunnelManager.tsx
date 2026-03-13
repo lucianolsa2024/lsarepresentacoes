@@ -75,7 +75,7 @@ function CorporateOpportunityCard({
       )}
       {rep && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <User className="h-3 w-3" /> {rep.representative_name}
+          <User className="h-3 w-3" /> {rep.name}
         </p>
       )}
       {opp.nextFollowupDate && (
