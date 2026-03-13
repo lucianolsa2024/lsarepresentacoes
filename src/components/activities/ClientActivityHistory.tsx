@@ -56,8 +56,8 @@ export function ClientActivityHistory({
 
   const stats = useMemo(() => {
     const total = clientActivities.length;
-    const completed = clientActivities.filter(a => a.status === 'concluida').length;
-    const pending = clientActivities.filter(a => a.status === 'pendente').length;
+    const completed = clientActivities.filter(a => a.status === 'concluida' || a.status === 'realizada').length;
+    const pending = clientActivities.filter(a => a.status === 'pendente' || a.status === 'agendada').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     
     return { total, completed, pending, completionRate };

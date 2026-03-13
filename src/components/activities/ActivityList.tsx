@@ -50,7 +50,7 @@ export function ActivityList({
 
   const grouped = activities.reduce<GroupedActivities>(
     (acc, activity) => {
-      if (activity.status === 'concluida' || activity.status === 'cancelada') {
+      if (activity.status === 'concluida' || activity.status === 'cancelada' || activity.status === 'realizada') {
         if (showCompleted) {
           acc.completed.push(activity);
         }
