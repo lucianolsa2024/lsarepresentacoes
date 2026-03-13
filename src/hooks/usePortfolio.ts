@@ -246,7 +246,7 @@ export function usePortfolio() {
 
       return {
         client,
-        computedStatus: finalStatus,
+        computedStatus: computedSt,
         curve,
         daysSinceLastVisit,
         nextVisitDue,
