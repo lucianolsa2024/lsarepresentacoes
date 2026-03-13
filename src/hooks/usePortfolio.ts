@@ -264,7 +264,7 @@ export function usePortfolio() {
     collection: string;
     observations: string;
     participants: string[];
-  }): Promise<boolean> => {
+  }): Promise<{ success: boolean; npsToken?: string }> => {
     try {
       const { data: result, error } = await supabase
         .from('store_trainings' as any)
@@ -291,11 +291,11 @@ export function usePortfolio() {
 
       toast.success('Treinamento registrado');
       await fetchPortfolioData();
-      return true;
+      return { success: true, npsToken: (result as any).nps_token };
     } catch (error) {
       console.error('Error adding training:', error);
       toast.error('Erro ao registrar treinamento');
-      return false;
+      return { success: false };
     }
   };
 

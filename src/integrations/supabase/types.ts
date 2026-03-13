@@ -1335,6 +1335,8 @@ export type Database = {
           collection: string | null
           created_at: string | null
           id: string
+          nps_submitted: boolean
+          nps_token: string | null
           observations: string | null
           trainer_email: string
           training_date: string
@@ -1344,6 +1346,8 @@ export type Database = {
           collection?: string | null
           created_at?: string | null
           id?: string
+          nps_submitted?: boolean
+          nps_token?: string | null
           observations?: string | null
           trainer_email: string
           training_date: string
@@ -1353,6 +1357,8 @@ export type Database = {
           collection?: string | null
           created_at?: string | null
           id?: string
+          nps_submitted?: boolean
+          nps_token?: string | null
           observations?: string | null
           trainer_email?: string
           training_date?: string

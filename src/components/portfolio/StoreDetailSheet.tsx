@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, Link as LinkIcon } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { PortfolioClient, StoreTraining, NpsResponse } from '@/hooks/usePortfolio';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
@@ -28,7 +29,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   trainings: StoreTraining[];
   npsResponses: NpsResponse[];
-  onAddTraining: (data: any) => Promise<boolean>;
+  onAddTraining: (data: any) => Promise<{ success: boolean; npsToken?: string }>;
   onAddNps: (data: any) => Promise<boolean>;
   onRegisterVisit: (clientId: string, data: { date: string; description: string; result: string; nextStep: string }) => Promise<boolean>;
   influencers: ClientInfluencer[];
@@ -43,6 +44,7 @@ export function StoreDetailSheet({
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [showNpsForm, setShowNpsForm] = useState(false);
+  const [npsLink, setNpsLink] = useState<string | null>(null);
   const [visitForm, setVisitForm] = useState({ date: new Date().toISOString().split('T')[0], description: '', result: 'positivo', nextStep: '' });
   const [trainingForm, setTrainingForm] = useState({ trainingDate: new Date().toISOString().split('T')[0], trainerEmail: '', collection: '', observations: '', participants: [] as string[] });
   const [npsForm, setNpsForm] = useState({ consultantName: '', scores: [0, 0, 0, 0, 0], comment: '', responseDate: new Date().toISOString().split('T')[0] });
@@ -65,13 +67,17 @@ export function StoreDetailSheet({
 
   const handleTrainingSubmit = async () => {
     if (!trainingForm.trainerEmail) { toast.error('Selecione o representante'); return; }
-    const ok = await onAddTraining({
+    const result = await onAddTraining({
       clientId: client.id,
       ...trainingForm,
     });
-    if (ok) {
+    if (result.success) {
       setShowTrainingForm(false);
       setTrainingForm({ trainingDate: new Date().toISOString().split('T')[0], trainerEmail: '', collection: '', observations: '', participants: [] });
+      if (result.npsToken) {
+        const link = `${window.location.origin}/nps/${result.npsToken}`;
+        setNpsLink(link);
+      }
     }
   };
 
@@ -301,6 +307,23 @@ export function StoreDetailSheet({
                     <Button variant="outline" onClick={() => setShowTrainingForm(false)}>Cancelar</Button>
                     <Button onClick={handleTrainingSubmit}>Salvar</Button>
                   </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* NPS Link Dialog */}
+            <Dialog open={!!npsLink} onOpenChange={open => { if (!open) setNpsLink(null); }}>
+              <DialogContent>
+                <DialogHeader><DialogTitle className="flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Link NPS do Treinamento</DialogTitle></DialogHeader>
+                <p className="text-sm text-muted-foreground">Compartilhe este link com os participantes para que respondam o formulário NPS:</p>
+                <div className="flex items-center gap-2">
+                  <Input value={npsLink || ''} readOnly className="text-xs" />
+                  <Button size="sm" variant="outline" onClick={() => {
+                    navigator.clipboard.writeText(npsLink || '');
+                    toast.success('Link copiado!');
+                  }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
