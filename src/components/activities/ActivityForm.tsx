@@ -199,7 +199,7 @@ export function ActivityForm({
         ? `${CRM_TYPE_CONFIG[type as keyof typeof CRM_TYPE_CONFIG]?.label || type} - ${selectedClient?.company || ''}`
         : title.trim();
 
-      await onSubmit({
+      const submitData: any = {
         activity_category: category,
         type,
         title: autoTitle,
@@ -216,7 +216,11 @@ export function ActivityForm({
         next_step: nextStep.trim() || undefined,
         next_contact_date: nextContactDate || undefined,
         order_id: orderId || undefined,
-      });
+      };
+      if (activity) {
+        submitData.status = status;
+      }
+      await onSubmit(submitData);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
