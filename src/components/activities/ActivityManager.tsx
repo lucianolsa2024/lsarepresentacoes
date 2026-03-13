@@ -79,6 +79,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   // Filters
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<ActivityCategory | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<ActivityPriority | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | 'all'>('all');
