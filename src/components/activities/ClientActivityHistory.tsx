@@ -16,7 +16,7 @@ interface ClientActivityHistoryProps {
   onActivityClick?: (activity: Activity) => void;
 }
 
-const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: string }>> = {
+const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   followup: RefreshCcw,
   ligacao: Phone,
   email: Mail,
@@ -28,12 +28,17 @@ const typeIcons: Record<Activity['type'], React.ComponentType<{ className?: stri
   relacionamento: Heart,
   checklist_loja: ClipboardCheck,
   outros: MoreHorizontal,
+  whatsapp: Phone,
+  proposta_enviada: ClipboardList,
+  outro_crm: MoreHorizontal,
 };
 
-const statusIcons: Record<Activity['status'], React.ComponentType<{ className?: string }>> = {
+const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   pendente: Clock,
+  agendada: Clock,
   em_andamento: Clock,
   concluida: CheckCircle,
+  realizada: CheckCircle,
   cancelada: XCircle,
 };
 
