@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 interface Props {
   clients: Client[];
-  representatives: { email: string; representative_name: string }[];
+  representatives: { email: string; name: string }[];
   initial?: SalesOpportunity | null;
   onSave: (data: OpportunityFormData) => void;
   onCancel: () => void;
