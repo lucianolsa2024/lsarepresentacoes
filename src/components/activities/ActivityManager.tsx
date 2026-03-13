@@ -93,10 +93,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     return activities.filter(activity => {
       if (hiddenIds.has(activity.id)) return false;
 
-      // Delivery activities: only visible to Maíra; overdue ones also visible to everyone
+      // Delivery activities: only visible to Maíra
       if (isDeliveryActivity(activity) && !isMaira) {
-        const isOverdue = activity.status === 'pendente' && activity.due_date < today;
-        if (!isOverdue) return false;
+        return false;
       }
 
       if (search) {
