@@ -210,7 +210,7 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
             <div className="flex flex-wrap gap-3 text-xs">
               <span>Total: <strong>{stats.total}</strong></span>
               <span>Faturados: <strong>{stats.faturados}</strong></span>
-              {stats.duplicatas > 0 && <span className="text-orange-600">Duplicatas ignoradas: <strong>{stats.duplicatas}</strong></span>}
+              {stats.duplicatas > 0 && <span className="text-destructive">Duplicatas ignoradas: <strong>{stats.duplicatas}</strong></span>}
             </div>
             {stats.erros.length > 0 && (
               <div className="text-xs text-destructive mt-1">
