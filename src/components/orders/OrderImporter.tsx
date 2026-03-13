@@ -5,9 +5,11 @@ import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Upload, Loader2, CheckCircle, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { importarPedidosExcel, PedidoLinha } from '@/lib/importarPedidos';
+import * as XLSX from 'xlsx';
 
 interface OrderWithMeta {
   order: OrderFormData;
