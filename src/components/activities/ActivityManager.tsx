@@ -107,6 +107,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
           activity.client?.company.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
+      if (categoryFilter !== 'all' && activity.activity_category !== categoryFilter) return false;
       if (typeFilter !== 'all' && activity.type !== typeFilter) return false;
       if (priorityFilter !== 'all' && activity.priority !== priorityFilter) return false;
       if (statusFilter !== 'all' && activity.status !== statusFilter) return false;
