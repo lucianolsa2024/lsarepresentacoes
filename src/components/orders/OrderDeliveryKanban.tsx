@@ -61,7 +61,7 @@ const STATUS_CONFIG: Record<DeliveryStatus, { label: string; icon: React.ReactNo
 const COLUMN_ORDER: DeliveryStatus[] = ['atrasado', 'embarque_semana', 'embarque_proxima', 'embarque_futuro', 'faturado'];
 
 function getDeliveryStatus(order: Order): DeliveryStatus {
-  if (order.orderType === 'PRONTA ENTREGA') return 'faturado';
+  if (order.status === 'faturado' || order.status === 'entregue' || order.orderType === 'PRONTA ENTREGA') return 'faturado';
   const deliveryDateStr = order.rescheduleDate || order.deliveryDate;
   if (!deliveryDateStr) return 'embarque_futuro';
 
