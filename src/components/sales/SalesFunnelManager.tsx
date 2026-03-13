@@ -315,6 +315,18 @@ export function SalesFunnelManager() {
         </DialogContent>
       </Dialog>
 
+      {/* Won confirmation dialog */}
+      <Dialog open={!!wonConfirm} onOpenChange={(open) => !open && setWonConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Confirmar como Ganho?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Deseja marcar esta oportunidade como <strong>Fechado — Ganho ✅</strong>?</p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setWonConfirm(null)}>Cancelar</Button>
+            <Button onClick={handleWonConfirm} className="bg-green-600 hover:bg-green-700 text-white">Confirmar Ganho</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Lost reason modal */}
       <LostReasonModal open={!!lostModal} onClose={() => setLostModal(null)} onConfirm={handleLostConfirm} />
 
@@ -359,6 +371,93 @@ export function SalesFunnelManager() {
           })}
         </div>
       </DragDropContext>
+
+      {/* Won & Lost sections */}
+      {(wonOpps.length > 0 || lostOpps.length > 0) && (
+        <div className="space-y-3 mt-4">
+          {wonOpps.length > 0 && (
+            <Collapsible open={showWon} onOpenChange={setShowWon}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between border-green-300 hover:bg-green-50">
+                  <span className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-green-600" />
+                    <span className="font-semibold text-green-800">Fechado — Ganho ✅</span>
+                    <Badge variant="secondary">{wonOpps.length}</Badge>
+                    <span className="text-sm text-muted-foreground">{formatCurrency(wonValue)}</span>
+                  </span>
+                  {showWon ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {wonOpps.map(opp => {
+                    const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
+                    const rep = opp.ownerEmail ? representatives.find(r => r.email === opp.ownerEmail) : null;
+                    return (
+                      <div key={opp.id} className="bg-card border border-green-200 rounded-lg p-3 space-y-1.5">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            {client && <p className="text-xs font-semibold flex items-center gap-1 truncate"><Building2 className="h-3 w-3 shrink-0" /> {client.company}</p>}
+                            <p className="text-sm font-medium truncate">{opp.title}</p>
+                          </div>
+                          <div className="flex gap-0.5 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                        {opp.value > 0 && <p className="text-xs font-semibold text-green-700 flex items-center gap-1"><DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}</p>}
+                        {rep && <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> {rep.name}</p>}
+                        {opp.wonAt && <p className="text-xs text-muted-foreground">Ganho em: {new Date(opp.wonAt).toLocaleDateString('pt-BR')}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {lostOpps.length > 0 && (
+            <Collapsible open={showLost} onOpenChange={setShowLost}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between border-red-300 hover:bg-red-50">
+                  <span className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="font-semibold text-red-800">Fechado — Perdido ❌</span>
+                    <Badge variant="secondary">{lostOpps.length}</Badge>
+                    <span className="text-sm text-muted-foreground">{formatCurrency(lostValue)}</span>
+                  </span>
+                  {showLost ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {lostOpps.map(opp => {
+                    const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
+                    const rep = opp.ownerEmail ? representatives.find(r => r.email === opp.ownerEmail) : null;
+                    return (
+                      <div key={opp.id} className="bg-card border border-red-200 rounded-lg p-3 space-y-1.5">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            {client && <p className="text-xs font-semibold flex items-center gap-1 truncate"><Building2 className="h-3 w-3 shrink-0" /> {client.company}</p>}
+                            <p className="text-sm font-medium truncate">{opp.title}</p>
+                          </div>
+                          <div className="flex gap-0.5 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                        {opp.value > 0 && <p className="text-xs font-semibold text-red-700 flex items-center gap-1"><DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}</p>}
+                        {rep && <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> {rep.name}</p>}
+                        {opp.lostReason && <p className="text-xs text-red-600"><strong>Motivo:</strong> {opp.lostReason}</p>}
+                        {opp.lostAt && <p className="text-xs text-muted-foreground">Perdido em: {new Date(opp.lostAt).toLocaleDateString('pt-BR')}</p>}
+                        {opp.notes && <p className="text-xs text-muted-foreground line-clamp-2">{opp.notes}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+      )}
     </div>
   );
 }
