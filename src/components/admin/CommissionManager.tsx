@@ -20,7 +20,7 @@ import {
   type ConciliacaoResult,
   type ParcelaConciliada,
   type ConciliacaoStatus,
-} from './commissionReconciliation';
+} from '@/lib/commissionReconciliation';
 
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist';
