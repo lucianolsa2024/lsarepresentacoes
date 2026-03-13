@@ -370,6 +370,30 @@ export function SalesFunnelManager() {
             );
           })}
         </div>
+
+        {/* Drop zones for Ganho / Perdido */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <Droppable droppableId="ganho">
+            {(provided, snapshot) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}
+                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${snapshot.isDraggingOver ? 'border-green-500 bg-green-50' : 'border-green-300 bg-green-50/30'}`}>
+                <Trophy className="h-5 w-5 mx-auto text-green-600 mb-1" />
+                <p className="text-sm font-semibold text-green-700">Arraste aqui → Ganho ✅</p>
+                <div className="hidden">{provided.placeholder}</div>
+              </div>
+            )}
+          </Droppable>
+          <Droppable droppableId="perdido">
+            {(provided, snapshot) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}
+                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${snapshot.isDraggingOver ? 'border-red-500 bg-red-50' : 'border-red-300 bg-red-50/30'}`}>
+                <XCircle className="h-5 w-5 mx-auto text-red-600 mb-1" />
+                <p className="text-sm font-semibold text-red-700">Arraste aqui → Perdido ❌</p>
+                <div className="hidden">{provided.placeholder}</div>
+              </div>
+            )}
+          </Droppable>
+        </div>
       </DragDropContext>
 
       {/* Won & Lost sections */}
