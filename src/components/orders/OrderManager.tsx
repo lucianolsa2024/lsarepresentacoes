@@ -213,5 +213,6 @@ export function OrderManager() {
           <FaturadosImporter onComplete={() => setActiveTab('list')} />
         </TabsContent>
       </Tabs>
+    </div>
   );
 }
