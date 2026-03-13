@@ -352,6 +352,54 @@ export type Database = {
           },
         ]
       }
+      commission_entries: {
+        Row: {
+          cliente: string
+          cond_pgto: string | null
+          created_at: string
+          dt_emissao: string | null
+          dt_fat: string
+          id: string
+          numero_nf: string
+          numero_pedido: string
+          produto_completo: string
+          representante_pf: string
+          tabela_preco: string | null
+          tipo_pedido: string | null
+          valor: number
+        }
+        Insert: {
+          cliente: string
+          cond_pgto?: string | null
+          created_at?: string
+          dt_emissao?: string | null
+          dt_fat: string
+          id?: string
+          numero_nf: string
+          numero_pedido: string
+          produto_completo: string
+          representante_pf: string
+          tabela_preco?: string | null
+          tipo_pedido?: string | null
+          valor?: number
+        }
+        Update: {
+          cliente?: string
+          cond_pgto?: string | null
+          created_at?: string
+          dt_emissao?: string | null
+          dt_fat?: string
+          id?: string
+          numero_nf?: string
+          numero_pedido?: string
+          produto_completo?: string
+          representante_pf?: string
+          tabela_preco?: string | null
+          tipo_pedido?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
       discount_policies: {
         Row: {
           avg_days: number
