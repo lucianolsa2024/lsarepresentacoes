@@ -228,18 +228,8 @@ export function usePortfolio() {
         : null;
       const curve = curves[client.id] || null;
       const daysSinceLastPurchase = lastPurchases[client.id] ?? null;
-      const computedSt = computeStatus(
-        (client as any).portfolioStatus || client.curve === 'D' ? 'prospeccao' : null,
-        daysSinceLastVisit,
-        curve,
-        daysSinceLastPurchase
-      );
-
-      // Get portfolio_status from raw data if available
-      const manualStatus = (client as any).portfolioStatus;
-      const finalStatus = (manualStatus === 'prospeccao' || manualStatus === 'onboarding')
-        ? manualStatus
-        : computedSt;
+      const manualStatus = client.portfolioStatus;
+      const computedSt = computeStatus(manualStatus, daysSinceLastVisit, curve, daysSinceLastPurchase);
 
       const maxDays = curve ? CURVE_MAX_DAYS[curve] : 50;
       const nextVisitDue = lastVisitStr ? addDays(new Date(lastVisitStr + 'T00:00:00'), maxDays) : null;
