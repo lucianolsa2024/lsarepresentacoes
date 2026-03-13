@@ -130,32 +130,6 @@ function parseInstallments(condPgto: string, dtFat: string, valorTotal: number, 
   }));
 }
 
-function cellVal(val: any): string {
-  if (val == null) return '';
-  if (typeof val === 'object' && val.result !== undefined) return String(val.result ?? '');
-  if (typeof val === 'object' && val.richText) return val.richText.map((r: any) => r.text).join('');
-  if (val instanceof Date) return format(val, 'yyyy-MM-dd');
-  return String(val).trim();
-}
-
-function parseExcelDate(val: any): string {
-  if (!val) return '';
-  if (val instanceof Date) return format(val, 'yyyy-MM-dd');
-  if (typeof val === 'number') {
-    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-    return format(d, 'yyyy-MM-dd');
-  }
-  const s = String(val).trim();
-  const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
-  return s;
-}
-
-function parsePrice(val: any): number {
-  if (typeof val === 'number') return val;
-  const s = String(val).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
-  return parseFloat(s) || 0;
-}
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
