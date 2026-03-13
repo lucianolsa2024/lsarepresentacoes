@@ -40,7 +40,7 @@ function CorporateOpportunityCard({
   opp, clients, representatives, onEdit, onDelete,
 }: {
   opp: SalesOpportunity; clients: Client[];
-  representatives: { email: string; representative_name: string }[];
+  representatives: { email: string; name: string }[];
   onEdit: (opp: SalesOpportunity) => void; onDelete: (id: string) => void;
 }) {
   const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
