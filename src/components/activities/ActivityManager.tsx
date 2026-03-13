@@ -3,6 +3,7 @@ import { useActivities } from '@/hooks/useActivities';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
+import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
 import { Activity, ActivityCategory, ActivityType, ActivityPriority, ActivityStatus, CreateActivityInput } from '@/types/activity';
 import { ActivityList } from './ActivityList';
 import { ActivityKanban } from './ActivityKanban';
