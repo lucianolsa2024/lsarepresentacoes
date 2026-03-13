@@ -196,18 +196,22 @@ export function SalesReport({ orders }: SalesReportProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vendedor</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
-                <TableHead className="text-right">Volume</TableHead>
-                <TableHead className="text-right">Pedidos</TableHead>
-                <TableHead className="text-right">Ticket Médio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {byRep.map((r) => (
-                <TableRow key={r.name}>
-                  <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
-                  <TableCell className="text-right">{formatCurrency(r.revenue)}</TableCell>
+                 <TableHead>Vendedor</TableHead>
+                 <TableHead className="text-right">Venda</TableHead>
+                 <TableHead className="text-right">Faturado</TableHead>
+                 <TableHead className="text-right">Total</TableHead>
+                 <TableHead className="text-right">Volume</TableHead>
+                 <TableHead className="text-right">Pedidos</TableHead>
+                 <TableHead className="text-right">Ticket Médio</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {byRep.map((r) => (
+                 <TableRow key={r.name}>
+                   <TableCell><Badge variant="outline">{r.name}</Badge></TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.venda)}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(r.faturado)}</TableCell>
+                   <TableCell className="text-right font-semibold">{formatCurrency(r.total)}</TableCell>
                   <TableCell className="text-right">{r.volume}</TableCell>
                   <TableCell className="text-right">{r.orders}</TableCell>
                   <TableCell className="text-right">{formatCurrency(r.ticket)}</TableCell>
