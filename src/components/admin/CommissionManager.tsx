@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from '@/components/ui/sonner';
 import { Upload, DollarSign, TrendingUp, Clock, AlertTriangle, ChevronDown, ChevronRight, FileCheck, Download, CheckCircle, AlertCircle, FileText, Clock4, CheckSquare } from 'lucide-react';
-import ExcelJS from 'exceljs';
 import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import {
   parseFoccoERPPDF,
@@ -21,6 +20,7 @@ import {
   type ParcelaConciliada,
   type ConciliacaoStatus,
 } from '@/lib/commissionReconciliation';
+import { importarPedidosExcel, chaveDuplicata, type PedidoLinha } from '@/lib/importarPedidos';
 
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist';
