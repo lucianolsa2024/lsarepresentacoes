@@ -391,6 +391,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
               Selecionar
             </Button>
           )}
+          <CalendarSubscription />
           <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Atividade
