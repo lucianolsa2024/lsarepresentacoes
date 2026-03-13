@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,15 +10,13 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from '@/components/ui/sonner';
-import { Upload, DollarSign, TrendingUp, Clock, AlertTriangle, ChevronDown, ChevronRight, FileCheck, Download, CheckCircle, AlertCircle, FileText, Clock4 } from 'lucide-react';
+import { Upload, DollarSign, TrendingUp, Clock, AlertTriangle, ChevronDown, ChevronRight, FileCheck, Download, CheckCircle, AlertCircle, FileText, Clock4, CheckSquare } from 'lucide-react';
 import ExcelJS from 'exceljs';
-import { format, addDays, startOfMonth, endOfMonth, parseISO, isBefore } from 'date-fns';
+import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import {
   parsePdfText,
   reconcile,
   buildSummary,
-  type PdfRecord,
-  type PdfHeader,
   type ExcelInstallment,
   type ReconciliationSummary,
   type ReconciliationResult,
@@ -91,6 +89,8 @@ const TABLE_BADGE_COLORS: Record<string, string> = {
   PRATA: 'bg-gray-400 text-white',
   BRONZE: 'bg-orange-500 text-white',
 };
+
+const PAID_STORAGE_KEY = 'commission_paid_installments';
 
 // ── Helpers ──
 
@@ -195,6 +195,20 @@ const STATUS_CONFIG: Record<ReconciliationStatus, { icon: React.ReactNode; label
   somente_excel: { icon: <Clock4 className="h-4 w-4" />, label: 'Somente Excel', className: 'bg-gray-400 text-white' },
 };
 
+// ── Paid installments persistence ──
+
+function loadPaidInstallments(): Set<string> {
+  try {
+    const stored = localStorage.getItem(PAID_STORAGE_KEY);
+    if (stored) return new Set(JSON.parse(stored));
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function savePaidInstallments(paid: Set<string>) {
+  localStorage.setItem(PAID_STORAGE_KEY, JSON.stringify([...paid]));
+}
+
 // ── Component ──
 
 export function CommissionManager() {
@@ -225,6 +239,27 @@ export function CommissionManager() {
   const [reconciliationMap, setReconciliationMap] = useState<Map<string, ReconciliationResult>>(new Map());
   const [reconciliationDialogOpen, setReconciliationDialogOpen] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
+
+  // Manual paid status
+  const [paidInstallments, setPaidInstallments] = useState<Set<string>>(loadPaidInstallments);
+
+  const togglePaid = useCallback((nf: string, parcelaIndex: number) => {
+    setPaidInstallments(prev => {
+      const key = `${nf}|${parcelaIndex}`;
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      savePaidInstallments(next);
+      return next;
+    });
+  }, []);
+
+  const isPaid = useCallback((nf: string, parcelaIndex: number) => {
+    return paidInstallments.has(`${nf}|${parcelaIndex}`);
+  }, [paidInstallments]);
 
   // ── Load data ──
   const fetchEntries = async () => {
@@ -399,10 +434,18 @@ export function CommissionManager() {
 
     try {
       const text = await extractTextFromPdf(file);
+      console.log('PDF text extracted, length:', text.length);
+      console.log('First 2000 chars:', text.substring(0, 2000));
+      
       const { header, records } = parsePdfText(text);
 
+      console.log('PDF records found:', records.length);
+      if (records.length > 0) {
+        console.log('First record:', records[0]);
+      }
+
       if (records.length === 0) {
-        toast.warning('Nenhum registro DUP encontrado no PDF.');
+        toast.warning('Nenhum registro DUP encontrado no PDF. Verifique o formato do arquivo.');
         setParsingPdf(false);
         return;
       }
@@ -448,6 +491,7 @@ export function CommissionManager() {
       setReconciliationDialogOpen(true);
       toast.success(`${records.length} registros extraídos do PDF.`);
     } catch (err: any) {
+      console.error('PDF processing error:', err);
       toast.error(err.message || 'Erro ao processar PDF');
     }
     setParsingPdf(false);
@@ -556,17 +600,17 @@ export function CommissionManager() {
     return groupedOrders.filter(o => {
       const matchingInstallments = o.installments.filter(inst => {
         const due = format(inst.dueDate, 'yyyy-MM-dd');
-        // Due date range filter
         if (dueDateFrom && due < dueDateFrom) return false;
         if (dueDateTo && due > dueDateTo) return false;
-        // Status filter
         if (filterStatus === 'vencer' && due < today) return false;
         if (filterStatus === 'vencidas' && due >= today) return false;
+        if (filterStatus === 'recebidas' && !isPaid(o.numero_nf, inst.index)) return false;
+        if (filterStatus === 'pendentes' && isPaid(o.numero_nf, inst.index)) return false;
         return true;
       });
       return matchingInstallments.length > 0;
     });
-  }, [groupedOrders, filterStatus, today, dueDateFrom, dueDateTo]);
+  }, [groupedOrders, filterStatus, today, dueDateFrom, dueDateTo, isPaid]);
 
   // Get filtered installments (for summary cards)
   const filteredInstallments = useMemo(() => {
@@ -577,10 +621,12 @@ export function CommissionManager() {
         if (dueDateTo && due > dueDateTo) return false;
         if (filterStatus === 'vencer' && due < today) return false;
         if (filterStatus === 'vencidas' && due >= today) return false;
+        if (filterStatus === 'recebidas' && !isPaid(o.numero_nf, inst.index)) return false;
+        if (filterStatus === 'pendentes' && isPaid(o.numero_nf, inst.index)) return false;
         return true;
       })
     );
-  }, [displayOrders, dueDateFrom, dueDateTo, filterStatus, today]);
+  }, [displayOrders, dueDateFrom, dueDateTo, filterStatus, today, isPaid]);
 
   // ── Summary cards ──
   const totalFaturado = filteredInstallments.reduce((s, i) => s + i.value, 0);
@@ -637,6 +683,39 @@ export function CommissionManager() {
 
   const getInstallmentReconciliation = (nf: string, parcelaIndex: number): ReconciliationResult | undefined => {
     return reconciliationMap.get(`${nf}|${parcelaIndex}`);
+  };
+
+  const getInstallmentStatus = (nf: string, parcelaIndex: number, dueDate: string, hasRec: boolean, rec?: ReconciliationResult) => {
+    const paid = isPaid(nf, parcelaIndex);
+    if (paid) {
+      return (
+        <Badge className="bg-green-600 text-white">
+          <CheckSquare className="h-4 w-4 mr-1" />
+          Recebida
+        </Badge>
+      );
+    }
+    if (hasRec && rec) {
+      return (
+        <Badge className={STATUS_CONFIG[rec.status].className}>
+          {STATUS_CONFIG[rec.status].icon}
+          <span className="ml-1">{STATUS_CONFIG[rec.status].label}</span>
+        </Badge>
+      );
+    }
+    if (hasRec && !rec) {
+      return (
+        <Badge className="bg-gray-400 text-white">
+          <Clock4 className="h-4 w-4" />
+          <span className="ml-1">Somente Excel</span>
+        </Badge>
+      );
+    }
+    // Default status
+    const isOverdue = dueDate < today;
+    return isOverdue
+      ? <Badge variant="destructive">🔴 Vencida</Badge>
+      : <Badge className="bg-yellow-500 text-black">🟡 A vencer</Badge>;
   };
 
   return (
@@ -770,6 +849,8 @@ export function CommissionManager() {
               <SelectItem value="__all__">Todas</SelectItem>
               <SelectItem value="vencer">A Vencer</SelectItem>
               <SelectItem value="vencidas">Vencidas</SelectItem>
+              <SelectItem value="recebidas">Recebidas</SelectItem>
+              <SelectItem value="pendentes">Pendentes</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -839,20 +920,18 @@ export function CommissionManager() {
                                     <>
                                       <TableHead className="text-right">Comissão ERP</TableHead>
                                       <TableHead className="text-right">Diferença</TableHead>
-                                      <TableHead className="text-center">Conciliação</TableHead>
                                     </>
                                   )}
-                                  {!hasReconciliation && (
-                                    <TableHead className="text-center">Status</TableHead>
-                                  )}
+                                  <TableHead className="text-center">Status</TableHead>
+                                  <TableHead className="text-center w-24">Ação</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {order.installments.map(inst => {
                                   const dueDateStr = format(inst.dueDate, 'yyyy-MM-dd');
-                                  const isOverdue = dueDateStr < today;
                                   const rec = hasReconciliation ? getInstallmentReconciliation(order.numero_nf, inst.index) : undefined;
                                   const rowClass = rec?.status === 'divergencia' ? 'bg-yellow-50 dark:bg-yellow-950/20' : '';
+                                  const paid = isPaid(order.numero_nf, inst.index);
 
                                   return (
                                     <TableRow key={inst.index} className={rowClass}>
@@ -869,29 +948,24 @@ export function CommissionManager() {
                                           <TableCell className={`text-right ${rec && Math.abs(rec.diferenca) > 0.10 ? 'text-destructive font-medium' : ''}`}>
                                             {rec ? fmt(rec.diferenca) : '—'}
                                           </TableCell>
-                                          <TableCell className="text-center">
-                                            {rec ? (
-                                              <Badge className={STATUS_CONFIG[rec.status].className}>
-                                                {STATUS_CONFIG[rec.status].icon}
-                                                <span className="ml-1">{STATUS_CONFIG[rec.status].label}</span>
-                                              </Badge>
-                                            ) : (
-                                              <Badge className="bg-gray-400 text-white">
-                                                <Clock4 className="h-4 w-4" />
-                                                <span className="ml-1">Somente Excel</span>
-                                              </Badge>
-                                            )}
-                                          </TableCell>
                                         </>
                                       )}
-                                      {!hasReconciliation && (
-                                        <TableCell className="text-center">
-                                          {isOverdue
-                                            ? <Badge variant="destructive">🔴 Vencida</Badge>
-                                            : <Badge className="bg-yellow-500 text-black">🟡 A vencer</Badge>
-                                          }
-                                        </TableCell>
-                                      )}
+                                      <TableCell className="text-center">
+                                        {getInstallmentStatus(order.numero_nf, inst.index, dueDateStr, hasReconciliation, rec)}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Button
+                                          variant={paid ? 'outline' : 'ghost'}
+                                          size="sm"
+                                          className="h-7 text-xs"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            togglePaid(order.numero_nf, inst.index);
+                                          }}
+                                        >
+                                          {paid ? 'Desfazer' : 'Dar baixa'}
+                                        </Button>
+                                      </TableCell>
                                     </TableRow>
                                   );
                                 })}

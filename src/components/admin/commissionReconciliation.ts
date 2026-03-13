@@ -1,5 +1,3 @@
-import { format, parse } from 'date-fns';
-
 // ── Types ──
 
 export interface PdfRecord {
@@ -59,7 +57,7 @@ function parseBrMoney(s: string): number {
 }
 
 function parseBrDate(s: string): string {
-  // dd/mm/aa → yyyy-MM-dd
+  // dd/mm/aa or dd/mm/yyyy → yyyy-MM-dd
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
   if (!m) return '';
   const day = m[1];
@@ -67,15 +65,6 @@ function parseBrDate(s: string): string {
   let year = m[3];
   if (year.length === 2) year = '20' + year;
   return `${year}-${month}-${day}`;
-}
-
-function normalizeStr(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 export function parsePdfText(text: string): { header: PdfHeader; records: PdfRecord[] } {
@@ -88,37 +77,95 @@ export function parsePdfText(text: string): { header: PdfHeader; records: PdfRec
   let periodoFim = '';
   
   for (const line of lines) {
-    // Look for representative line like "1345 - LSA - JULIANA CECCONI"
-    const repMatch = line.match(/(\d+\s*-\s*.+(?:LSA|representant).+)/i);
+    // Look for representative line like "Representante : 1345 - LSA - JULIANA CECCONI"
+    const repMatch = line.match(/Representante\s*:?\s*(\d+\s*-\s*.+?)(?:\s+Cnpj|$)/i);
     if (repMatch && !representante) {
       representante = repMatch[1].trim();
     }
-    // Look for period like "Período: 26/01/2026 a 25/02/2026" or date ranges
-    const periodMatch = line.match(/Per[ií]odo[:\s]*(\d{2}\/\d{2}\/\d{2,4})\s*(?:a|até|à)\s*(\d{2}\/\d{2}\/\d{2,4})/i);
-    if (periodMatch) {
-      periodoInicio = parseBrDate(periodMatch[1]);
-      periodoFim = parseBrDate(periodMatch[2]);
+    // Also try pattern like "1345 - LSA - JULIANA CECCONI"
+    if (!representante) {
+      const repMatch2 = line.match(/(\d+\s*-\s*.+(?:LSA).+)/i);
+      if (repMatch2) representante = repMatch2[1].trim();
+    }
+    // Look for period with pipe separator: "26/01/2026|25/02/2026"
+    const pipeMatch = line.match(/(\d{2}\/\d{2}\/\d{4})\|(\d{2}\/\d{2}\/\d{4})/);
+    if (pipeMatch && !periodoInicio) {
+      periodoInicio = parseBrDate(pipeMatch[1]);
+      periodoFim = parseBrDate(pipeMatch[2]);
+    }
+    // Also try "Período: dd/mm/yyyy a dd/mm/yyyy"
+    if (!periodoInicio) {
+      const periodMatch = line.match(/Per[ií]odo[:\s]*(\d{2}\/\d{2}\/\d{2,4})\s*(?:a|até|à)\s*(\d{2}\/\d{2}\/\d{2,4})/i);
+      if (periodMatch) {
+        periodoInicio = parseBrDate(periodMatch[1]);
+        periodoFim = parseBrDate(periodMatch[2]);
+      }
     }
   }
 
-  // Parse DUP lines
-  // Pattern: DUP <NF> - <PARCELA> <DT_MOV> <DT_VCTO> <COD_MOV> - (<COD_MOV>) <DESC_MOV> <PCT_COM> <BASE> <COM_GERADA> <COM_LIBERADA>
-  const dupRegex = /^DUP\s+(\d+)\s+-\s+(\d+)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(\d+)\s+-\s+\(\d+\)\s+[\w\/]+(?:\s+-\s+\w+)?\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)/;
+  // Parse DUP lines - flexible regex that handles client text between parcela and dates
+  // Format: DUP <NF> - <PARCELA> [optional client text] <DT_MOV dd/mm/yy> <DT_VCTO dd/mm/yy> <MOV_CODE> - (<MOV_CODE>) <DESC> <PCT> <val1> <val2> <val3> [val4]
+  const dupRegex = /DUP\s+(\d+)\s+-\s+(\d+)\s+(?:.*?\s+)?(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(\d+)\s+-\s+\(\d+\)\s+[\w\/]+(?:\s+-\s+\w+)?\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)(?:\s+([\d.,]+))?/;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const match = line.match(dupRegex);
     if (match) {
-      // Next line is client
+      const pct = parseInt(match[6]);
+      const pctDecimal = pct / 100;
+      
+      // Parse all monetary values
+      const v1 = parseBrMoney(match[7]);
+      const v2 = parseBrMoney(match[8]);
+      const v3 = parseBrMoney(match[9]);
+      const v4 = match[10] ? parseBrMoney(match[10]) : null;
+
+      // First value is always Base
+      const base = v1;
+      const expectedCom = base * pctDecimal;
+
+      // Determine ComLiberada: find the value closest to Base × %
+      // ComLiberada ≈ Base × % (can differ slightly due to rounding)
+      let comLiberada = 0;
+      let comGerada = 0;
+
+      if (v4 !== null) {
+        // 4 values: Base, ComGerada, ValorPago, ComLiberada
+        comGerada = v2;
+        comLiberada = v4;
+        // If v4 is 0 or empty-like, check if v3 is the commission
+        if (comLiberada === 0 && Math.abs(v3 - expectedCom) < Math.abs(v3 * 0.5)) {
+          comLiberada = v3;
+        }
+      } else {
+        // 3 values: need to determine which is ComLiberada
+        // ComLiberada should be ≈ Base × %
+        const candidates = [v2, v3];
+        const closest = candidates.reduce((best, v) =>
+          Math.abs(v - expectedCom) < Math.abs(best - expectedCom) ? v : best
+        );
+        comLiberada = closest;
+        comGerada = closest === v2 ? 0 : v2;
+      }
+
+      // Extract client from next line(s)
       let clientePdf = '';
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        // Client line: "6497 - UNIQUE BY HOUSE COMERCIO DE MOVEIS LTDA"
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const nextLine = lines[j].trim();
+        // Skip empty lines
+        if (!nextLine) continue;
+        // Stop if next DUP line
+        if (nextLine.startsWith('DUP') || nextLine.startsWith('Sub-Total') || nextLine.startsWith('Total')) break;
+        // Client line pattern: "6497 - UNIQUE BY HOUSE..." or just text
         const clientMatch = nextLine.match(/^\d+\s*-\s*(.+)$/);
         if (clientMatch) {
           clientePdf = clientMatch[1].trim();
-        } else {
+          break;
+        }
+        // If it's not empty and not a DUP line, it might be the client
+        if (nextLine.length > 3 && !nextLine.match(/^\d{2}\/\d{2}/)) {
           clientePdf = nextLine;
+          break;
         }
       }
 
@@ -128,10 +175,10 @@ export function parsePdfText(text: string): { header: PdfHeader; records: PdfRec
         dtMov: parseBrDate(match[3]),
         dtVcto: parseBrDate(match[4]),
         tipoMov: parseInt(match[5]),
-        pctComissao: parseInt(match[6]),
-        base: parseBrMoney(match[7]),
-        comGerada: parseBrMoney(match[8]),
-        comLiberada: parseBrMoney(match[9]),
+        pctComissao: pct,
+        base,
+        comGerada,
+        comLiberada,
         clientePdf,
       });
     }
@@ -163,13 +210,11 @@ export function reconcile(
   const matchedExcelKeys = new Set<string>();
 
   for (const pdf of pdfRecords) {
-    // Find matching Excel installment by NF + parcela number
     const excelMatch = excelInstallments.find(ei => {
       const key = `${ei.nf}|${ei.parcelaIndex}`;
       if (matchedExcelKeys.has(key)) return false;
       if (ei.nf !== pdf.nf) return false;
       if (ei.parcelaIndex !== pdf.parcela) return false;
-      // Optionally check client similarity
       return true;
     });
 
@@ -195,7 +240,6 @@ export function reconcile(
         status,
       });
     } else {
-      // Only in PDF
       results.push({
         nf: pdf.nf,
         parcela: pdf.parcela,
@@ -210,7 +254,6 @@ export function reconcile(
     }
   }
 
-  // Find Excel installments not matched
   for (const ei of excelInstallments) {
     const key = `${ei.nf}|${ei.parcelaIndex}`;
     if (!matchedExcelKeys.has(key)) {
