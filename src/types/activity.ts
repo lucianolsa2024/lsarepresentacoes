@@ -130,14 +130,14 @@ export const CRM_TYPE_CONFIG: Record<CrmActivityType, { label: string; icon: str
   reuniao: { label: 'Reunião', icon: 'Users', color: 'indigo' },
   proposta_enviada: { label: 'Proposta Enviada', icon: 'FileText', color: 'blue' },
   followup: { label: 'Follow-up', icon: 'RefreshCcw', color: 'cyan' },
+  treinamento: { label: 'Treinamento', icon: 'GraduationCap', color: 'cyan' },
+  checklist_loja: { label: 'Checklist Loja', icon: 'ClipboardCheck', color: 'teal' },
   outro_crm: { label: 'Outro', icon: 'MoreHorizontal', color: 'slate' },
 };
 
 export const TAREFA_TYPE_CONFIG: Record<TarefaActivityType, { label: string; icon: string; color: string }> = {
   tarefa: { label: 'Tarefa', icon: 'ClipboardList', color: 'gray' },
-  treinamento: { label: 'Treinamento', icon: 'GraduationCap', color: 'cyan' },
   assistencia: { label: 'Assistência', icon: 'Wrench', color: 'amber' },
-  checklist_loja: { label: 'Checklist Loja', icon: 'ClipboardCheck', color: 'teal' },
   outros: { label: 'Outros', icon: 'MoreHorizontal', color: 'slate' },
 };
 
