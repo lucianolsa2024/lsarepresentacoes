@@ -5,9 +5,11 @@ import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Upload, Loader2, CheckCircle, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { importarPedidosExcel, PedidoLinha } from '@/lib/importarPedidos';
+import * as XLSX from 'xlsx';
 
 interface OrderWithMeta {
   order: OrderFormData;
@@ -49,6 +51,7 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<{ order: OrderFormData; nfNumber: string | null; isFaturado: boolean }[]>([]);
   const [stats, setStats] = useState<{ total: number; faturados: number; duplicatas: number; erros: string[] } | null>(null);
+  const [rawDebug, setRawDebug] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { nameToEmail } = useRepresentatives();
   const normalizedNameToEmail = useMemo(() => {
@@ -65,6 +68,17 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
     if (!file) return;
 
     try {
+      // ── Raw debug: read columns and first row before processing ──
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { raw: true, defval: null });
+      const columns = rawRows.length > 0 ? Object.keys(rawRows[0]) : [];
+      const firstRow = rawRows.length > 0 ? rawRows[0] : {};
+      setRawDebug(
+        `Colunas encontradas: ${JSON.stringify(columns)}\n\nPrimeira linha bruta: ${JSON.stringify(firstRow, null, 2)}`
+      );
+
       const result = await importarPedidosExcel(file);
 
       if (result.erros.length > 0) {
@@ -199,6 +213,18 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
           <Upload className="h-4 w-4 mr-2" />
           Selecionar Arquivo
         </Button>
+
+        {/* Raw debug */}
+        {rawDebug && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Debug — Dados brutos do Excel:</p>
+            <Textarea
+              readOnly
+              value={rawDebug}
+              className="font-mono text-xs h-40 bg-muted"
+            />
+          </div>
+        )}
 
         {/* Stats */}
         {stats && (
