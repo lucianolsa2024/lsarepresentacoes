@@ -1,29 +1,26 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useSalesOpportunities, SalesOpportunity, FUNNEL_STAGES_LOJISTA, FUNNEL_STAGES_CORPORATIVO, LOST_REASONS, OpportunityFormData } from '@/hooks/useSalesOpportunities';
+import { useSalesOpportunities, SalesOpportunity, FUNNEL_STAGES_CORPORATIVO, LOST_REASONS, OpportunityFormData } from '@/hooks/useSalesOpportunities';
 import { useClients, Client } from '@/hooks/useClients';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { CorporateOpportunityForm } from './CorporateOpportunityForm';
 import { LostReasonModal } from './LostReasonModal';
+import { PortfolioManager } from '@/components/portfolio/PortfolioManager';
 
 const STAGE_COLORS: Record<string, string> = {
   prospeccao: 'bg-blue-100 border-blue-300 text-blue-800',
   qualificacao: 'bg-purple-100 border-purple-300 text-purple-800',
   elaboracao_proposta: 'bg-cyan-100 border-cyan-300 text-cyan-800',
-  proposta: 'bg-amber-100 border-amber-300 text-amber-800',
   proposta_enviada: 'bg-amber-100 border-amber-300 text-amber-800',
   negociacao: 'bg-orange-100 border-orange-300 text-orange-800',
   fechamento: 'bg-emerald-100 border-emerald-300 text-emerald-800',
@@ -95,69 +92,6 @@ function CorporateOpportunityCard({
   );
 }
 
-function LojistaOpportunityCard({
-  opp, clients, onEdit, onDelete,
-}: {
-  opp: SalesOpportunity; clients: Client[];
-  onEdit: (opp: SalesOpportunity) => void; onDelete: (id: string) => void;
-}) {
-  const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
-  const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  return (
-    <div className="bg-card border rounded-lg p-3 space-y-2 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{opp.title}</p>
-          {client && <p className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" /> {client.company}</p>}
-          {opp.contactName && <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> {opp.contactName}</p>}
-        </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(opp); }}><Edit2 className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(opp.id); }}><Trash2 className="h-3 w-3" /></Button>
-        </div>
-      </div>
-      {opp.value > 0 && <p className="text-xs font-semibold text-primary flex items-center gap-1"><DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}</p>}
-      {opp.expectedCloseDate && <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(opp.expectedCloseDate).toLocaleDateString('pt-BR')}</p>}
-      {opp.description && <p className="text-xs text-muted-foreground line-clamp-2">{opp.description}</p>}
-    </div>
-  );
-}
-
-function LojistaOpportunityForm({
-  clients, initial, onSave, onCancel,
-}: {
-  clients: Client[]; initial?: SalesOpportunity | null;
-  onSave: (data: OpportunityFormData) => void; onCancel: () => void;
-}) {
-  const stages = FUNNEL_STAGES_LOJISTA;
-  const [form, setForm] = useState<OpportunityFormData>({
-    clientId: initial?.clientId || null, title: initial?.title || '', description: initial?.description || '',
-    funnelType: 'lojista', stage: initial?.stage || 'prospeccao', value: initial?.value || 0,
-    expectedCloseDate: initial?.expectedCloseDate || '', contactName: initial?.contactName || '',
-    contactPhone: initial?.contactPhone || '', contactEmail: initial?.contactEmail || '', notes: initial?.notes || '',
-  });
-  const handleSubmit = () => { if (!form.title.trim()) { toast.error('Preencha o título'); return; } onSave(form); };
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2 col-span-2"><Label>Título *</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ex: Projeto loja Centro" /></div>
-        <div className="space-y-2"><Label>Cliente</Label>
-          <Select value={form.clientId || 'none'} onValueChange={v => setForm({ ...form, clientId: v === 'none' ? null : v })}><SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent><SelectItem value="none">Nenhum</SelectItem>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company}</SelectItem>)}</SelectContent></Select>
-        </div>
-        <div className="space-y-2"><Label>Etapa</Label>
-          <Select value={form.stage} onValueChange={v => setForm({ ...form, stage: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{stages.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent></Select>
-        </div>
-        <div className="space-y-2"><Label>Valor estimado (R$)</Label><Input type="number" value={form.value || ''} onChange={e => setForm({ ...form, value: parseFloat(e.target.value) || 0 })} /></div>
-        <div className="space-y-2"><Label>Previsão de fechamento</Label><Input type="date" value={form.expectedCloseDate || ''} onChange={e => setForm({ ...form, expectedCloseDate: e.target.value })} /></div>
-        <div className="space-y-2"><Label>Contato</Label><Input value={form.contactName || ''} onChange={e => setForm({ ...form, contactName: e.target.value })} /></div>
-        <div className="space-y-2"><Label>Telefone</Label><Input value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} /></div>
-        <div className="space-y-2 col-span-2"><Label>Descrição</Label><Textarea value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-      </div>
-      <div className="flex gap-2 justify-end"><Button variant="outline" onClick={onCancel}>Cancelar</Button><Button onClick={handleSubmit}>{initial ? 'Salvar' : 'Criar'}</Button></div>
-    </div>
-  );
-}
-
 export function SalesFunnelManager() {
   const { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, moveStage } = useSalesOpportunities();
   const { clients } = useClients();
@@ -174,17 +108,31 @@ export function SalesFunnelManager() {
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
 
-  const isCorporativo = funnelType === 'corporativo';
-  const stages = isCorporativo ? FUNNEL_STAGES_CORPORATIVO : FUNNEL_STAGES_LOJISTA;
+  // Show Portfolio for lojistas tab
+  if (funnelType === 'lojista') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <Tabs value={funnelType} onValueChange={v => setFunnelType(v as any)}>
+            <TabsList>
+              <TabsTrigger value="lojista"><Store className="h-4 w-4 mr-2" /> Carteira Lojistas</TabsTrigger>
+              <TabsTrigger value="corporativo"><Building2 className="h-4 w-4 mr-2" /> Corporativos</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <PortfolioManager />
+      </div>
+    );
+  }
+
+  // Corporativo funnel below
+  const stages = FUNNEL_STAGES_CORPORATIVO;
   const activeStages = stages.filter(s => !['ganho', 'perdido'].includes(s.key));
 
-  const filteredOpps = useMemo(() => {
-    let opps = opportunities.filter(o => o.funnelType === funnelType);
-    if (repFilter !== 'all') opps = opps.filter(o => o.ownerEmail === repFilter);
-    return opps;
-  }, [opportunities, funnelType, repFilter]);
+  const filteredOpps = opportunities.filter(o => o.funnelType === 'corporativo')
+    .filter(o => repFilter === 'all' || o.ownerEmail === repFilter);
 
-  const periodFilteredOpps = useMemo(() => {
+  const periodFilteredOpps = (() => {
     if (periodFilter === 'all') return filteredOpps;
     const now = new Date();
     let start: Date;
@@ -192,22 +140,18 @@ export function SalesFunnelManager() {
     else if (periodFilter === 'quarter') { const q = Math.floor(now.getMonth() / 3) * 3; start = new Date(now.getFullYear(), q, 1); }
     else { start = new Date(now.getFullYear(), 0, 1); }
     return filteredOpps.filter(o => new Date(o.createdAt) >= start);
-  }, [filteredOpps, periodFilter]);
+  })();
 
-  const stageGroups = useMemo(() => {
-    const groups: Record<string, SalesOpportunity[]> = {};
-    const firstStageKey = activeStages[0]?.key || 'prospeccao';
-    activeStages.forEach(s => { groups[s.key] = []; });
-    periodFilteredOpps.forEach(o => {
-      if (groups[o.stage]) {
-        groups[o.stage].push(o);
-      } else if (!['ganho', 'perdido'].includes(o.stage)) {
-        // Opportunities with unrecognized stages go to the first column
-        groups[firstStageKey].push(o);
-      }
-    });
-    return groups;
-  }, [periodFilteredOpps, activeStages]);
+  const stageGroups: Record<string, SalesOpportunity[]> = {};
+  const firstStageKey = activeStages[0]?.key || 'prospeccao';
+  activeStages.forEach(s => { stageGroups[s.key] = []; });
+  periodFilteredOpps.forEach(o => {
+    if (stageGroups[o.stage]) {
+      stageGroups[o.stage].push(o);
+    } else if (!['ganho', 'perdido'].includes(o.stage)) {
+      stageGroups[firstStageKey].push(o);
+    }
+  });
 
   const wonOpps = periodFilteredOpps.filter(o => o.stage === 'ganho');
   const lostOpps = periodFilteredOpps.filter(o => o.stage === 'perdido');
@@ -236,14 +180,8 @@ export function SalesFunnelManager() {
     const newStage = result.destination.droppableId;
     const currentStage = result.source.droppableId;
     if (newStage === currentStage) return;
-    if (newStage === 'perdido') {
-      setLostModal({ oppId });
-      return;
-    }
-    if (newStage === 'ganho') {
-      setWonConfirm({ oppId });
-      return;
-    }
+    if (newStage === 'perdido') { setLostModal({ oppId }); return; }
+    if (newStage === 'ganho') { setWonConfirm({ oppId }); return; }
     await moveStage(oppId, newStage);
   };
 
@@ -264,7 +202,7 @@ export function SalesFunnelManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-2xl font-bold text-foreground">Funis de Venda</h2>
+        <h2 className="text-2xl font-bold text-foreground">Funil Corporativo</h2>
         <Button onClick={() => { setEditingOpp(null); setShowForm(true); }}><Plus className="h-4 w-4 mr-2" /> Nova Oportunidade</Button>
       </div>
 
@@ -272,7 +210,7 @@ export function SalesFunnelManager() {
       <div className="flex items-center gap-4 flex-wrap">
         <Tabs value={funnelType} onValueChange={v => setFunnelType(v as any)}>
           <TabsList>
-            <TabsTrigger value="lojista"><Store className="h-4 w-4 mr-2" /> Lojistas</TabsTrigger>
+            <TabsTrigger value="lojista"><Store className="h-4 w-4 mr-2" /> Carteira Lojistas</TabsTrigger>
             <TabsTrigger value="corporativo"><Building2 className="h-4 w-4 mr-2" /> Corporativos</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -307,11 +245,7 @@ export function SalesFunnelManager() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>{editingOpp ? 'Editar Oportunidade' : 'Nova Oportunidade'}</DialogTitle></DialogHeader>
-          {isCorporativo ? (
-            <CorporateOpportunityForm clients={clients} representatives={representatives} initial={editingOpp} onSave={handleSave} onCancel={() => { setShowForm(false); setEditingOpp(null); }} />
-          ) : (
-            <LojistaOpportunityForm clients={clients} initial={editingOpp} onSave={handleSave} onCancel={() => { setShowForm(false); setEditingOpp(null); }} />
-          )}
+          <CorporateOpportunityForm clients={clients} representatives={representatives} initial={editingOpp} onSave={handleSave} onCancel={() => { setShowForm(false); setEditingOpp(null); }} />
         </DialogContent>
       </Dialog>
 
@@ -332,7 +266,7 @@ export function SalesFunnelManager() {
 
       {/* Kanban */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className={`grid gap-3 overflow-x-auto`} style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(180px, 1fr))` }}>
+        <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(180px, 1fr))` }}>
           {activeStages.map(stage => {
             const stageOpps = stageGroups[stage.key] || [];
             const stageValue = stageOpps.reduce((s, o) => s + o.value, 0);
@@ -352,11 +286,7 @@ export function SalesFunnelManager() {
                         <Draggable key={opp.id} draggableId={opp.id} index={index}>
                           {(provided) => (
                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                              {isCorporativo ? (
-                                <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} />
-                              ) : (
-                                <LojistaOpportunityCard opp={opp} clients={clients} onEdit={handleEdit} onDelete={deleteOpportunity} />
-                              )}
+                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} />
                             </div>
                           )}
                         </Draggable>
@@ -424,9 +354,7 @@ export function SalesFunnelManager() {
                             {client && <p className="text-xs font-semibold flex items-center gap-1 truncate"><Building2 className="h-3 w-3 shrink-0" /> {client.company}</p>}
                             <p className="text-sm font-medium truncate">{opp.title}</p>
                           </div>
-                          <div className="flex gap-0.5 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
-                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
                         </div>
                         {opp.value > 0 && <p className="text-xs font-semibold text-green-700 flex items-center gap-1"><DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}</p>}
                         {rep && <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> {rep.name}</p>}
@@ -464,9 +392,7 @@ export function SalesFunnelManager() {
                             {client && <p className="text-xs font-semibold flex items-center gap-1 truncate"><Building2 className="h-3 w-3 shrink-0" /> {client.company}</p>}
                             <p className="text-sm font-medium truncate">{opp.title}</p>
                           </div>
-                          <div className="flex gap-0.5 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
-                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleEdit(opp)}><Edit2 className="h-3 w-3" /></Button>
                         </div>
                         {opp.value > 0 && <p className="text-xs font-semibold text-red-700 flex items-center gap-1"><DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}</p>}
                         {rep && <p className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> {rep.name}</p>}
