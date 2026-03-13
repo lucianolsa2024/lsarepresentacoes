@@ -12,6 +12,7 @@ export interface Client extends ClientData {
   parentClientId: string | null;
   curve: ClientCurve;
   curveUpdatedAt: string | null;
+  portfolioStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
