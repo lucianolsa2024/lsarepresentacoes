@@ -109,7 +109,10 @@ export function OrderManager() {
             <FileText className="h-4 w-4 mr-2" />
             PDF
           </TabsTrigger>
-        </TabsList>
+          <TabsTrigger value="faturados">
+            <Receipt className="h-4 w-4 mr-2" />
+            Faturados
+          </TabsTrigger>
 
         <TabsContent value="list" className="mt-4">
           <OrderList
