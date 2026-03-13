@@ -149,6 +149,9 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     setCompleteNotes('');
     setCreateFollowUp(false);
     setFollowUpDate('');
+    setCreateDeal(false);
+    setDealTitle('');
+    setDealValue('');
   };
 
   const getNextFollowUpTitle = (title: string): string => {
