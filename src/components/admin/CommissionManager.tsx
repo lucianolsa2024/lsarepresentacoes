@@ -14,13 +14,12 @@ import { Upload, DollarSign, TrendingUp, Clock, AlertTriangle, ChevronDown, Chev
 import ExcelJS from 'exceljs';
 import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import {
-  parsePdfText,
-  reconcile,
-  buildSummary,
-  type ExcelInstallment,
-  type ReconciliationSummary,
-  type ReconciliationResult,
-  type ReconciliationStatus,
+  parseFoccoERPPDF,
+  conciliarComissoes,
+  extractTextFromPDF,
+  type ConciliacaoResult,
+  type ParcelaConciliada,
+  type ConciliacaoStatus,
 } from './commissionReconciliation';
 
 // @ts-ignore
@@ -162,33 +161,9 @@ const fmt = (v: number) =>
 
 const fmtPct = (v: number) => `${(v * 100).toFixed(0)}%`;
 
-async function extractTextFromPdf(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const lines: string[] = [];
-    let lastY: number | null = null;
-    let currentLine = '';
-    for (const item of content.items as any[]) {
-      if (lastY !== null && Math.abs(item.transform[5] - lastY) > 2) {
-        lines.push(currentLine);
-        currentLine = '';
-      }
-      currentLine += (currentLine ? ' ' : '') + item.str;
-      lastY = item.transform[5];
-    }
-    if (currentLine) lines.push(currentLine);
-    text += lines.join('\n') + '\n';
-  }
-  return text;
-}
-
 // ── Reconciliation status helpers ──
 
-const STATUS_CONFIG: Record<ReconciliationStatus, { icon: React.ReactNode; label: string; className: string }> = {
+const STATUS_CONFIG: Record<ConciliacaoStatus, { icon: React.ReactNode; label: string; className: string }> = {
   conciliado: { icon: <CheckCircle className="h-4 w-4" />, label: 'Conciliado', className: 'bg-green-500 text-white' },
   divergencia: { icon: <AlertCircle className="h-4 w-4" />, label: 'Divergência', className: 'bg-yellow-500 text-black' },
   somente_pdf: { icon: <FileText className="h-4 w-4" />, label: 'Somente PDF', className: 'bg-blue-500 text-white' },
@@ -235,8 +210,8 @@ export function CommissionManager() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Reconciliation
-  const [reconciliationSummary, setReconciliationSummary] = useState<ReconciliationSummary | null>(null);
-  const [reconciliationMap, setReconciliationMap] = useState<Map<string, ReconciliationResult>>(new Map());
+  const [conciliacaoResult, setConciliacaoResult] = useState<ConciliacaoResult | null>(null);
+  const [conciliacaoMap, setConciliacaoMap] = useState<Map<string, ParcelaConciliada>>(new Map());
   const [reconciliationDialogOpen, setReconciliationDialogOpen] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
 
@@ -433,25 +408,24 @@ export function CommissionManager() {
     setParsingPdf(true);
 
     try {
-      const text = await extractTextFromPdf(file);
+      const text = await extractTextFromPDF(file, pdfjsLib);
       console.log('PDF text extracted, length:', text.length);
       console.log('First 2000 chars:', text.substring(0, 2000));
-      
-      const { header, records } = parsePdfText(text);
 
-      console.log('PDF records found:', records.length);
-      if (records.length > 0) {
-        console.log('First record:', records[0]);
+      const pdfResult = parseFoccoERPPDF(text);
+
+      console.log('PDF records found:', pdfResult.records.length);
+      if (pdfResult.records.length > 0) {
+        console.log('First record:', pdfResult.records[0]);
       }
 
-      if (records.length === 0) {
+      if (pdfResult.records.length === 0) {
         toast.warning('Nenhum registro DUP encontrado no PDF. Verifique o formato do arquivo.');
         setParsingPdf(false);
         return;
       }
 
-      // Build Excel installments from all entries (not just filtered)
-      const allExcelInstallments: ExcelInstallment[] = [];
+      // Build parcelas from ALL entries (not just filtered)
       const entryMap = new Map<string, CommissionEntry[]>();
       for (const e of entries) {
         const key = `${e.numero_pedido}|${e.numero_nf}|${e.dt_fat}|${e.cond_pgto}|${e.representante_pf}|${e.cliente}|${e.tabela_preco}`;
@@ -459,37 +433,58 @@ export function CommissionManager() {
         entryMap.get(key)!.push(e);
       }
 
+      const allParcelas: Array<{
+        numeroPedido: string;
+        numeroNF: string;
+        cliente: string;
+        representante: string;
+        tabela: string;
+        condPgto: string;
+        dtFat: string;
+        parcela: string;
+        parcelaIdx: number;
+        vencimento: string;
+        valorParcela: number;
+        taxa: number;
+        comissaoCalculada: number;
+      }> = [];
+
       for (const [, items] of entryMap) {
         const first = items[0];
         const valorTotal = items.reduce((s, i) => s + i.valor, 0);
         const rate = getRate(first.tabela_preco);
         const installments = parseInstallments(first.cond_pgto, first.dt_fat, valorTotal, rate);
         for (const inst of installments) {
-          allExcelInstallments.push({
-            nf: first.numero_nf,
-            parcelaIndex: inst.index,
+          allParcelas.push({
+            numeroPedido: first.numero_pedido,
+            numeroNF: first.numero_nf,
             cliente: first.cliente,
-            dueDate: format(inst.dueDate, 'yyyy-MM-dd'),
-            value: inst.value,
-            commission: inst.commission,
-            rate: inst.rate,
+            representante: first.representante_pf,
+            tabela: first.tabela_preco,
+            condPgto: first.cond_pgto,
+            dtFat: first.dt_fat,
+            parcela: `${inst.index}/${inst.total}`,
+            parcelaIdx: inst.index,
+            vencimento: format(inst.dueDate, 'dd/MM/yyyy'),
+            valorParcela: inst.value,
+            taxa: inst.rate,
+            comissaoCalculada: inst.commission,
           });
         }
       }
 
-      const results = reconcile(records, allExcelInstallments);
-      const summary = buildSummary(header, results);
+      const resultado = conciliarComissoes(allParcelas, pdfResult);
 
-      // Build lookup map: nf|parcela -> result
-      const rMap = new Map<string, ReconciliationResult>();
-      for (const r of results) {
-        rMap.set(`${r.nf}|${r.parcela}`, r);
+      // Build lookup map: nf|parcelaIdx -> ParcelaConciliada
+      const rMap = new Map<string, ParcelaConciliada>();
+      for (const p of resultado.parcelas) {
+        rMap.set(`${p.numeroNF}|${p.parcelaIdx}`, p);
       }
 
-      setReconciliationMap(rMap);
-      setReconciliationSummary(summary);
+      setConciliacaoMap(rMap);
+      setConciliacaoResult(resultado);
       setReconciliationDialogOpen(true);
-      toast.success(`${records.length} registros extraídos do PDF.`);
+      toast.success(`${pdfResult.records.length} registros extraídos do PDF. Conciliação concluída.`);
     } catch (err: any) {
       console.error('PDF processing error:', err);
       toast.error(err.message || 'Erro ao processar PDF');
@@ -499,21 +494,24 @@ export function CommissionManager() {
 
   // ── Export reconciliation ──
   const handleExportReconciliation = async () => {
-    if (!reconciliationSummary) return;
+    if (!conciliacaoResult) return;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Conciliação');
 
     ws.columns = [
-      { header: 'NF', key: 'nf', width: 12 },
+      { header: 'Nº Pedido', key: 'numeroPedido', width: 14 },
+      { header: 'NF', key: 'numeroNF', width: 12 },
+      { header: 'Cliente', key: 'cliente', width: 30 },
+      { header: 'Representante', key: 'representante', width: 20 },
       { header: 'Parcela', key: 'parcela', width: 10 },
-      { header: 'Cliente PDF', key: 'clientePdf', width: 30 },
-      { header: 'Cliente Excel', key: 'clienteExcel', width: 30 },
-      { header: 'Vencimento', key: 'dtVcto', width: 14 },
-      { header: 'Valor Excel', key: 'valorExcel', width: 14 },
-      { header: 'Comissão Calculada', key: 'comissaoExcel', width: 18 },
-      { header: 'Comissão ERP', key: 'comLiberadaPdf', width: 16 },
+      { header: 'Vencimento', key: 'vencimento', width: 14 },
+      { header: 'Valor Parcela', key: 'valorParcela', width: 14 },
+      { header: 'Taxa', key: 'taxa', width: 8 },
+      { header: 'Comissão Calculada', key: 'comissaoCalculada', width: 18 },
+      { header: 'Comissão ERP', key: 'pdf_comLiberada', width: 16 },
       { header: 'Diferença', key: 'diferenca', width: 14 },
       { header: 'Status', key: 'status', width: 18 },
+      { header: 'Cliente PDF', key: 'pdf_cliente', width: 30 },
     ];
 
     const statusLabels: Record<string, string> = {
@@ -523,18 +521,21 @@ export function CommissionManager() {
       somente_excel: '🕐 Somente Excel',
     };
 
-    for (const r of reconciliationSummary.results) {
+    for (const p of conciliacaoResult.parcelas) {
       ws.addRow({
-        nf: r.nf,
-        parcela: r.parcela,
-        clientePdf: r.clientePdf || '',
-        clienteExcel: r.clienteExcel || '',
-        dtVcto: r.dtVcto || '',
-        valorExcel: r.valorExcel ?? '',
-        comissaoExcel: r.comissaoExcel ?? '',
-        comLiberadaPdf: r.comLiberadaPdf ?? '',
-        diferenca: r.diferenca,
-        status: statusLabels[r.status] || r.status,
+        numeroPedido: p.numeroPedido,
+        numeroNF: p.numeroNF,
+        cliente: p.cliente,
+        representante: p.representante,
+        parcela: p.parcela,
+        vencimento: p.vencimento,
+        valorParcela: p.valorParcela,
+        taxa: `${(p.taxa * 100).toFixed(0)}%`,
+        comissaoCalculada: p.comissaoCalculada,
+        pdf_comLiberada: p.pdf_comLiberada ?? '',
+        diferenca: p.diferenca,
+        status: statusLabels[p.status] || p.status,
+        pdf_cliente: p.pdf_cliente || '',
       });
     }
 
@@ -679,13 +680,13 @@ export function CommissionManager() {
   const footerValorTotal = displayOrders.reduce((s, o) => s + o.valor_total, 0);
   const footerComissaoTotal = displayOrders.reduce((s, o) => s + o.total_commission, 0);
 
-  const hasReconciliation = reconciliationMap.size > 0;
+  const hasReconciliation = conciliacaoMap.size > 0;
 
-  const getInstallmentReconciliation = (nf: string, parcelaIndex: number): ReconciliationResult | undefined => {
-    return reconciliationMap.get(`${nf}|${parcelaIndex}`);
+  const getInstallmentReconciliation = (nf: string, parcelaIndex: number): ParcelaConciliada | undefined => {
+    return conciliacaoMap.get(`${nf}|${parcelaIndex}`);
   };
 
-  const getInstallmentStatus = (nf: string, parcelaIndex: number, dueDate: string, hasRec: boolean, rec?: ReconciliationResult) => {
+  const getInstallmentStatus = (nf: string, parcelaIndex: number, dueDate: string, hasRec: boolean, rec?: ParcelaConciliada) => {
     const paid = isPaid(nf, parcelaIndex);
     if (paid) {
       return (
@@ -743,7 +744,7 @@ export function CommissionManager() {
           </Button>
         )}
         {hasReconciliation && (
-          <Button variant="outline" size="sm" onClick={() => { setReconciliationMap(new Map()); setReconciliationSummary(null); }}>
+          <Button variant="outline" size="sm" onClick={() => { setConciliacaoMap(new Map()); setConciliacaoResult(null); }}>
             Limpar Conciliação
           </Button>
         )}
@@ -943,7 +944,7 @@ export function CommissionManager() {
                                       {hasReconciliation && (
                                         <>
                                           <TableCell className="text-right">
-                                            {rec?.comLiberadaPdf != null ? fmt(rec.comLiberadaPdf) : '—'}
+                                            {rec?.pdf_comLiberada != null ? fmt(rec.pdf_comLiberada) : '—'}
                                           </TableCell>
                                           <TableCell className={`text-right ${rec && Math.abs(rec.diferenca) > 0.10 ? 'text-destructive font-medium' : ''}`}>
                                             {rec ? fmt(rec.diferenca) : '—'}
@@ -1060,14 +1061,14 @@ export function CommissionManager() {
               Extrato de Comissões — RCTR0370
             </DialogDescription>
           </DialogHeader>
-          {reconciliationSummary && (
+          {conciliacaoResult && (
             <div className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm">
-                {reconciliationSummary.header.representante && (
-                  <p><span className="font-medium">Representante:</span> {reconciliationSummary.header.representante}</p>
+                {conciliacaoResult.representante && (
+                  <p><span className="font-medium">Representante:</span> {conciliacaoResult.representante}</p>
                 )}
-                {reconciliationSummary.header.periodoInicio && (
-                  <p><span className="font-medium">Período PDF:</span> {reconciliationSummary.header.periodoInicio && format(parseISO(reconciliationSummary.header.periodoInicio), 'dd/MM/yyyy')} a {reconciliationSummary.header.periodoFim && format(parseISO(reconciliationSummary.header.periodoFim), 'dd/MM/yyyy')}</p>
+                {conciliacaoResult.periodo && (
+                  <p><span className="font-medium">Período PDF:</span> {conciliacaoResult.periodo}</p>
                 )}
               </div>
 
@@ -1076,28 +1077,40 @@ export function CommissionManager() {
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   <div>
                     <p className="text-sm font-medium">Conciliados</p>
-                    <p className="text-xs text-muted-foreground">{reconciliationSummary.conciliados} parcelas — {fmt(reconciliationSummary.valorConciliados)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {conciliacaoResult.resumo.conciliados} parcelas — {fmt(
+                        conciliacaoResult.parcelas
+                          .filter(p => p.status === 'conciliado')
+                          .reduce((s, p) => s + (p.pdf_comLiberada || 0), 0)
+                      )}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 p-3 rounded-lg border">
                   <AlertCircle className="h-5 w-5 text-yellow-500" />
                   <div>
                     <p className="text-sm font-medium">Divergências</p>
-                    <p className="text-xs text-muted-foreground">{reconciliationSummary.divergencias} parcelas — {fmt(reconciliationSummary.valorDivergencias)} de diferença</p>
+                    <p className="text-xs text-muted-foreground">
+                      {conciliacaoResult.resumo.divergencias} parcelas — {fmt(
+                        Math.abs(conciliacaoResult.parcelas
+                          .filter(p => p.status === 'divergencia')
+                          .reduce((s, p) => s + p.diferenca, 0))
+                      )} de diferença
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 p-3 rounded-lg border">
                   <FileText className="h-5 w-5 text-blue-500" />
                   <div>
                     <p className="text-sm font-medium">Somente no PDF</p>
-                    <p className="text-xs text-muted-foreground">{reconciliationSummary.somentePdf} registros</p>
+                    <p className="text-xs text-muted-foreground">{conciliacaoResult.resumo.somentePDF} registros</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 p-3 rounded-lg border">
                   <Clock4 className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium">Somente no Excel</p>
-                    <p className="text-xs text-muted-foreground">{reconciliationSummary.somenteExcel} parcelas</p>
+                    <p className="text-xs text-muted-foreground">{conciliacaoResult.resumo.somenteExcel} parcelas</p>
                   </div>
                 </div>
               </div>
@@ -1105,16 +1118,16 @@ export function CommissionManager() {
               <div className="border rounded-lg p-4 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Total Comissão ERP:</span>
-                  <span className="font-medium">{fmt(reconciliationSummary.totalComissaoErp)}</span>
+                  <span className="font-medium">{fmt(conciliacaoResult.resumo.totalComissaoPDF)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Comissão Calculada:</span>
-                  <span className="font-medium">{fmt(reconciliationSummary.totalComissaoCalc)}</span>
+                  <span className="font-medium">{fmt(conciliacaoResult.resumo.totalComissaoExcel)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-1">
                   <span className="font-medium">Diferença:</span>
-                  <span className={`font-bold ${reconciliationSummary.totalDiferenca > 0 ? 'text-destructive' : ''}`}>
-                    {fmt(reconciliationSummary.totalComissaoErp - reconciliationSummary.totalComissaoCalc)}
+                  <span className={`font-bold ${Math.abs(conciliacaoResult.resumo.diferenca) > 0.10 ? 'text-destructive' : ''}`}>
+                    {fmt(conciliacaoResult.resumo.diferenca)}
                   </span>
                 </div>
               </div>
