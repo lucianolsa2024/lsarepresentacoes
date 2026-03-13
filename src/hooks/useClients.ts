@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ClientData } from '@/types/quote';
+import { ClientData, ClientInfluencer } from '@/types/quote';
 import { toast } from 'sonner';
 
 export type ClientCurve = 'A' | 'B' | 'C' | 'D';
+
+import { ClientType } from '@/types/quote';
 
 export interface Client extends ClientData {
   id: string;
@@ -14,32 +16,8 @@ export interface Client extends ClientData {
   updatedAt: string;
 }
 
-import { ClientType } from '@/types/quote';
-
 // Convert DB row to Client
-const dbToClient = (row: {
-  id: string;
-  name: string | null;
-  company: string;
-  document: string | null;
-  phone: string | null;
-  email: string | null;
-  is_new_client: boolean | null;
-  client_type: string | null;
-  owner_email: string | null;
-  parent_client_id: string | null;
-  street: string | null;
-  number: string | null;
-  complement: string | null;
-  neighborhood: string | null;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
-  curve: string | null;
-  curve_updated_at: string | null;
-  created_at: string;
-  updated_at: string;
-}): Client => ({
+const dbToClient = (row: any, reps: string[] = [], influencers: ClientInfluencer[] = []): Client => ({
   id: row.id,
   name: row.name || '',
   company: row.company,
@@ -52,6 +30,13 @@ const dbToClient = (row: {
   parentClientId: row.parent_client_id || null,
   curve: (row.curve as ClientCurve) || 'D',
   curveUpdatedAt: row.curve_updated_at || null,
+  inscricaoEstadual: row.inscricao_estadual || '',
+  site: row.site || '',
+  segment: row.segment || '',
+  defaultPaymentTerms: row.default_payment_terms || '',
+  notes: row.notes || '',
+  representativeEmails: reps,
+  influencers,
   address: {
     street: row.street || '',
     number: row.number || '',
@@ -83,6 +68,11 @@ const clientToDb = (client: ClientData & { curve?: string }) => ({
   city: client.address.city || null,
   state: client.address.state || null,
   zip_code: client.address.zipCode || null,
+  inscricao_estadual: client.inscricaoEstadual || null,
+  site: client.site || null,
+  segment: client.segment || null,
+  default_payment_terms: client.defaultPaymentTerms || null,
+  notes: client.notes || null,
   ...(client.curve ? { curve: client.curve } : {}),
 });
 
@@ -93,14 +83,42 @@ export function useClients() {
   const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('company');
+      
+      // Fetch clients, reps, and influencers in parallel
+      const [clientsRes, repsRes, influencersRes] = await Promise.all([
+        supabase.from('clients').select('*').order('company'),
+        supabase.from('client_representatives' as any).select('*'),
+        supabase.from('client_influencers' as any).select('*'),
+      ]);
 
-      if (error) throw error;
+      if (clientsRes.error) throw clientsRes.error;
 
-      setClients((data || []).map(dbToClient));
+      // Group reps by client_id
+      const repsByClient: Record<string, string[]> = {};
+      ((repsRes.data || []) as any[]).forEach((r: any) => {
+        if (!repsByClient[r.client_id]) repsByClient[r.client_id] = [];
+        repsByClient[r.client_id].push(r.representative_email);
+      });
+
+      // Group influencers by client_id
+      const influencersByClient: Record<string, ClientInfluencer[]> = {};
+      ((influencersRes.data || []) as any[]).forEach((inf: any) => {
+        if (!influencersByClient[inf.client_id]) influencersByClient[inf.client_id] = [];
+        influencersByClient[inf.client_id].push({
+          id: inf.id,
+          name: inf.name,
+          role: inf.role || '',
+          phone: inf.phone || '',
+          email: inf.email || '',
+          notes: inf.notes || '',
+        });
+      });
+
+      setClients(
+        (clientsRes.data || []).map((row: any) =>
+          dbToClient(row, repsByClient[row.id] || [], influencersByClient[row.id] || [])
+        )
+      );
     } catch (error) {
       console.error('Error fetching clients:', error);
       toast.error('Erro ao carregar clientes');
@@ -113,17 +131,63 @@ export function useClients() {
     fetchClients();
   }, [fetchClients]);
 
+  const syncRepsAndInfluencers = async (clientId: string, clientData: ClientData) => {
+    // Sync representatives
+    if (clientData.representativeEmails) {
+      // Delete existing
+      await supabase.from('client_representatives' as any).delete().eq('client_id', clientId);
+      // Insert new
+      if (clientData.representativeEmails.length > 0) {
+        await supabase.from('client_representatives' as any).insert(
+          clientData.representativeEmails.map(email => ({
+            client_id: clientId,
+            representative_email: email,
+          }))
+        );
+      }
+      // Also update owner_email to the first rep for backward compat
+      if (clientData.representativeEmails.length > 0 && !clientData.ownerEmail) {
+        await supabase.from('clients').update({ owner_email: clientData.representativeEmails[0] }).eq('id', clientId);
+      }
+    }
+
+    // Sync influencers
+    if (clientData.influencers) {
+      await supabase.from('client_influencers' as any).delete().eq('client_id', clientId);
+      if (clientData.influencers.length > 0) {
+        await supabase.from('client_influencers' as any).insert(
+          clientData.influencers.map(inf => ({
+            client_id: clientId,
+            name: inf.name,
+            role: inf.role || null,
+            phone: inf.phone || null,
+            email: inf.email || null,
+            notes: inf.notes || null,
+          }))
+        );
+      }
+    }
+  };
+
   const addClient = async (clientData: ClientData): Promise<Client | null> => {
     try {
+      // Set owner_email from first rep for backward compatibility
+      const dataToInsert = clientToDb(clientData);
+      if (clientData.representativeEmails?.length && !dataToInsert.owner_email) {
+        dataToInsert.owner_email = clientData.representativeEmails[0];
+      }
+
       const { data, error } = await supabase
         .from('clients')
-        .insert(clientToDb(clientData))
+        .insert(dataToInsert)
         .select()
         .single();
 
       if (error) throw error;
 
-      const newClient = dbToClient(data);
+      await syncRepsAndInfluencers(data.id, clientData);
+
+      const newClient = dbToClient(data, clientData.representativeEmails || [], clientData.influencers || []);
       setClients(prev => [...prev, newClient].sort((a, b) => a.company.localeCompare(b.company)));
       toast.success('Cliente cadastrado com sucesso');
       return newClient;
@@ -136,12 +200,19 @@ export function useClients() {
 
   const updateClient = async (id: string, clientData: ClientData): Promise<boolean> => {
     try {
+      const dataToUpdate = clientToDb(clientData);
+      if (clientData.representativeEmails?.length && !dataToUpdate.owner_email) {
+        dataToUpdate.owner_email = clientData.representativeEmails[0];
+      }
+
       const { error } = await supabase
         .from('clients')
-        .update(clientToDb(clientData))
+        .update(dataToUpdate)
         .eq('id', id);
 
       if (error) throw error;
+
+      await syncRepsAndInfluencers(id, clientData);
 
       await fetchClients();
       toast.success('Cliente atualizado com sucesso');
