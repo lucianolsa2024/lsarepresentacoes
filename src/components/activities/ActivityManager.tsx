@@ -185,10 +185,26 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       });
     }
 
+    if (createDeal && activity) {
+      await addOpportunity({
+        clientId: activity.client_id || null,
+        title: dealTitle.trim() || `Negociação — ${activity.client?.company || activity.title}`,
+        description: `Originada da atividade: ${activity.title}`,
+        funnelType: 'corporativo',
+        stage: 'prospeccao',
+        value: parseFloat(dealValue) || 0,
+        ownerEmail: activity.assigned_to_email || currentEmail,
+      });
+      toast.success('Negociação criada!');
+    }
+
     setCompleteDialog(null);
     setCompleteNotes('');
     setCreateFollowUp(false);
     setFollowUpDate('');
+    setCreateDeal(false);
+    setDealTitle('');
+    setDealValue('');
   };
 
   const handleDelete = async () => {
