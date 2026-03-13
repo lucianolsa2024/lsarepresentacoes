@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSalesOpportunities, SalesOpportunity, FUNNEL_STAGES_CORPORATIVO, LOST_REASONS, OpportunityFormData } from '@/hooks/useSalesOpportunities';
 import { useClients, Client } from '@/hooks/useClients';
@@ -107,6 +107,21 @@ export function SalesFunnelManager() {
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
+
+  // Listen for external edit-opportunity events (from ClientDetailPanel)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const opp = (e as CustomEvent).detail as SalesOpportunity;
+      if (opp) {
+        if (opp.funnelType === 'lojista') setFunnelType('lojista');
+        else setFunnelType('corporativo');
+        setEditingOpp(opp);
+        setShowForm(true);
+      }
+    };
+    window.addEventListener('edit-opportunity', handler);
+    return () => window.removeEventListener('edit-opportunity', handler);
+  }, []);
 
   // Show Portfolio for lojistas tab
   if (funnelType === 'lojista') {

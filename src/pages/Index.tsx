@@ -798,6 +798,24 @@ const Index = () => {
                 setClientDetailId(null);
                 setActiveTab('activities');
               }}
+              onActivityClick={(activity) => {
+                setClientDetailId(null);
+                setActiveTab('activities');
+                // Small delay to let ActivityManager mount, then open edit
+                setTimeout(() => {
+                  const event = new CustomEvent('edit-activity', { detail: activity });
+                  window.dispatchEvent(event);
+                }, 300);
+              }}
+              onOpportunityClick={(opp) => {
+                setClientDetailId(null);
+                setActiveTab('funnel');
+                // Small delay to let SalesFunnelManager mount, then open edit
+                setTimeout(() => {
+                  const event = new CustomEvent('edit-opportunity', { detail: opp });
+                  window.dispatchEvent(event);
+                }, 300);
+              }}
               onQuoteClick={(quote) => {
                 setClientDetailId(null);
                 handleEditQuote(quote);

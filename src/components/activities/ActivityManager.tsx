@@ -257,6 +257,16 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
     return () => window.removeEventListener('open-checklist', handler);
   }, []);
 
+  // Listen for external edit-activity events (from ClientDetailPanel)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const activity = (e as CustomEvent).detail as Activity;
+      if (activity) handleEdit(activity);
+    };
+    window.addEventListener('edit-activity', handler);
+    return () => window.removeEventListener('edit-activity', handler);
+  }, []);
+
   // Bulk action handlers
   const handleToggleSelect = (id: string) => {
     setSelectedIds(prev => {

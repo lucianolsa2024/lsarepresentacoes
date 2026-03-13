@@ -236,7 +236,27 @@ export function useActivities() {
   const completeActivity = async (id: string, notes?: string): Promise<boolean> => {
     const activity = activities.find(a => a.id === id);
     const newStatus = activity?.activity_category === 'crm' ? 'realizada' : 'concluida';
-    return updateActivity(id, { status: newStatus as ActivityStatus, completed_notes: notes });
+    try {
+      const updateData: Record<string, unknown> = {
+        status: newStatus,
+        completed_at: new Date().toISOString(),
+      };
+      if (notes) updateData.completed_notes = notes;
+
+      const { error } = await supabase
+        .from('activities')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchActivities();
+      toast.success('Atividade concluída!');
+      return true;
+    } catch (error) {
+      console.error('Error completing activity:', error);
+      toast.error('Erro ao concluir atividade');
+      return false;
+    }
   };
 
   const cancelActivity = async (id: string): Promise<boolean> => {
