@@ -97,6 +97,8 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
     let result = orders;
     if (clientFilter !== 'all') result = result.filter(o => o.clientName === clientFilter);
     if (repFilter !== 'all') result = result.filter(o => o.representative === repFilter);
+    if (dateFrom) result = result.filter(o => o.issueDate >= dateFrom);
+    if (dateTo) result = result.filter(o => o.issueDate <= dateTo);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(o =>
@@ -106,7 +108,7 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
       );
     }
     return result;
-  }, [orders, search, clientFilter, repFilter]);
+  }, [orders, search, clientFilter, repFilter, dateFrom, dateTo]);
 
   const totalValue = useMemo(() => filtered.reduce((s, o) => s + o.price, 0), [filtered]);
   const formatDate = (d: string | null) => { if (!d) return '-'; try { return format(parseISO(d), 'dd/MM/yyyy'); } catch { return d; } };
