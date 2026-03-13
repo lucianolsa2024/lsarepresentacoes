@@ -3,7 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Activity,
+  ActivityCategory,
   ActivityStatus,
+  ActivityResult,
   CreateActivityInput,
   UpdateActivityInput,
   RecurrenceRule,
@@ -11,6 +13,7 @@ import {
 
 interface DbActivity {
   id: string;
+  activity_category: string;
   type: string;
   title: string;
   description: string | null;
@@ -32,6 +35,10 @@ interface DbActivity {
   watcher_emails: string[] | null;
   created_at: string;
   updated_at: string;
+  result: string | null;
+  next_step: string | null;
+  next_contact_date: string | null;
+  order_id: string | null;
 }
 
 interface DbClient {
@@ -44,6 +51,7 @@ interface DbClient {
 
 const dbToActivity = (row: DbActivity, client?: DbClient | null): Activity => ({
   id: row.id,
+  activity_category: (row.activity_category || 'tarefa') as ActivityCategory,
   type: row.type as Activity['type'],
   title: row.title,
   description: row.description || undefined,
@@ -65,6 +73,10 @@ const dbToActivity = (row: DbActivity, client?: DbClient | null): Activity => ({
   watcher_emails: row.watcher_emails || [],
   created_at: row.created_at,
   updated_at: row.updated_at,
+  result: (row.result as ActivityResult) || undefined,
+  next_step: row.next_step || undefined,
+  next_contact_date: row.next_contact_date || undefined,
+  order_id: row.order_id || undefined,
   client: client ? {
     id: client.id,
     company: client.company,
@@ -90,7 +102,6 @@ export function useActivities() {
 
       if (activitiesError) throw activitiesError;
 
-      // Fetch clients for activities
       const clientIds = [...new Set((activitiesData || []).map(a => a.client_id).filter(Boolean))];
       let clientsMap: Record<string, DbClient> = {};
       
@@ -109,7 +120,7 @@ export function useActivities() {
       }
 
       const mappedActivities = (activitiesData || []).map(row => 
-        dbToActivity(row as DbActivity, row.client_id ? clientsMap[row.client_id] : null)
+        dbToActivity(row as unknown as DbActivity, row.client_id ? clientsMap[row.client_id] : null)
       );
 
       setActivities(mappedActivities);
@@ -128,6 +139,7 @@ export function useActivities() {
   const addActivity = async (input: CreateActivityInput): Promise<Activity | null> => {
     try {
       const insertData = {
+        activity_category: input.activity_category || 'tarefa',
         type: input.type,
         title: input.title,
         description: input.description || null,
@@ -142,6 +154,10 @@ export function useActivities() {
         recurrence_rule: input.recurrence_rule ? JSON.stringify(input.recurrence_rule) : null,
         assigned_to_email: input.assigned_to_email || null,
         watcher_emails: input.watcher_emails ?? [],
+        result: input.result || null,
+        next_step: input.next_step || null,
+        next_contact_date: input.next_contact_date || null,
+        order_id: input.order_id || null,
       };
       
       const { data, error } = await supabase
@@ -154,7 +170,7 @@ export function useActivities() {
       
       await fetchActivities();
       toast.success('Atividade criada com sucesso!');
-      return dbToActivity(data as DbActivity);
+      return dbToActivity(data as unknown as DbActivity);
     } catch (error) {
       console.error('Error creating activity:', error);
       toast.error('Erro ao criar atividade');
@@ -164,19 +180,30 @@ export function useActivities() {
 
   const updateActivity = async (id: string, updates: UpdateActivityInput): Promise<boolean> => {
     try {
+      const updateData: Record<string, unknown> = {};
+      
+      if (updates.activity_category !== undefined) updateData.activity_category = updates.activity_category;
+      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description || null;
+      if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
+      if (updates.due_time !== undefined) updateData.due_time = updates.due_time || null;
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.client_id !== undefined) updateData.client_id = updates.client_id || null;
+      if (updates.quote_id !== undefined) updateData.quote_id = updates.quote_id || null;
+      if (updates.completed_notes !== undefined) updateData.completed_notes = updates.completed_notes || null;
+      if (updates.reminder_at !== undefined) updateData.reminder_at = updates.reminder_at || null;
+      if (updates.assigned_to_email !== undefined) updateData.assigned_to_email = updates.assigned_to_email || null;
+      if (updates.watcher_emails !== undefined) updateData.watcher_emails = updates.watcher_emails;
+      if (updates.result !== undefined) updateData.result = updates.result || null;
+      if (updates.next_step !== undefined) updateData.next_step = updates.next_step || null;
+      if (updates.next_contact_date !== undefined) updateData.next_contact_date = updates.next_contact_date || null;
+      if (updates.order_id !== undefined) updateData.order_id = updates.order_id || null;
+
       const { error } = await supabase
         .from('activities')
-        .update({
-          ...updates,
-          description: updates.description !== undefined ? updates.description || null : undefined,
-          due_time: updates.due_time !== undefined ? updates.due_time || null : undefined,
-          client_id: updates.client_id !== undefined ? updates.client_id || null : undefined,
-          quote_id: updates.quote_id !== undefined ? updates.quote_id || null : undefined,
-          completed_notes: updates.completed_notes !== undefined ? updates.completed_notes || null : undefined,
-          reminder_at: updates.reminder_at !== undefined ? updates.reminder_at || null : undefined,
-          assigned_to_email: updates.assigned_to_email !== undefined ? updates.assigned_to_email || null : undefined,
-          watcher_emails: updates.watcher_emails !== undefined ? updates.watcher_emails : undefined,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -193,13 +220,8 @@ export function useActivities() {
 
   const deleteActivity = async (id: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('activities')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('activities').delete().eq('id', id);
       if (error) throw error;
-      
       await fetchActivities();
       toast.success('Atividade excluída!');
       return true;
@@ -211,10 +233,9 @@ export function useActivities() {
   };
 
   const completeActivity = async (id: string, notes?: string): Promise<boolean> => {
-    return updateActivity(id, {
-      status: 'concluida',
-      completed_notes: notes,
-    });
+    const activity = activities.find(a => a.id === id);
+    const newStatus = activity?.activity_category === 'crm' ? 'realizada' : 'concluida';
+    return updateActivity(id, { status: newStatus as ActivityStatus, completed_notes: notes });
   };
 
   const cancelActivity = async (id: string): Promise<boolean> => {
@@ -225,7 +246,6 @@ export function useActivities() {
     return updateActivity(id, { status: 'em_andamento' });
   };
 
-  // Filter helpers
   const getActivitiesByStatus = (status: ActivityStatus): Activity[] => {
     return activities.filter(a => a.status === status);
   };
@@ -237,7 +257,7 @@ export function useActivities() {
   const getOverdueActivities = (): Activity[] => {
     const today = new Date().toISOString().split('T')[0];
     return activities.filter(a => 
-      a.status === 'pendente' && a.due_date < today
+      (a.status === 'pendente' || a.status === 'agendada') && a.due_date < today
     );
   };
 
@@ -250,12 +270,10 @@ export function useActivities() {
     const today = new Date();
     const futureDate = new Date(today);
     futureDate.setDate(today.getDate() + days);
-    
     const todayStr = today.toISOString().split('T')[0];
     const futureStr = futureDate.toISOString().split('T')[0];
-    
     return activities.filter(a => 
-      a.status === 'pendente' && 
+      (a.status === 'pendente' || a.status === 'agendada') && 
       a.due_date >= todayStr && 
       a.due_date <= futureStr
     );
