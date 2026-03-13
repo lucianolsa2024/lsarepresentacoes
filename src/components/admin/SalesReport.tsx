@@ -102,9 +102,12 @@ export function SalesReport({ orders }: SalesReportProps) {
               <Label>Até</Label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-44" />
             </div>
-            <div className="text-sm text-muted-foreground">
-              {filtered.length} pedidos | Total: <strong>{formatCurrency(totalRevenue)}</strong>
-            </div>
+             <div className="text-sm text-muted-foreground space-x-3">
+               <span>{filtered.length} pedidos</span>
+               <span>Venda: <strong className="text-foreground">{formatCurrency(totalVenda)}</strong></span>
+               <span>Faturado: <strong className="text-foreground">{formatCurrency(totalFaturado)}</strong></span>
+               <span>Total: <strong className="text-foreground">{formatCurrency(totalRevenue)}</strong></span>
+             </div>
           </div>
         </CardContent>
       </Card>
