@@ -404,6 +404,7 @@ export type Database = {
           owner_email: string | null
           parent_client_id: string | null
           phone: string | null
+          portfolio_status: string | null
           segment: string | null
           site: string | null
           state: string | null
@@ -432,6 +433,7 @@ export type Database = {
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
+          portfolio_status?: string | null
           segment?: string | null
           site?: string | null
           state?: string | null
@@ -460,6 +462,7 @@ export type Database = {
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
+          portfolio_status?: string | null
           segment?: string | null
           site?: string | null
           state?: string | null
@@ -691,6 +694,69 @@ export type Database = {
             columns: ["modulation_id"]
             isOneToOne: false
             referencedRelation: "product_modulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nps_responses: {
+        Row: {
+          client_id: string
+          comment: string | null
+          consultant_name: string
+          created_at: string | null
+          id: string
+          response_date: string
+          score_1: number
+          score_2: number
+          score_3: number
+          score_4: number
+          score_5: number
+          trainer_email: string | null
+          training_id: string | null
+        }
+        Insert: {
+          client_id: string
+          comment?: string | null
+          consultant_name: string
+          created_at?: string | null
+          id?: string
+          response_date?: string
+          score_1?: number
+          score_2?: number
+          score_3?: number
+          score_4?: number
+          score_5?: number
+          trainer_email?: string | null
+          training_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          comment?: string | null
+          consultant_name?: string
+          created_at?: string | null
+          id?: string
+          response_date?: string
+          score_1?: number
+          score_2?: number
+          score_3?: number
+          score_4?: number
+          score_5?: number
+          trainer_email?: string | null
+          training_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nps_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_responses_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "store_trainings"
             referencedColumns: ["id"]
           },
         ]
@@ -1259,6 +1325,73 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_trainings: {
+        Row: {
+          client_id: string
+          collection: string | null
+          created_at: string | null
+          id: string
+          observations: string | null
+          trainer_email: string
+          training_date: string
+        }
+        Insert: {
+          client_id: string
+          collection?: string | null
+          created_at?: string | null
+          id?: string
+          observations?: string | null
+          trainer_email: string
+          training_date: string
+        }
+        Update: {
+          client_id?: string
+          collection?: string | null
+          created_at?: string | null
+          id?: string
+          observations?: string | null
+          trainer_email?: string
+          training_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_trainings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_participants: {
+        Row: {
+          consultant_name: string
+          created_at: string | null
+          id: string
+          training_id: string
+        }
+        Insert: {
+          consultant_name: string
+          created_at?: string | null
+          id?: string
+          training_id: string
+        }
+        Update: {
+          consultant_name?: string
+          created_at?: string | null
+          id?: string
+          training_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_participants_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "store_trainings"
             referencedColumns: ["id"]
           },
         ]

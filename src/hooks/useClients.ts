@@ -12,6 +12,7 @@ export interface Client extends ClientData {
   parentClientId: string | null;
   curve: ClientCurve;
   curveUpdatedAt: string | null;
+  portfolioStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +31,7 @@ const dbToClient = (row: any, reps: string[] = [], influencers: ClientInfluencer
   parentClientId: row.parent_client_id || null,
   curve: (row.curve as ClientCurve) || 'D',
   curveUpdatedAt: row.curve_updated_at || null,
+  portfolioStatus: row.portfolio_status || null,
   inscricaoEstadual: row.inscricao_estadual || '',
   site: row.site || '',
   segment: row.segment || '',

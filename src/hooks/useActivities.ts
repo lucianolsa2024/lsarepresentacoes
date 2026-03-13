@@ -138,7 +138,7 @@ export function useActivities() {
 
   const addActivity = async (input: CreateActivityInput): Promise<Activity | null> => {
     try {
-      const insertData = {
+      const insertData: Record<string, any> = {
         activity_category: input.activity_category || 'tarefa',
         type: input.type,
         title: input.title,
@@ -159,10 +159,11 @@ export function useActivities() {
         next_contact_date: input.next_contact_date || null,
         order_id: input.order_id || null,
       };
+      if ((input as any).status) insertData.status = (input as any).status;
       
       const { data, error } = await supabase
         .from('activities')
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single();
 
