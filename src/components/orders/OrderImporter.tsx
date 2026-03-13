@@ -214,6 +214,18 @@ export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClien
           Selecionar Arquivo
         </Button>
 
+        {/* Raw debug */}
+        {rawDebug && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Debug — Dados brutos do Excel:</p>
+            <Textarea
+              readOnly
+              value={rawDebug}
+              className="font-mono text-xs h-40 bg-muted"
+            />
+          </div>
+        )}
+
         {/* Stats */}
         {stats && (
           <div className="p-3 bg-muted rounded-lg space-y-2">
