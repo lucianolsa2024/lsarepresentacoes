@@ -9,6 +9,7 @@ import { OrderImporter } from './OrderImporter';
 import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
+import { FaturadosImporter } from './FaturadosImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
