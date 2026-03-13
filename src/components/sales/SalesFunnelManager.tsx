@@ -170,6 +170,9 @@ export function SalesFunnelManager() {
   const [repFilter, setRepFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [lostModal, setLostModal] = useState<{ oppId: string } | null>(null);
+  const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
+  const [showWon, setShowWon] = useState(false);
+  const [showLost, setShowLost] = useState(false);
 
   const isCorporativo = funnelType === 'corporativo';
   const stages = isCorporativo ? FUNNEL_STAGES_CORPORATIVO : FUNNEL_STAGES_LOJISTA;
