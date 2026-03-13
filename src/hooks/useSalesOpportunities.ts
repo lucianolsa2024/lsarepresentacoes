@@ -20,6 +20,9 @@ export interface SalesOpportunity {
   lostAt: string | null;
   createdAt: string;
   updatedAt: string;
+  ownerEmail: string | null;
+  stageChangedAt: string;
+  nextFollowupDate: string | null;
 }
 
 export interface OpportunityFormData {
@@ -35,9 +38,11 @@ export interface OpportunityFormData {
   contactEmail?: string;
   notes?: string;
   ownerEmail?: string;
+  lostReason?: string;
+  nextFollowupDate?: string;
 }
 
-export const FUNNEL_STAGES = [
+export const FUNNEL_STAGES_LOJISTA = [
   { key: 'prospeccao', label: 'Prospecção' },
   { key: 'qualificacao', label: 'Qualificação' },
   { key: 'proposta', label: 'Proposta' },
@@ -45,6 +50,27 @@ export const FUNNEL_STAGES = [
   { key: 'fechamento', label: 'Fechamento' },
   { key: 'ganho', label: 'Ganho' },
   { key: 'perdido', label: 'Perdido' },
+] as const;
+
+export const FUNNEL_STAGES_CORPORATIVO = [
+  { key: 'prospeccao', label: 'Prospecção' },
+  { key: 'qualificacao', label: 'Qualificação' },
+  { key: 'elaboracao_proposta', label: 'Elaboração de Proposta' },
+  { key: 'proposta_enviada', label: 'Proposta Enviada' },
+  { key: 'negociacao', label: 'Negociação' },
+  { key: 'ganho', label: 'Fechado — Ganho ✅' },
+  { key: 'perdido', label: 'Fechado — Perdido ❌' },
+] as const;
+
+// Keep backward compat
+export const FUNNEL_STAGES = FUNNEL_STAGES_LOJISTA;
+
+export const LOST_REASONS = [
+  { key: 'preco', label: 'Preço' },
+  { key: 'prazo', label: 'Prazo' },
+  { key: 'concorrencia', label: 'Concorrência' },
+  { key: 'sem_orcamento', label: 'Sem orçamento' },
+  { key: 'outro', label: 'Outro' },
 ] as const;
 
 const dbToOpportunity = (row: any): SalesOpportunity => ({
@@ -65,6 +91,9 @@ const dbToOpportunity = (row: any): SalesOpportunity => ({
   lostAt: row.lost_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  ownerEmail: row.owner_email,
+  stageChangedAt: row.stage_changed_at,
+  nextFollowupDate: row.next_followup_date,
 });
 
 export function useSalesOpportunities() {
@@ -107,6 +136,8 @@ export function useSalesOpportunities() {
         contact_phone: data.contactPhone || null,
         contact_email: data.contactEmail || null,
         notes: data.notes || null,
+        next_followup_date: data.nextFollowupDate || null,
+        stage_changed_at: new Date().toISOString(),
       };
       if (data.ownerEmail) insertData.owner_email = data.ownerEmail;
       const { data: result, error } = await supabase
@@ -135,8 +166,12 @@ export function useSalesOpportunities() {
       if (data.funnelType !== undefined) updateData.funnel_type = data.funnelType;
       if (data.stage !== undefined) {
         updateData.stage = data.stage;
+        updateData.stage_changed_at = new Date().toISOString();
         if (data.stage === 'ganho') updateData.won_at = new Date().toISOString();
-        if (data.stage === 'perdido') updateData.lost_at = new Date().toISOString();
+        if (data.stage === 'perdido') {
+          updateData.lost_at = new Date().toISOString();
+          if (data.lostReason) updateData.lost_reason = data.lostReason;
+        }
       }
       if (data.value !== undefined) updateData.value = data.value;
       if (data.expectedCloseDate !== undefined) updateData.expected_close_date = data.expectedCloseDate;
@@ -145,6 +180,9 @@ export function useSalesOpportunities() {
       if (data.contactEmail !== undefined) updateData.contact_email = data.contactEmail;
       if (data.notes !== undefined) updateData.notes = data.notes;
       if (data.clientId !== undefined) updateData.client_id = data.clientId;
+      if (data.ownerEmail !== undefined) updateData.owner_email = data.ownerEmail;
+      if (data.nextFollowupDate !== undefined) updateData.next_followup_date = data.nextFollowupDate;
+      if (data.lostReason !== undefined) updateData.lost_reason = data.lostReason;
 
       const { error } = await supabase
         .from('sales_opportunities')
@@ -179,8 +217,10 @@ export function useSalesOpportunities() {
     }
   };
 
-  const moveStage = async (id: string, newStage: string): Promise<boolean> => {
-    return updateOpportunity(id, { stage: newStage });
+  const moveStage = async (id: string, newStage: string, lostReason?: string): Promise<boolean> => {
+    const data: Partial<OpportunityFormData> = { stage: newStage };
+    if (lostReason) data.lostReason = lostReason;
+    return updateOpportunity(id, data);
   };
 
   return {
