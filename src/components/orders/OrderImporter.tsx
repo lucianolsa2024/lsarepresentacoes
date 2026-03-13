@@ -7,191 +7,54 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, Loader2, CheckCircle, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import ExcelJS from 'exceljs';
+import { importarPedidosExcel, PedidoLinha } from '@/lib/importarPedidos';
+
+interface OrderWithMeta {
+  order: OrderFormData;
+  clientId?: string | null;
+  nfNumber?: string | null;
+  status?: string;
+}
 
 interface Props {
   clients: Client[];
-  onImport: (orders: { order: OrderFormData; clientId?: string | null }[]) => Promise<number>;
+  existingOrderKeys?: Set<string>;
+  onImport: (orders: OrderWithMeta[]) => Promise<number>;
   onAddClient: (client: ClientData) => Promise<Client | null>;
   onComplete: () => void;
 }
 
-// Keywords for each field — first match wins
-const COLUMN_PATTERNS: Record<string, RegExp> = {
-  issueDate: /^(dt\s*emiss[aã]o|data\s*emiss[aã]o|emiss[aã]o|dt\s*ped)/i,
-  clientName: /^(cliente|client|razao|raz[aã]o\s*social|empresa)/i,
-  orderNumber: /^(n[uú]mero\s*pedido|num\s*ped|pedido|numero|n[°º]?\s*ped)/i,
-  oc: /^(oc|ordem\s*comp|o\.?c\.?)/i,
-  product: /^(produto|prod|modelo|descri[cç][aã]o\s*prod)/i,
-  fabric: /^(tecido|tec|revestimento)/i,
-  supplier: /^(fornecedor|forn|f[aá]brica|marca)/i,
-  deliveryDate: /^(dt\s*entrega|data\s*entrega|entrega|prev\s*entrega|previs[aã]o)/i,
-  paymentTerms: /^(cond\s*pg|cond\s*pagto|cond\.?\s*pag|condi[cç][oõ]es|prazo\s*pag|pagamento)/i,
-  representative: /^(representante|rep|vendedor|consultor)/i,
-  quantity: /^(qtd|quantidade|quant|qtde)/i,
-  price: /^(valor|pre[cç]o|vlr|total|vl)/i,
-  fabricProvided: /^(tecido\s*forn|tec\s*forn|fornece\s*tec)/i,
-  dimensions: /^(dimens[aã]o|dim|medida|tamanho|comp\s*[\+\&]?\s*prof)/i,
-  orderType: /^(tipo\s*ped|tipo|order\s*type)/i,
-};
-
-// Extract raw value from ExcelJS cell (handles rich text, formulas, dates)
-function cellValue(val: any): any {
-  if (val == null) return '';
-  if (typeof val === 'object' && val.richText) {
-    return val.richText.map((r: any) => r.text || '').join('');
-  }
-  if (typeof val === 'object' && val.text != null) {
-    return val.text;
-  }
-  if (typeof val === 'object' && val.result != null) {
-    return val.result; // formula result
-  }
-  return val;
+function pedidoToOrder(l: PedidoLinha): OrderFormData {
+  const isFabricProvided = /tecido\s*forn/i.test(l.tecido || '');
+  return {
+    issueDate: l.dt_emissao || new Date().toISOString().split('T')[0],
+    clientName: l.cliente,
+    supplier: (l.fornecedor || 'SOHOME').toUpperCase(),
+    representative: l.representante,
+    orderNumber: String(l.numero_pedido),
+    oc: l.oc || '',
+    product: l.produto_completo,
+    fabricProvided: isFabricProvided ? 'SIM' : 'NAO',
+    fabric: isFabricProvided ? '' : (l.tecido || ''),
+    dimensions: l.comp_prof || '',
+    deliveryDate: l.data_entrega || '',
+    quantity: l.qtde || 1,
+    price: l.valor,
+    orderType: l.tipo_pedido || 'ENCOMENDA',
+    paymentTerms: l.cond_pgto || '',
+  };
 }
 
-function parseExcelDate(value: any): string {
-  const v = cellValue(value);
-  if (!v) return '';
-  if (v instanceof Date) return v.toISOString().split('T')[0];
-  if (typeof v === 'number') {
-    const date = new Date((v - 25569) * 86400 * 1000);
-    return date.toISOString().split('T')[0];
-  }
-  const str = String(v).trim();
-  // Try M/D/YY or MM/DD/YY or DD/MM/YYYY
-  const slashParts = str.split('/');
-  if (slashParts.length === 3) {
-    let [a, b, c] = slashParts;
-    let year = c.length === 2 ? `20${c}` : c;
-    if (parseInt(a) > 12) {
-      return `${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
-    }
-    return `${year}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
-  }
-  return str;
-}
-
-function parsePrice(value: any): number {
-  const raw = cellValue(value);
-  if (!raw && raw !== 0) return 0;
-  if (typeof raw === 'number') return raw;
-  let str = String(raw).replace(/[^\d.,\-]/g, '');
-  if (!str) return 0;
-
-  const lastDot = str.lastIndexOf('.');
-  const lastComma = str.lastIndexOf(',');
-
-  if (lastDot === -1 && lastComma === -1) {
-    return parseFloat(str) || 0;
-  }
-
-  if (lastComma > lastDot) {
-    // Comma is the last separator
-    const afterComma = str.substring(lastComma + 1);
-    if (afterComma.length === 3 && !str.includes('.')) {
-      // "4,132" → 4132 (comma as thousands separator, no decimal)
-      str = str.replace(/,/g, '');
-    } else {
-      // "1.234,56" → 1234.56 (Brazilian decimal format)
-      str = str.replace(/\./g, '').replace(',', '.');
-    }
-  } else if (lastDot > lastComma) {
-    // Dot is the last separator (US format): "1,234.56"
-    str = str.replace(/,/g, '');
-  }
-
-  return parseFloat(str) || 0;
-}
-
-function normalizeHeader(header: string): string {
-  return String(header || '')
-    .trim()
-    .replace(/[\n\r]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[()#$%]/g, '')
-    .trim();
-}
-
-const COLUMN_KEYWORDS: Record<string, string[]> = {
-  issueDate: ['dt emissao', 'data emissao', 'emissao', 'dt ped', 'data pedido'],
-  clientName: ['cliente', 'client', 'razao social', 'empresa'],
-  orderNumber: ['numero pedido', 'num ped', 'pedido', 'n ped'],
-  oc: ['oc', 'ordem comp', 'o c'],
-  product: ['produto completo', 'produto', 'prod', 'modelo', 'descricao prod'],
-  fabric: ['tecido', 'tec', 'revestimento'],
-  supplier: ['fornecedor', 'forn', 'fabrica', 'marca'],
-  deliveryDate: ['dt entrega', 'data entrega', 'entrega', 'prev entrega', 'previsao'],
-  paymentTerms: ['cond pgto', 'cond pagto', 'cond pag', 'condicoes', 'prazo pag', 'pagamento'],
-  representative: ['representante pf', 'representante', 'rep', 'vendedor', 'consultor'],
-  quantity: ['qtde #', 'qtde', 'qtd', 'quantidade', 'quant'],
-  price: ['valor r', 'valor', 'preco', 'vlr', 'total', 'vl'],
-  fabricProvided: ['tecido forn', 'tec forn', 'fornece tec'],
-  dimensions: ['comp prof', 'dimensao', 'dim', 'medida', 'tamanho'],
-  orderType: ['tipo pedido', 'tipo ped', 'tipo', 'order type'],
-};
-
-function normalizeHeaderForMatch(header: string): string {
-  return normalizeHeader(header)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-
-function detectColumnMapping(headers: string[]): Record<string, number> {
-  const mapping: Record<string, number> = {};
-  const normalized = headers.map(normalizeHeaderForMatch);
-
-  for (const field of Object.keys(COLUMN_PATTERNS)) {
-    const keywords = COLUMN_KEYWORDS[field] || [];
-    let bestIndex = -1;
-    let bestScore = -1;
-
-    for (let i = 0; i < normalized.length; i++) {
-      const header = normalized[i];
-      if (!header) continue;
-
-      let score = -1;
-      if (keywords.some((k) => header === k)) score = 3;
-      else if (keywords.some((k) => header.startsWith(k))) score = 2;
-      else if (keywords.some((k) => header.includes(k))) score = 1;
-      else {
-        const regex = COLUMN_PATTERNS[field];
-        regex.lastIndex = 0;
-        if (regex.test(header)) score = 0;
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestIndex = i;
-      }
-    }
-
-    if (bestIndex >= 0) {
-      mapping[field] = bestIndex;
-    }
-  }
-
-  return mapping;
-}
-
-export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Props) {
+export function OrderImporter({ clients, existingOrderKeys, onImport, onAddClient, onComplete }: Props) {
   const [importing, setImporting] = useState(false);
-  const [preview, setPreview] = useState<OrderFormData[]>([]);
-  const [detectedColumns, setDetectedColumns] = useState<Record<string, number>>({});
-  const [headerNames, setHeaderNames] = useState<string[]>([]);
+  const [preview, setPreview] = useState<{ order: OrderFormData; nfNumber: string | null; isFaturado: boolean }[]>([]);
+  const [stats, setStats] = useState<{ total: number; faturados: number; duplicatas: number; erros: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { nameToEmail } = useRepresentatives();
   const normalizedNameToEmail = useMemo(() => {
     return Object.fromEntries(
       Object.entries(nameToEmail).map(([name, email]) => [
-        name
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toUpperCase()
-          .trim(),
+        name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim(),
         email,
       ])
     );
@@ -202,92 +65,44 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
     if (!file) return;
 
     try {
-      const workbook = new ExcelJS.Workbook();
-      const buffer = await file.arrayBuffer();
-      await workbook.xlsx.load(buffer);
+      const result = await importarPedidosExcel(file);
 
-      const sheet = workbook.worksheets[0];
-      if (!sheet) { toast.error('Planilha vazia'); return; }
-
-      // Read header row - try to extract from cells
-      const headerRow = sheet.getRow(1);
-      const headers: string[] = [];
-      headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        const raw = cell.value;
-        headers[colNumber] = String(cellValue(raw) || '');
-      });
-
-      console.log('[OrderImporter] Headers detected:', headers.filter(Boolean));
-      console.log('[OrderImporter] Raw header values:', headerRow.values);
-
-      const mapping = detectColumnMapping(headers);
-      console.log('[OrderImporter] Column mapping:', mapping);
-      console.log('[OrderImporter] Unmapped fields:', Object.keys(COLUMN_PATTERNS).filter(f => !(f in mapping)));
-      setDetectedColumns(mapping);
-      setHeaderNames(headers);
-
-      // Check required fields
-      if (mapping.clientName == null) {
-        toast.error('Coluna de cliente não encontrada na planilha');
-        return;
+      if (result.erros.length > 0) {
+        console.warn('[OrderImporter] Erros no parsing:', result.erros);
       }
 
-      const rows: OrderFormData[] = [];
+      // Deduplicate against existing orders
+      const dedupKeys = existingOrderKeys || new Set<string>();
+      const unique: typeof preview = [];
+      let dupCount = 0;
 
-      sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
-        const rawVals = row.values as any[];
-        // Normalize all cell values (handle rich text, formulas, etc.)
-        const vals = rawVals.map(cellValue);
-
-        if (rowNumber === 2) {
-          console.log('[OrderImporter] Row 2 raw values:', rawVals.map((v, i) => `[${i}] ${typeof v}: ${JSON.stringify(v)?.substring(0, 80)}`));
-          console.log('[OrderImporter] Row 2 parsed values:', vals);
+      for (const l of result.linhas) {
+        const key = `${l.cliente.toLowerCase().trim()}::${String(l.numero_pedido).trim()}::${l.produto_completo.toLowerCase().trim()}`;
+        // Also check simpler key for backward compat
+        const simpleKey = `${l.cliente.toLowerCase().trim()}::${String(l.numero_pedido).trim()}`;
+        if (dedupKeys.has(key) || dedupKeys.has(simpleKey)) {
+          dupCount++;
+          continue;
         }
+        dedupKeys.add(key);
 
-        const clientName = String(vals[mapping.clientName] || '').trim();
-        if (!clientName) return;
-
-        // Detect fabric provided from fabric column value
-        const rawFabric = mapping.fabric != null ? String(vals[mapping.fabric] || '').trim() : '';
-        const isFabricProvided = /tecido\s*forn/i.test(rawFabric);
-        const fabricValue = isFabricProvided ? '' : rawFabric;
-        const fabricProvidedValue = mapping.fabricProvided != null
-          ? String(cellValue(rawVals[mapping.fabricProvided]) || 'NAO').trim().toUpperCase()
-          : (isFabricProvided ? 'SIM' : 'NAO');
-
-        // Normalize supplier to uppercase
-        const rawSupplier = mapping.supplier != null ? String(vals[mapping.supplier] || 'SOHOME').trim() : 'SOHOME';
-        const supplier = rawSupplier.toUpperCase();
-
-        // Normalize order type: map numeric values or fallback
-        let rawOrderType = mapping.orderType != null ? String(vals[mapping.orderType] || 'ENCOMENDA').trim() : 'ENCOMENDA';
-        if (/^\d+$/.test(rawOrderType)) rawOrderType = 'ENCOMENDA';
-
-        rows.push({
-          issueDate: mapping.issueDate != null ? parseExcelDate(rawVals[mapping.issueDate]) : new Date().toISOString().split('T')[0],
-          clientName,
-          supplier,
-          representative: mapping.representative != null ? String(vals[mapping.representative] || '').trim() : '',
-          orderNumber: mapping.orderNumber != null ? String(vals[mapping.orderNumber] || '').trim() : '',
-          oc: mapping.oc != null ? String(vals[mapping.oc] || '').trim() : '',
-          product: mapping.product != null ? String(vals[mapping.product] || '').trim() : '',
-          fabricProvided: fabricProvidedValue,
-          fabric: fabricValue,
-          dimensions: mapping.dimensions != null ? String(vals[mapping.dimensions] || '').trim() : '',
-          deliveryDate: mapping.deliveryDate != null ? parseExcelDate(rawVals[mapping.deliveryDate]) : '',
-          quantity: mapping.quantity != null ? (parseInt(String(vals[mapping.quantity] || '1')) || 1) : 1,
-          price: mapping.price != null ? parsePrice(rawVals[mapping.price]) : 0,
-          orderType: rawOrderType.toUpperCase(),
-          paymentTerms: mapping.paymentTerms != null ? String(vals[mapping.paymentTerms] || '').trim() : '',
+        const isFaturado = l.numero_nf !== null && l.dt_fat !== null;
+        unique.push({
+          order: pedidoToOrder(l),
+          nfNumber: l.numero_nf !== null ? String(l.numero_nf) : null,
+          isFaturado,
         });
+      }
+
+      setPreview(unique);
+      setStats({
+        total: result.totalLinhas,
+        faturados: unique.filter(u => u.isFaturado).length,
+        duplicatas: dupCount,
+        erros: result.erros,
       });
 
-      setPreview(rows);
-
-      const mappedFields = Object.keys(mapping).length;
-      const totalFields = Object.keys(COLUMN_PATTERNS).length;
-      toast.success(`${rows.length} pedidos encontrados. ${mappedFields}/${totalFields} colunas mapeadas automaticamente.`);
+      toast.success(`${unique.length} pedidos prontos para importar${dupCount > 0 ? ` (${dupCount} duplicatas ignoradas)` : ''}`);
     } catch (error) {
       console.error('Error parsing Excel:', error);
       toast.error('Erro ao ler a planilha');
@@ -304,15 +119,14 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
 
       const newClientNames = [...new Set(
         preview
-          .map(o => o.clientName)
+          .map(o => o.order.clientName)
           .filter(name => !clientMap.has(name.toLowerCase()))
       )];
 
       for (const name of newClientNames) {
-        // Find representative from first order of this client
-        const firstOrder = preview.find(o => o.clientName === name);
-        const repEmail = firstOrder?.representative
-          ? normalizedNameToEmail[(firstOrder.representative)
+        const firstOrder = preview.find(o => o.order.clientName === name);
+        const repEmail = firstOrder?.order.representative
+          ? normalizedNameToEmail[(firstOrder.order.representative)
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '')
               .toUpperCase()
@@ -333,9 +147,11 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
         }
       }
 
-      const ordersWithClients = preview.map(order => ({
-        order,
-        clientId: clientMap.get(order.clientName.toLowerCase()) || null,
+      const ordersWithClients: OrderWithMeta[] = preview.map(p => ({
+        order: p.order,
+        clientId: clientMap.get(p.order.clientName.toLowerCase()) || null,
+        nfNumber: p.nfNumber,
+        status: p.isFaturado ? 'faturado' : 'pendente',
       }));
 
       const count = await onImport(ordersWithClients);
@@ -343,9 +159,12 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       if (newClientNames.length > 0) {
         toast.info(`${newClientNames.length} novo(s) cliente(s) criado(s)`);
       }
+      const faturados = preview.filter(p => p.isFaturado).length;
+      if (faturados > 0) {
+        toast.info(`${faturados} pedido(s) marcados como faturado com NF`);
+      }
       setPreview([]);
-      setDetectedColumns({});
-      setHeaderNames([]);
+      setStats(null);
       onComplete();
     } catch (error) {
       console.error('Import error:', error);
@@ -353,25 +172,6 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
     } finally {
       setImporting(false);
     }
-  };
-
-  const mappedFields = Object.entries(detectedColumns);
-  const fieldLabels: Record<string, string> = {
-    issueDate: 'Data Emissão',
-    clientName: 'Cliente',
-    orderNumber: 'Nº Pedido',
-    oc: 'OC',
-    product: 'Produto',
-    fabric: 'Tecido',
-    supplier: 'Fornecedor',
-    deliveryDate: 'Data Entrega',
-    paymentTerms: 'Cond. Pagamento',
-    representative: 'Representante',
-    quantity: 'Quantidade',
-    price: 'Valor',
-    fabricProvided: 'Tecido Fornecido',
-    dimensions: 'Dimensão',
-    orderType: 'Tipo Pedido',
   };
 
   return (
@@ -384,7 +184,7 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          O sistema detecta automaticamente as colunas da planilha. Basta que os cabeçalhos contenham termos como "Cliente", "Pedido", "Produto", "Tecido", "Entrega", etc.
+          Importa planilhas do FoccoERP. Pedidos com NF e data de faturamento serão marcados como faturados automaticamente. Duplicatas são ignoradas.
         </p>
 
         <input
@@ -400,26 +200,23 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
           Selecionar Arquivo
         </Button>
 
-        {/* Column mapping feedback */}
-        {mappedFields.length > 0 && (
+        {/* Stats */}
+        {stats && (
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <p className="text-sm font-medium flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-primary" />
-              Colunas detectadas automaticamente:
+              Resultado do parsing:
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {mappedFields.map(([field, colIndex]) => (
-                <span key={field} className="inline-flex items-center gap-1 text-xs bg-background border rounded-md px-2 py-1">
-                  <span className="font-medium">{fieldLabels[field] || field}</span>
-                  <span className="text-muted-foreground">← {normalizeHeader(headerNames[colIndex] || '')}</span>
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-3 text-xs">
+              <span>Total: <strong>{stats.total}</strong></span>
+              <span>Faturados: <strong>{stats.faturados}</strong></span>
+              {stats.duplicatas > 0 && <span className="text-orange-600">Duplicatas ignoradas: <strong>{stats.duplicatas}</strong></span>}
             </div>
-            {Object.keys(COLUMN_PATTERNS).filter(f => !(f in detectedColumns)).length > 0 && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                Não encontradas: {Object.keys(COLUMN_PATTERNS).filter(f => !(f in detectedColumns)).map(f => fieldLabels[f] || f).join(', ')}
-              </p>
+            {stats.erros.length > 0 && (
+              <div className="text-xs text-destructive mt-1">
+                <AlertCircle className="h-3 w-3 inline mr-1" />
+                {stats.erros.length} erro(s) no parsing
+              </div>
             )}
           </div>
         )}
@@ -429,8 +226,9 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm font-medium">{preview.length} pedidos prontos para importar</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Clientes: {[...new Set(preview.map(o => o.clientName))].length} |
-                Clientes novos: {[...new Set(preview.map(o => o.clientName).filter(name => !clients.some(c => c.company.toLowerCase() === name.toLowerCase())))].length}
+                Clientes: {[...new Set(preview.map(o => o.order.clientName))].length} |
+                Novos: {[...new Set(preview.map(o => o.order.clientName).filter(name => !clients.some(c => c.company.toLowerCase() === name.toLowerCase())))].length} |
+                Faturados: {preview.filter(p => p.isFaturado).length}
               </p>
             </div>
 
@@ -442,35 +240,47 @@ export function OrderImporter({ clients, onImport, onAddClient, onComplete }: Pr
                     <th className="p-2 text-left">Cliente</th>
                     <th className="p-2 text-left">Pedido</th>
                     <th className="p-2 text-left">Produto</th>
-                    <th className="p-2 text-left">Tecido</th>
-                    <th className="p-2 text-right">Qtd</th>
-                    <th className="p-2 text-right">Preço</th>
+                    <th className="p-2 text-left">NF</th>
+                    <th className="p-2 text-left">Status</th>
+                    <th className="p-2 text-right">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.slice(0, 50).map((o, i) => (
+                  {preview.slice(0, 50).map((p, i) => (
                     <tr key={i} className="border-t">
-                      <td className="p-2 whitespace-nowrap">{o.issueDate}</td>
-                      <td className="p-2 max-w-[150px] truncate">{o.clientName}</td>
-                      <td className="p-2">{o.orderNumber || '-'}</td>
-                      <td className="p-2">{o.product}</td>
-                      <td className="p-2">{o.fabric}</td>
-                      <td className="p-2 text-right">{o.quantity}</td>
-                      <td className="p-2 text-right whitespace-nowrap">{o.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                      <td className="p-2">{p.order.issueDate}</td>
+                      <td className="p-2">{p.order.clientName}</td>
+                      <td className="p-2">{p.order.orderNumber}</td>
+                      <td className="p-2 max-w-[200px] truncate">{p.order.product}</td>
+                      <td className="p-2">{p.nfNumber || '-'}</td>
+                      <td className="p-2">
+                        {p.isFaturado ? (
+                          <span className="text-primary font-medium">Faturado</span>
+                        ) : (
+                          <span className="text-muted-foreground">Pendente</span>
+                        )}
+                      </td>
+                      <td className="p-2 text-right">{p.order.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {preview.length > 50 && (
-                <p className="text-xs text-center py-2 text-muted-foreground">... e mais {preview.length - 50} pedidos</p>
+                <p className="p-2 text-xs text-muted-foreground text-center">... e mais {preview.length - 50} pedidos</p>
               )}
             </div>
 
-            <Button onClick={handleImport} disabled={importing} className="w-full">
+            <Button onClick={handleImport} disabled={importing}>
               {importing ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importando...</>
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
               ) : (
-                <><CheckCircle className="h-4 w-4 mr-2" /> Importar {preview.length} Pedidos</>
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Importar {preview.length} pedidos
+                </>
               )}
             </Button>
           </div>

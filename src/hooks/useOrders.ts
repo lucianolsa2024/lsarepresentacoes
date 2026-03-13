@@ -120,12 +120,17 @@ export function useOrders() {
     }
   };
 
-  const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null }[]): Promise<number> => {
+  const addOrders = async (ordersData: { order: OrderFormData; clientId?: string | null; pdfUrl?: string | null; nfNumber?: string | null; status?: string }[]): Promise<number> => {
     try {
       await loadRepMap();
       const allRows = await Promise.all(ordersData.map(async d => {
         const ownerEmail = await resolveOwnerEmail(d.order.representative);
-        return orderToDb(d.order, d.clientId, d.pdfUrl, ownerEmail);
+        const row = orderToDb(d.order, d.clientId, d.pdfUrl, ownerEmail);
+        return {
+          ...row,
+          ...(d.nfNumber ? { nf_number: d.nfNumber } : {}),
+          ...(d.status ? { status: d.status } : {}),
+        };
       }));
 
       // Process in batches of 100 to avoid timeouts
