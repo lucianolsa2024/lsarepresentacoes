@@ -59,6 +59,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const isAdmin = useIsAdmin();
   const { user } = useAuth();
   const { activeReps } = useRepresentatives();
+  const { addOpportunity } = useSalesOpportunities();
   const currentEmail = user?.email;
 
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'report' | 'checklist_report'>('list');
