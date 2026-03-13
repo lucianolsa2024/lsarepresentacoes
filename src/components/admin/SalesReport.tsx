@@ -50,17 +50,22 @@ export function SalesReport({ orders }: SalesReportProps) {
   }, [filtered]);
 
   const byRep = useMemo(() => {
-    const map: Record<string, { revenue: number; volume: number; orders: number }> = {};
+    const map: Record<string, { venda: number; faturado: number; volume: number; orders: number }> = {};
     filtered.forEach((o) => {
       const key = o.representative || 'SEM VENDEDOR';
-      if (!map[key]) map[key] = { revenue: 0, volume: 0, orders: 0 };
-      map[key].revenue += o.price * o.quantity;
+      if (!map[key]) map[key] = { venda: 0, faturado: 0, volume: 0, orders: 0 };
+      const val = o.price * o.quantity;
+      if (o.status === 'faturado' || o.status === 'entregue') {
+        map[key].faturado += val;
+      } else {
+        map[key].venda += val;
+      }
       map[key].volume += o.quantity;
       map[key].orders += 1;
     });
     return Object.entries(map)
-      .map(([name, d]) => ({ name, ...d, ticket: d.orders ? d.revenue / d.orders : 0 }))
-      .sort((a, b) => b.revenue - a.revenue);
+      .map(([name, d]) => ({ name, ...d, total: d.venda + d.faturado, ticket: d.orders ? (d.venda + d.faturado) / d.orders : 0 }))
+      .sort((a, b) => b.total - a.total);
   }, [filtered]);
 
   const crossData = useMemo(() => {
