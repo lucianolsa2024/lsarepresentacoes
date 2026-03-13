@@ -46,6 +46,10 @@ export function AdminPanel({ orders }: AdminPanelProps) {
           <TrendingUp className="h-4 w-4 mr-2" />
           Curva de Clientes
         </TabsTrigger>
+        <TabsTrigger value="comissionamento">
+          <Percent className="h-4 w-4 mr-2" />
+          Comissionamento
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -68,6 +72,9 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       </TabsContent>
       <TabsContent value="curva" className="mt-0">
         <ClientCurveReport />
+      </TabsContent>
+      <TabsContent value="comissionamento" className="mt-0">
+        <CommissionManager />
       </TabsContent>
     </Tabs>
   );
