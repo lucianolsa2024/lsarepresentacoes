@@ -44,6 +44,7 @@ export function StoreDetailSheet({
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [showNpsForm, setShowNpsForm] = useState(false);
+  const [npsLink, setNpsLink] = useState<string | null>(null);
   const [visitForm, setVisitForm] = useState({ date: new Date().toISOString().split('T')[0], description: '', result: 'positivo', nextStep: '' });
   const [trainingForm, setTrainingForm] = useState({ trainingDate: new Date().toISOString().split('T')[0], trainerEmail: '', collection: '', observations: '', participants: [] as string[] });
   const [npsForm, setNpsForm] = useState({ consultantName: '', scores: [0, 0, 0, 0, 0], comment: '', responseDate: new Date().toISOString().split('T')[0] });
