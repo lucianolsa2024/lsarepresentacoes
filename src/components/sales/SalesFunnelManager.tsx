@@ -240,7 +240,18 @@ export function SalesFunnelManager() {
       setLostModal({ oppId });
       return;
     }
+    if (newStage === 'ganho') {
+      setWonConfirm({ oppId });
+      return;
+    }
     await moveStage(oppId, newStage);
+  };
+
+  const handleWonConfirm = async () => {
+    if (!wonConfirm) return;
+    await moveStage(wonConfirm.oppId, 'ganho');
+    setWonConfirm(null);
+    toast.success('Oportunidade marcada como ganha! 🎉');
   };
 
   const handleLostConfirm = async (reason: string, notes: string) => {
