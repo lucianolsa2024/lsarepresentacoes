@@ -29,7 +29,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   trainings: StoreTraining[];
   npsResponses: NpsResponse[];
-  onAddTraining: (data: any) => Promise<boolean>;
+  onAddTraining: (data: any) => Promise<{ success: boolean; npsToken?: string }>;
   onAddNps: (data: any) => Promise<boolean>;
   onRegisterVisit: (clientId: string, data: { date: string; description: string; result: string; nextStep: string }) => Promise<boolean>;
   influencers: ClientInfluencer[];
