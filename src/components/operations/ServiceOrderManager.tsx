@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, List } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, List, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SERVICE_ORDER_STATUSES, getStatusColor } from '@/types/serviceOrder';
+import PrecificacaoEstofados from './PrecificacaoEstofados';
 import type { ServiceOrder, ServiceOrderPhoto, ServiceOrderFormData } from '@/types/serviceOrder';
 
 export function ServiceOrderManager() {
