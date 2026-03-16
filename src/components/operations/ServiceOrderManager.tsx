@@ -117,6 +117,10 @@ export function ServiceOrderManager() {
             <List className="h-4 w-4 mr-2" />
             Lista
           </TabsTrigger>
+          <TabsTrigger value="precificacao">
+            <Calculator className="h-4 w-4 mr-2" />
+            Precificação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-4">
