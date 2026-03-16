@@ -184,6 +184,7 @@ export function RepHomeDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    {isAdmin && <TableHead>Representante</TableHead>}
                     <TableHead className="text-right">Dias s/ compra</TableHead>
                     <TableHead className="text-right">Faturamento 12m</TableHead>
                     <TableHead className="text-right">Pedidos 12m</TableHead>
@@ -194,6 +195,11 @@ export function RepHomeDashboard() {
                   {inactiveClients.map((c) => (
                     <TableRow key={c.client_id}>
                       <TableCell className="font-medium">{c.client_name}</TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-sm text-muted-foreground">
+                          {c.owner_email ? (emailToName[c.owner_email] || c.owner_email) : '—'}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <Badge
                           variant={
