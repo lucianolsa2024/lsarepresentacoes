@@ -263,6 +263,10 @@ export function ServiceOrderManager() {
             ))}
           </div>
         </TabsContent>
+
+        <TabsContent value="precificacao" className="mt-4">
+          <PrecificacaoEstofados />
+        </TabsContent>
       </Tabs>
 
       {/* Form dialog */}
