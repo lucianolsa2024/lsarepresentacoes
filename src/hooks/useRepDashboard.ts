@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 export interface RepMonthDashboard {
   owner_email: string | null;
@@ -44,34 +45,45 @@ export interface InactiveClient {
 
 export function useRepDashboard() {
   const { user } = useAuth();
+  const isAdmin = useIsAdmin();
   const [monthData, setMonthData] = useState<RepMonthDashboard | null>(null);
   const [compare90d, setCompare90d] = useState<Rep90dCompare | null>(null);
   const [inactiveClients, setInactiveClients] = useState<InactiveClient[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.email || isAdmin === null) return;
 
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
       const email = user.email!;
 
+      const monthQuery = supabase
+        .from('v_rep_month_dashboard')
+        .select('*')
+        .eq('owner_email', email)
+        .maybeSingle();
+
+      const compareQuery = supabase
+        .from('v_rep_90d_compare')
+        .select('*')
+        .eq('owner_email', email)
+        .maybeSingle();
+
+      let inactiveQuery = supabase
+        .from('v_rep_clients_no_purchase_60d')
+        .select('*')
+        .order('revenue_12m', { ascending: false });
+
+      // Non-admin: filter by own email only
+      if (!isAdmin) {
+        inactiveQuery = inactiveQuery.eq('owner_email', email);
+      }
+
       const [monthRes, compareRes, inactiveRes] = await Promise.all([
-        supabase
-          .from('v_rep_month_dashboard')
-          .select('*')
-          .eq('owner_email', email)
-          .maybeSingle(),
-        supabase
-          .from('v_rep_90d_compare')
-          .select('*')
-          .eq('owner_email', email)
-          .maybeSingle(),
-        supabase
-          .from('v_rep_clients_no_purchase_60d')
-          .select('*')
-          .eq('owner_email', email)
-          .order('revenue_12m', { ascending: false }),
+        monthQuery,
+        compareQuery,
+        inactiveQuery,
       ]);
 
       setMonthData(monthRes.data as RepMonthDashboard | null);
@@ -80,8 +92,8 @@ export function useRepDashboard() {
       setLoading(false);
     };
 
-    fetch();
-  }, [user?.email]);
+    fetchData();
+  }, [user?.email, isAdmin]);
 
-  return { monthData, compare90d, inactiveClients, loading };
+  return { monthData, compare90d, inactiveClients, loading, isAdmin };
 }

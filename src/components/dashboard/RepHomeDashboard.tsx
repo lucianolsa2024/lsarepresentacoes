@@ -1,4 +1,5 @@
 import { useRepDashboard } from '@/hooks/useRepDashboard';
+import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { RepShareWidget } from './RepShareWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -53,8 +54,8 @@ function ChangeIndicator({ value }: { value: number | null | undefined }) {
 }
 
 export function RepHomeDashboard() {
-  const { monthData, compare90d, inactiveClients, loading } = useRepDashboard();
-
+  const { monthData, compare90d, inactiveClients, loading, isAdmin } = useRepDashboard();
+  const { emailToName } = useRepresentatives();
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -183,6 +184,7 @@ export function RepHomeDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    {isAdmin && <TableHead>Representante</TableHead>}
                     <TableHead className="text-right">Dias s/ compra</TableHead>
                     <TableHead className="text-right">Faturamento 12m</TableHead>
                     <TableHead className="text-right">Pedidos 12m</TableHead>
@@ -193,6 +195,11 @@ export function RepHomeDashboard() {
                   {inactiveClients.map((c) => (
                     <TableRow key={c.client_id}>
                       <TableCell className="font-medium">{c.client_name}</TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-sm text-muted-foreground">
+                          {c.owner_email ? (emailToName[c.owner_email] || c.owner_email) : '—'}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <Badge
                           variant={
