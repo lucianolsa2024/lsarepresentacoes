@@ -54,8 +54,8 @@ function ChangeIndicator({ value }: { value: number | null | undefined }) {
 }
 
 export function RepHomeDashboard() {
-  const { monthData, compare90d, inactiveClients, loading } = useRepDashboard();
-
+  const { monthData, compare90d, inactiveClients, loading, isAdmin } = useRepDashboard();
+  const { emailToName } = useRepresentatives();
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
