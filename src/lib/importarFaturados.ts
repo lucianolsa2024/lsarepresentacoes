@@ -84,8 +84,21 @@ function toInt(value: unknown): number | null {
 function toFloat(value: unknown): number {
   if (value === null || value === undefined || value === '') return 0;
   const n = Number(value);
-  if (isNaN(n)) return 0;
-  return n;
+  if (!isNaN(n)) return n;
+
+  // Handle locale-formatted strings like "4,169" or "1.071.993,77"
+  let str = String(value).trim().replace(/[¤$\u20AC£¥R\s]/g, '');
+  const lastComma = str.lastIndexOf(',');
+  const lastDot = str.lastIndexOf('.');
+  if (lastComma > lastDot) {
+    // Comma as decimal: "1.234,56" → 1234.56
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Dot as decimal or thousand-sep comma: "1,234.56" or "4,169"
+    str = str.replace(/,/g, '');
+  }
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 function parseDate(value: unknown): string | null {
