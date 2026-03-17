@@ -276,8 +276,16 @@ export function CommissionManager() {
         return;
       }
 
+      const { data: existingEntries, error: existingError } = await supabase
+        .from('commission_entries' as any)
+        .select('numero_pedido, numero_nf, produto_completo, valor, representante_pf');
+
+      if (existingError) {
+        throw new Error('Erro ao verificar registros existentes');
+      }
+
       const existingKeys = new Set(
-        entries.map(e => `${e.numero_pedido}|${e.numero_nf}|${e.produto_completo}|${e.valor}|${e.representante_pf}`)
+        ((existingEntries as any[]) || []).map(e => `${e.numero_pedido}|${e.numero_nf}|${e.produto_completo}|${e.valor}|${e.representante_pf}`)
       );
 
       const dups: DuplicateInfo[] = [];

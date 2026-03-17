@@ -53,9 +53,22 @@ function toInt(value: unknown): number | null {
  */
 function toFloat(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
+
   const n = Number(value);
-  if (isNaN(n)) return null;
-  return n;
+  if (!isNaN(n)) return n;
+
+  let str = String(value).trim().replace(/[¤$\u20AC£¥R\s]/g, '');
+  const lastComma = str.lastIndexOf(',');
+  const lastDot = str.lastIndexOf('.');
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    str = str.replace(/,/g, '');
+  }
+
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? null : parsed;
 }
 
 /**
