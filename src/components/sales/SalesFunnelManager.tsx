@@ -320,6 +320,22 @@ export function SalesFunnelManager() {
       {/* Lost reason modal */}
       <LostReasonModal open={!!lostModal} onClose={() => setLostModal(null)} onConfirm={handleLostConfirm} />
 
+      {/* Funnel Checklist Modal */}
+      {checklistPending && (() => {
+        const client = checklistPending.opp.clientId ? clients.find(c => c.id === checklistPending.opp.clientId) : null;
+        const empresa = client?.company || checklistPending.opp.title;
+        const faseAtual = (checklistPending.opp.fase || checklistPending.opp.stage || 'prospeccao') as FaseId;
+        return (
+          <FunilChecklist
+            oportunidade={{ id: checklistPending.opp.id, empresa, valor: checklistPending.opp.value }}
+            faseAtual={faseAtual}
+            fasedestino={checklistPending.destStage as FaseId}
+            onConfirmar={handleChecklistConfirm}
+            onCancelar={() => setChecklistPending(null)}
+          />
+        );
+      })()}
+
       {/* Kanban */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(180px, 1fr))` }}>
