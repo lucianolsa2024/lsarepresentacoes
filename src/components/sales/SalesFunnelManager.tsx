@@ -206,7 +206,39 @@ export function SalesFunnelManager() {
     if (newStage === currentStage) return;
     if (newStage === 'perdido') { setLostModal({ oppId }); return; }
     if (newStage === 'ganho') { setWonConfirm({ oppId }); return; }
-    await moveStage(oppId, newStage);
+
+    // Intercept: open checklist before moving
+    const opp = periodFilteredOpps.find(o => o.id === oppId);
+    if (opp) {
+      setChecklistPending({ opp, destStage: newStage });
+    } else {
+      await moveStage(oppId, newStage);
+    }
+  };
+
+  const handleChecklistConfirm = async (atividades: AtividadeGerada[]) => {
+    if (!checklistPending) return;
+    const { opp, destStage } = checklistPending;
+    const faseAtual = (opp.fase || opp.stage || 'prospeccao') as FaseId;
+    const faseNova = destStage as FaseId;
+
+    // Use useFunilActions to save fase + create activities + history
+    const resultado = await avancarFase({
+      oportunidadeId: opp.id,
+      faseAtual,
+      faseNova,
+      atividades,
+    });
+
+    if (resultado.sucesso) {
+      // Also update the kanban stage column
+      await moveStage(opp.id, destStage);
+      toast.success(`Fase avançada! ${resultado.atividadesCriadas} atividade(s) criada(s).`);
+    } else {
+      toast.error(resultado.erro || 'Erro ao avançar fase');
+    }
+
+    setChecklistPending(null);
   };
 
   const handleWonConfirm = async () => {
