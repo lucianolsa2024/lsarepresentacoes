@@ -25,10 +25,13 @@ export type Database = {
           description: string | null
           due_date: string
           due_time: string | null
+          fase_destino: string | null
+          fase_origem: string | null
           id: string
           next_contact_date: string | null
           next_step: string | null
           order_id: string | null
+          origem: string | null
           parent_activity_id: string | null
           priority: string | null
           quote_id: string | null
@@ -37,6 +40,7 @@ export type Database = {
           reminder_sent: boolean | null
           result: string | null
           route_visit_id: string | null
+          sales_opportunity_id: string | null
           status: string | null
           template_id: string | null
           title: string
@@ -54,10 +58,13 @@ export type Database = {
           description?: string | null
           due_date: string
           due_time?: string | null
+          fase_destino?: string | null
+          fase_origem?: string | null
           id?: string
           next_contact_date?: string | null
           next_step?: string | null
           order_id?: string | null
+          origem?: string | null
           parent_activity_id?: string | null
           priority?: string | null
           quote_id?: string | null
@@ -66,6 +73,7 @@ export type Database = {
           reminder_sent?: boolean | null
           result?: string | null
           route_visit_id?: string | null
+          sales_opportunity_id?: string | null
           status?: string | null
           template_id?: string | null
           title: string
@@ -83,10 +91,13 @@ export type Database = {
           description?: string | null
           due_date?: string
           due_time?: string | null
+          fase_destino?: string | null
+          fase_origem?: string | null
           id?: string
           next_contact_date?: string | null
           next_step?: string | null
           order_id?: string | null
+          origem?: string | null
           parent_activity_id?: string | null
           priority?: string | null
           quote_id?: string | null
@@ -95,6 +106,7 @@ export type Database = {
           reminder_sent?: boolean | null
           result?: string | null
           route_visit_id?: string | null
+          sales_opportunity_id?: string | null
           status?: string | null
           template_id?: string | null
           title?: string
@@ -136,6 +148,13 @@ export type Database = {
             columns: ["route_visit_id"]
             isOneToOne: false
             referencedRelation: "route_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_sales_opportunity_id_fkey"
+            columns: ["sales_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
             referencedColumns: ["id"]
           },
           {
@@ -638,6 +657,41 @@ export type Database = {
           tier?: string
         }
         Relationships: []
+      }
+      historico_fases: {
+        Row: {
+          alterado_por: string | null
+          created_at: string
+          fase_anterior: string | null
+          fase_nova: string
+          id: string
+          sales_opportunity_id: string
+        }
+        Insert: {
+          alterado_por?: string | null
+          created_at?: string
+          fase_anterior?: string | null
+          fase_nova: string
+          id?: string
+          sales_opportunity_id: string
+        }
+        Update: {
+          alterado_por?: string | null
+          created_at?: string
+          fase_anterior?: string | null
+          fase_nova?: string
+          id?: string
+          sales_opportunity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_fases_sales_opportunity_id_fkey"
+            columns: ["sales_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       modulation_sizes: {
         Row: {
@@ -1155,6 +1209,9 @@ export type Database = {
           created_at: string
           description: string | null
           expected_close_date: string | null
+          fase: string | null
+          fase_anterior: string | null
+          fase_atualizada_em: string | null
           funnel_type: string
           id: string
           lost_at: string | null
@@ -1177,6 +1234,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           expected_close_date?: string | null
+          fase?: string | null
+          fase_anterior?: string | null
+          fase_atualizada_em?: string | null
           funnel_type?: string
           id?: string
           lost_at?: string | null
@@ -1199,6 +1259,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           expected_close_date?: string | null
+          fase?: string | null
+          fase_anterior?: string | null
+          fase_atualizada_em?: string | null
           funnel_type?: string
           id?: string
           lost_at?: string | null
