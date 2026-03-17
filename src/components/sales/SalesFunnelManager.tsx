@@ -16,6 +16,10 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { CorporateOpportunityForm } from './CorporateOpportunityForm';
 import { LostReasonModal } from './LostReasonModal';
 import { PortfolioManager } from '@/components/portfolio/PortfolioManager';
+import FunilChecklist from '@/components/funil/FunilChecklist';
+import type { AtividadeGerada } from '@/components/funil/FunilChecklist';
+import type { FaseId } from '@/components/funil/funil-config';
+import { useFunilActions } from '@/components/funil/useFunilActions';
 
 const STAGE_COLORS: Record<string, string> = {
   prospeccao: 'bg-blue-100 border-blue-300 text-blue-800',
@@ -98,6 +102,7 @@ export function SalesFunnelManager() {
   const { user } = useAuth();
   const { representatives } = useRepresentatives();
   const isAdmin = useIsAdmin();
+  const { avancarFase } = useFunilActions();
   const [funnelType, setFunnelType] = useState<'lojista' | 'corporativo'>('lojista');
   const [showForm, setShowForm] = useState(false);
   const [editingOpp, setEditingOpp] = useState<SalesOpportunity | null>(null);
@@ -107,6 +112,10 @@ export function SalesFunnelManager() {
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
+  const [checklistPending, setChecklistPending] = useState<{
+    opp: SalesOpportunity;
+    destStage: string;
+  } | null>(null);
 
   // Listen for external edit-opportunity events (from ClientDetailPanel)
   useEffect(() => {
@@ -197,7 +206,39 @@ export function SalesFunnelManager() {
     if (newStage === currentStage) return;
     if (newStage === 'perdido') { setLostModal({ oppId }); return; }
     if (newStage === 'ganho') { setWonConfirm({ oppId }); return; }
-    await moveStage(oppId, newStage);
+
+    // Intercept: open checklist before moving
+    const opp = periodFilteredOpps.find(o => o.id === oppId);
+    if (opp) {
+      setChecklistPending({ opp, destStage: newStage });
+    } else {
+      await moveStage(oppId, newStage);
+    }
+  };
+
+  const handleChecklistConfirm = async (atividades: AtividadeGerada[]) => {
+    if (!checklistPending) return;
+    const { opp, destStage } = checklistPending;
+    const faseAtual = (opp.fase || opp.stage || 'prospeccao') as FaseId;
+    const faseNova = destStage as FaseId;
+
+    // Use useFunilActions to save fase + create activities + history
+    const resultado = await avancarFase({
+      oportunidadeId: opp.id,
+      faseAtual,
+      faseNova,
+      atividades,
+    });
+
+    if (resultado.sucesso) {
+      // Also update the kanban stage column
+      await moveStage(opp.id, destStage);
+      toast.success(`Fase avançada! ${resultado.atividadesCriadas} atividade(s) criada(s).`);
+    } else {
+      toast.error(resultado.erro || 'Erro ao avançar fase');
+    }
+
+    setChecklistPending(null);
   };
 
   const handleWonConfirm = async () => {
@@ -278,6 +319,22 @@ export function SalesFunnelManager() {
 
       {/* Lost reason modal */}
       <LostReasonModal open={!!lostModal} onClose={() => setLostModal(null)} onConfirm={handleLostConfirm} />
+
+      {/* Funnel Checklist Modal */}
+      {checklistPending && (() => {
+        const client = checklistPending.opp.clientId ? clients.find(c => c.id === checklistPending.opp.clientId) : null;
+        const empresa = client?.company || checklistPending.opp.title;
+        const faseAtual = (checklistPending.opp.fase || checklistPending.opp.stage || 'prospeccao') as FaseId;
+        return (
+          <FunilChecklist
+            oportunidade={{ id: checklistPending.opp.id, empresa, valor: checklistPending.opp.value }}
+            faseAtual={faseAtual}
+            fasedestino={checklistPending.destStage as FaseId}
+            onConfirmar={handleChecklistConfirm}
+            onCancelar={() => setChecklistPending(null)}
+          />
+        );
+      })()}
 
       {/* Kanban */}
       <DragDropContext onDragEnd={handleDragEnd}>
