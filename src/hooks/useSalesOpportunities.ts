@@ -81,6 +81,7 @@ const dbToOpportunity = (row: any): SalesOpportunity => ({
   description: row.description || '',
   funnelType: row.funnel_type,
   stage: row.stage,
+  fase: row.fase || null,
   value: row.value || 0,
   expectedCloseDate: row.expected_close_date,
   contactName: row.contact_name || '',
