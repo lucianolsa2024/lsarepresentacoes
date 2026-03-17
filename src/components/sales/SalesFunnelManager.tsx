@@ -102,6 +102,7 @@ export function SalesFunnelManager() {
   const { user } = useAuth();
   const { representatives } = useRepresentatives();
   const isAdmin = useIsAdmin();
+  const { avancarFase } = useFunilActions();
   const [funnelType, setFunnelType] = useState<'lojista' | 'corporativo'>('lojista');
   const [showForm, setShowForm] = useState(false);
   const [editingOpp, setEditingOpp] = useState<SalesOpportunity | null>(null);
@@ -111,6 +112,10 @@ export function SalesFunnelManager() {
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
+  const [checklistPending, setChecklistPending] = useState<{
+    opp: SalesOpportunity;
+    destStage: string;
+  } | null>(null);
 
   // Listen for external edit-opportunity events (from ClientDetailPanel)
   useEffect(() => {
