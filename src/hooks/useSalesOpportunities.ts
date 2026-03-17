@@ -9,6 +9,7 @@ export interface SalesOpportunity {
   description: string;
   funnelType: 'lojista' | 'corporativo';
   stage: string;
+  fase: string | null;
   value: number;
   expectedCloseDate: string | null;
   contactName: string;
