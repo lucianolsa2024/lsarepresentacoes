@@ -104,7 +104,7 @@ export function ClientSelector({ clients, onSelect, onCreateNew }: ClientSelecto
                         <Building2 className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{client.company}</p>
+                        <p className="font-medium truncate">{clientDisplayName(client)}</p>
                         {client.name && (
                           <p className="text-sm text-muted-foreground truncate">
                             {client.name}
