@@ -759,7 +759,7 @@ export function ClientManager({
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
                                 <div>
-                                  <span className="font-medium">{client.company}</span>
+                                  <span className="font-medium">{clientDisplayName(client)}</span>
                                   {client.isNewClient && (
                                     <Badge variant="secondary" className="ml-2 text-xs">Novo</Badge>
                                   )}
