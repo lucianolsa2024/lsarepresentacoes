@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
+import { clientDisplayName } from '@/utils/clientDisplayName';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
