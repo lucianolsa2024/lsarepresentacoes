@@ -145,6 +145,7 @@ export function ClientManager({
     setFormData({
       name: client.name,
       company: client.company,
+      tradeName: client.tradeName || '',
       document: client.document,
       phone: client.phone,
       email: client.email,
