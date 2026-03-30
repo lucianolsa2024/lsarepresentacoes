@@ -736,7 +736,7 @@ export function ClientManager({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome / Razão Social</TableHead>
+                      <TableHead>Nome Fantasia / Razão Social</TableHead>
                       <TableHead>Segmento</TableHead>
                       <TableHead>Cond. Pagamento</TableHead>
                       <TableHead>Responsável(eis)</TableHead>
