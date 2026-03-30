@@ -145,7 +145,7 @@ export async function fetchRealized(
     .from('activities')
     .select('id, type, assigned_to_email')
     .in('assigned_to_email', emails)
-    .eq('status', 'concluida')
+.in('status', ['concluida', 'realizada'])
     .gte('due_date', monthStart)
     .lt('due_date', monthEnd);
 
