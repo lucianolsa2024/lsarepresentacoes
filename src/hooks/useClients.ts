@@ -254,6 +254,7 @@ export function useClients() {
     return clients.filter(
       c =>
         c.company.toLowerCase().includes(normalizedQuery) ||
+        (c.tradeName || '').toLowerCase().includes(normalizedQuery) ||
         c.name.toLowerCase().includes(normalizedQuery) ||
         c.document.toLowerCase().includes(normalizedQuery) ||
         c.email.toLowerCase().includes(normalizedQuery)
