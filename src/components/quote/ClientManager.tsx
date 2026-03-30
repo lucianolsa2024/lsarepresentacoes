@@ -360,13 +360,23 @@ export function ClientManager({
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Dados Cadastrais</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{isBranchMode ? 'Nome da Filial *' : 'Nome / Razão Social *'}</Label>
+                      <Label>{isBranchMode ? 'Nome da Filial *' : 'Razão Social *'}</Label>
                       <Input
                         value={formData.company}
                         onChange={(e) => updateField('company', e.target.value)}
                         placeholder={isBranchMode ? 'Ex: Loja Centro' : 'Razão social da empresa'}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Nome Fantasia</Label>
+                      <Input
+                        value={formData.tradeName || ''}
+                        onChange={(e) => updateField('tradeName', e.target.value)}
+                        placeholder="Nome fantasia da empresa"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                     <div className="space-y-2">
                       <Label>Nome do Contato</Label>
                       <Input
