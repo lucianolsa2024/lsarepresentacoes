@@ -1,118 +1,55 @@
 
 
-## Modulo de Gestao de Ordens de Servico (OS)
+## Problema identificado
 
-### Resumo
-Novo modulo completo dentro da aba "Operacao" para gerenciar ordens de servico com formulario dedicado, lista com filtros, calculo automatico de resultado liquido, upload de documentos/fotos e historico de alteracoes.
+Dois bugs na lista "Clientes sem Compra há 60+ dias":
 
----
+1. **Representante desatualizado**: A view `v_clients_summary` (base da `v_rep_clients_no_purchase_60d`) usa `owner_email` da tabela `orders`, não da tabela `clients`. Quando o responsável é alterado no cadastro do cliente, a view continua mostrando o representante antigo (do pedido).
 
-### 1. Banco de Dados
-
-**Nova tabela `service_orders`:**
-
-| Coluna | Tipo | Descricao |
-|---|---|---|
-| id | uuid PK | Identificador |
-| os_number | serial/text | Numero sequencial da OS |
-| product | text | Produto |
-| responsible_type | text | Fabrica, Consumidor ou Lojista |
-| responsible_name | text | Nome do responsavel pela tratativa |
-| has_rt | boolean | Indicacao RT |
-| rt_percentage | numeric | Percentual RT |
-| origin_nf | text | NF de origem |
-| defect | text | Defeito relatado |
-| labor_cost | numeric | Valor mao de obra |
-| supplies_cost | numeric | Valor insumos |
-| freight_cost | numeric | Valor frete |
-| net_result | numeric | Resultado liquido (calculado) |
-| delivery_forecast | date | Previsao de entrega |
-| status | text | Aguardando, Em andamento, Aguardando pecas, Concluido, Entregue |
-| exit_nf | text | NF de saida (futuro Bling) |
-| boleto_info | text | Info boleto (futuro Bling) |
-| supplies_nf_url | text | URL do PDF/XML da NF de insumos |
-| supplies_nf_data | jsonb | Dados extraidos do XML |
-| client_id | uuid FK | Cliente vinculado |
-| owner_email | text | Email do responsavel (RLS) |
-| change_history | jsonb | Historico de alteracoes |
-| created_at | timestamptz | Criacao |
-| updated_at | timestamptz | Atualizacao |
-
-**Nova tabela `service_order_photos`:**
-
-| Coluna | Tipo | Descricao |
-|---|---|---|
-| id | uuid PK | Identificador |
-| service_order_id | uuid FK | OS vinculada |
-| photo_type | text | "recebimento" ou "liberacao" |
-| file_url | text | URL publica |
-| file_name | text | Nome do arquivo |
-| created_at | timestamptz | Criacao |
-
-**Storage:** Novo bucket `service-order-files` (publico) para fotos e NFs.
-
-**RLS:** Mesma logica de isolamento por `owner_email` + admin com acesso total.
-
-**Numero sequencial:** Trigger para gerar `os_number` auto-incrementado (formato OS-0001).
+2. **Filtro de segmento incompleto**: O filtro atual só exclui clientes com segmento exatamente `corporativo`, mas os segmentos corporativos reais são: `Construtora`, `Escritório de Arquitetura`, `Incorporadora`.
 
 ---
 
-### 2. Arquivos Novos
+## Plano de correção
 
-- `src/types/serviceOrder.ts` - Tipos e constantes (status, interfaces)
-- `src/hooks/useServiceOrders.ts` - Hook CRUD com Supabase
-- `src/components/operations/ServiceOrderManager.tsx` - Componente principal (lista + filtros + dialogs)
-- `src/components/operations/ServiceOrderForm.tsx` - Formulario de criacao/edicao
-- `src/components/operations/ServiceOrderDetail.tsx` - Dialog de detalhes com historico e fotos
+### 1. Recriar a view `v_clients_summary` (migration SQL)
 
----
+Alterar a view para fazer JOIN com `clients` e usar `clients.owner_email` em vez de `orders.owner_email`. Isso garante que o representante reflita sempre o cadastro atualizado.
 
-### 3. Arquivos Editados
+```sql
+CREATE OR REPLACE VIEW v_clients_summary AS
+SELECT 
+  c.owner_email,
+  o.client_id,
+  o.client_name,
+  max(o.issue_date) AS last_purchase_date,
+  CURRENT_DATE - max(o.issue_date) AS days_since_last_purchase,
+  -- ... (mesmas agregações existentes, sem mudanças)
+  max(o.issue_date) < (CURRENT_DATE - '60 days'::interval) AS no_purchase_60d
+FROM orders o
+LEFT JOIN clients c ON c.id = o.client_id
+GROUP BY c.owner_email, o.client_id, o.client_name;
+```
 
-- `src/components/operations/OperationManager.tsx` - Nova aba "Ordens de Servico"
-- `src/integrations/supabase/types.ts` - Atualizado automaticamente
+### 2. Atualizar filtro de segmentos no frontend
 
----
+Em `useRepDashboard.ts`, trocar a query que busca apenas `ilike('segment', 'corporativo')` por uma query que busca todos os segmentos corporativos:
 
-### 4. Funcionalidades Principais
+```typescript
+const corpQuery = supabase
+  .from('clients')
+  .select('id, segment')
+  .or('segment.ilike.Construtora,segment.ilike.Incorporadora,segment.ilike.Escritório de Arquitetura');
+```
 
-**Lista de OS:**
-- Tabela/cards com colunas: numero, produto, responsavel, status, previsao, resultado liquido
-- Filtros por status, responsavel e periodo
-- Botao "Nova OS"
-
-**Formulario de OS:**
-- Responsavel: Select com opcoes Fabrica/Consumidor/Lojista
-- RT: Switch sim/nao + campo percentual condicional
-- Produto, NF origem, defeito relatado (campos de texto)
-- Valores: mao de obra, insumos (opcional), frete (opcional)
-- Resultado liquido = mao de obra + insumos + frete (calculado em tempo real)
-- Upload de NF de insumos (PDF ou XML)
-- Ao enviar XML: parsing client-side do DOMParser para extrair fornecedor, valor total, itens
-- Previsao de entrega (date picker)
-- Status da OS com 5 opcoes
-- Campos NF saida e boleto (preparados, sem integracao ainda)
-
-**Detalhe da OS:**
-- Todas as informacoes em dialog
-- Secao de fotos de recebimento (upload multiplo)
-- Secao de fotos de liberacao (upload multiplo)
-- Historico de alteracoes: cada update grava snapshot (campo, valor anterior, valor novo, data, usuario)
-
-**Calculo do resultado liquido:**
-- Se `responsible_type = "Fabrica"` e `has_rt = true`: resultado = -(labor + supplies + freight) * (1 - rt_percentage/100)
-- Senao: resultado = -(labor + supplies + freight)
-- Exibido com formatacao BRL e cor (vermelho negativo, verde positivo)
+Isso exclui da listagem todos os clientes dos 3 segmentos corporativos.
 
 ---
 
-### 5. Padrao Visual
+### Arquivos modificados
 
-Segue o mesmo padrao de UI ja utilizado no projeto:
-- Cards com `Card/CardContent` do shadcn
-- Dialogs para detalhes e formularios
-- Badges para status com cores semanticas
-- Responsivo (cards em mobile, tabela em desktop)
-- Toasts para feedback (sonner)
-- Icone `ClipboardList` para a aba
+| Arquivo | Alteração |
+|---|---|
+| Migration SQL (nova) | Recriar `v_clients_summary` com JOIN em `clients` para pegar `owner_email` atualizado |
+| `src/hooks/useRepDashboard.ts` | Expandir filtro de segmentos corporativos |
 
