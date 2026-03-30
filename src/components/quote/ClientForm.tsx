@@ -54,6 +54,7 @@ export function ClientForm({
     onChange({
       name: selectedClient.name,
       company: selectedClient.company,
+      tradeName: selectedClient.tradeName,
       document: selectedClient.document,
       phone: selectedClient.phone,
       email: selectedClient.email,
