@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { clientDisplayName } from '@/utils/clientDisplayName';
 import { Client, ClientCurve } from '@/hooks/useClients';
 import { ClientData, ClientInfluencer, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
