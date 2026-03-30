@@ -80,26 +80,6 @@ const clientToDb = (client: ClientData & { curve?: string }) => ({
   notes: client.notes || null,
   ...(client.curve ? { curve: client.curve } : {}),
 });
-  phone: client.phone || null,
-  email: client.email || null,
-  is_new_client: client.isNewClient,
-  client_type: client.clientType || null,
-  owner_email: client.ownerEmail || null,
-  parent_client_id: client.parentClientId || null,
-  street: client.address.street || null,
-  number: client.address.number || null,
-  complement: client.address.complement || null,
-  neighborhood: client.address.neighborhood || null,
-  city: client.address.city || null,
-  state: client.address.state || null,
-  zip_code: client.address.zipCode || null,
-  inscricao_estadual: client.inscricaoEstadual || null,
-  site: client.site || null,
-  segment: client.segment || null,
-  default_payment_terms: client.defaultPaymentTerms || null,
-  notes: client.notes || null,
-  ...(client.curve ? { curve: client.curve } : {}),
-});
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
