@@ -225,12 +225,14 @@ export function ClientManager({
     return result.filter((c) => {
       const matchesParent =
         c.company.toLowerCase().includes(query) ||
+        (c.tradeName || '').toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
         c.document.toLowerCase().includes(query) ||
         c.email.toLowerCase().includes(query);
       const branches = branchesByParent[c.id] || [];
       const matchesBranch = branches.some(b =>
         b.company.toLowerCase().includes(query) ||
+        (b.tradeName || '').toLowerCase().includes(query) ||
         b.name.toLowerCase().includes(query) ||
         b.address.city.toLowerCase().includes(query)
       );
