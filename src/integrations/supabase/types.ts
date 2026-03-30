@@ -836,6 +836,35 @@ export type Database = {
           },
         ]
       }
+      okr_goal_activity_types: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          goal_id: string
+          id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          goal_id: string
+          id?: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          goal_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "okr_goal_activity_types_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "okr_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       okr_goals: {
         Row: {
           created_at: string
