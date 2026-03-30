@@ -39,6 +39,7 @@ export function ClientSelector({ clients, onSelect, onCreateNew }: ClientSelecto
     return clients.filter(
       c =>
         c.company.toLowerCase().includes(query) ||
+        (c.tradeName || '').toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
         c.document.includes(query) ||
         c.email.toLowerCase().includes(query)
