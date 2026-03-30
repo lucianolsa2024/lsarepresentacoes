@@ -80,15 +80,26 @@ export function useRepDashboard() {
         inactiveQuery = inactiveQuery.eq('owner_email', email);
       }
 
-      const [monthRes, compareRes, inactiveRes] = await Promise.all([
+      // Fetch corporativo client IDs to exclude
+      const corpQuery = supabase
+        .from('clients')
+        .select('id')
+        .ilike('segment', 'corporativo');
+
+      const [monthRes, compareRes, inactiveRes, corpRes] = await Promise.all([
         monthQuery,
         compareQuery,
         inactiveQuery,
+        corpQuery,
       ]);
+
+      const corpIds = new Set((corpRes.data ?? []).map((c: any) => c.id));
+      const filtered = ((inactiveRes.data as InactiveClient[] | null) ?? [])
+        .filter(c => !corpIds.has(c.client_id));
 
       setMonthData(monthRes.data as RepMonthDashboard | null);
       setCompare90d(compareRes.data as Rep90dCompare | null);
-      setInactiveClients((inactiveRes.data as InactiveClient[] | null) ?? []);
+      setInactiveClients(filtered);
       setLoading(false);
     };
 
