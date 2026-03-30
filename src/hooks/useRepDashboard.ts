@@ -84,7 +84,7 @@ export function useRepDashboard() {
       const corpQuery = supabase
         .from('clients')
         .select('id')
-        .ilike('segment', 'corporativo');
+        .or('segment.ilike.Construtora,segment.ilike.Incorporadora,segment.ilike.Escritório de Arquitetura,segment.ilike.corporativo');
 
       const [monthRes, compareRes, inactiveRes, corpRes] = await Promise.all([
         monthQuery,
