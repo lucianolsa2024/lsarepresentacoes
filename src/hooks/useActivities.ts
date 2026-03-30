@@ -122,7 +122,7 @@ export function useActivities() {
 
       const activitiesData = [...(activeData || []), ...(completedData || [])];
 
-      if (activitiesError) throw activitiesError;
+      // errors already handled above
 
       const clientIds = [...new Set((activitiesData || []).map(a => a.client_id).filter(Boolean))];
       let clientsMap: Record<string, DbClient> = {};
