@@ -94,11 +94,33 @@ export function useActivities() {
     try {
       setLoading(true);
       
-      const { data: activitiesData, error: activitiesError } = await supabase
+      // Fetch active activities (not completed/cancelled) - avoids hitting the 1000 row default limit
+      const { data: activeData, error: activeError } = await supabase
         .from('activities')
         .select('*')
+        .not('status', 'in', '("concluida","cancelada","realizada")')
         .order('due_date', { ascending: true })
-        .order('due_time', { ascending: true, nullsFirst: false });
+        .order('due_time', { ascending: true, nullsFirst: false })
+        .limit(5000);
+
+      if (activeError) throw activeError;
+
+      // Fetch recently completed activities (last 30 days) for display when filter is set
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
+
+      const { data: completedData, error: completedError } = await supabase
+        .from('activities')
+        .select('*')
+        .in('status', ['concluida', 'cancelada', 'realizada'])
+        .gte('completed_at', cutoff)
+        .order('completed_at', { ascending: false })
+        .limit(500);
+
+      if (completedError) throw completedError;
+
+      const activitiesData = [...(activeData || []), ...(completedData || [])];
 
       if (activitiesError) throw activitiesError;
 
