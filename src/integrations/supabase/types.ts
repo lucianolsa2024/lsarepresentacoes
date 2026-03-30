@@ -449,6 +449,7 @@ export type Database = {
           site: string | null
           state: string | null
           street: string | null
+          trade_name: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -478,6 +479,7 @@ export type Database = {
           site?: string | null
           state?: string | null
           street?: string | null
+          trade_name?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -507,6 +509,7 @@ export type Database = {
           site?: string | null
           state?: string | null
           street?: string | null
+          trade_name?: string | null
           updated_at?: string
           zip_code?: string | null
         }

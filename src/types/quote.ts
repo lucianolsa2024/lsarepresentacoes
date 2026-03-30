@@ -90,6 +90,7 @@ export interface ClientInfluencer {
 export interface ClientData {
   name: string;
   company: string;
+  tradeName?: string;
   document: string;
   phone: string;
   email: string;
