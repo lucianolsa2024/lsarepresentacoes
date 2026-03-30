@@ -52,34 +52,7 @@ const dbToClient = (row: any, reps: string[] = [], influencers: ClientInfluencer
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
-  phone: row.phone || '',
-  email: row.email || '',
-  isNewClient: row.is_new_client || false,
-  clientType: (row.client_type as ClientType) || undefined,
-  ownerEmail: row.owner_email || undefined,
-  parentClientId: row.parent_client_id || null,
-  curve: (row.curve as ClientCurve) || 'D',
-  curveUpdatedAt: row.curve_updated_at || null,
-  portfolioStatus: row.portfolio_status || null,
-  inscricaoEstadual: row.inscricao_estadual || '',
-  site: row.site || '',
-  segment: row.segment || '',
-  defaultPaymentTerms: row.default_payment_terms || '',
-  notes: row.notes || '',
-  representativeEmails: reps,
-  influencers,
-  address: {
-    street: row.street || '',
-    number: row.number || '',
-    complement: row.complement || '',
-    neighborhood: row.neighborhood || '',
-    city: row.city || '',
-    state: row.state || '',
-    zipCode: row.zip_code || '',
-  },
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+
 
 // Convert Client to DB format
 const clientToDb = (client: ClientData & { curve?: string }) => ({
