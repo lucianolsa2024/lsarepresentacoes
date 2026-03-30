@@ -169,6 +169,7 @@ export interface Quote {
 export const INITIAL_CLIENT: ClientData = {
   name: '',
   company: '',
+  tradeName: '',
   document: '',
   phone: '',
   email: '',
