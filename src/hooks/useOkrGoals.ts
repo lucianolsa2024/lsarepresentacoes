@@ -115,7 +115,7 @@ export function useOkrGoals() {
   return { goals, loading, addGoal, updateGoal, deleteGoal, duplicateToNextMonth, refetch: fetchGoals };
 }
 
-/** Fetch realized values for a set of goals */
+/** Fetch realized values for a set of goals using okr_goal_activity_types */
 export async function fetchRealized(
   goals: OkrGoal[],
   month: string // yyyy-MM
@@ -127,11 +127,45 @@ export async function fetchRealized(
   const nextMonth = new Date(parseInt(month.slice(0, 4)), parseInt(month.slice(5, 7)), 1);
   const monthEnd = nextMonth.toISOString().slice(0, 10);
 
-  // Group goals by objective type
-  const shareGoals = goals.filter(g => g.strategic_objective === 'share_loja');
-  const reactivateGoals = goals.filter(g => g.strategic_objective === 'reativar_clientes');
-  const newClientGoals = goals.filter(g => g.strategic_objective === 'novos_clientes');
+  // Busca os tipos de atividade vinculados a cada meta
+  const goalIds = goals.map(g => g.id);
+  const { data: activityTypes } = await supabase
+    .from('okr_goal_activity_types' as any)
+    .select('goal_id, activity_type')
+    .in('goal_id', goalIds);
 
+  if (!activityTypes || activityTypes.length === 0) {
+    goals.forEach(g => result.set(g.id, 0));
+    return result;
+  }
+
+  // Busca todas as atividades do mês para os emails dos responsáveis
+  const emails = [...new Set(goals.map(g => g.owner_email))];
+  const { data: activities } = await supabase
+    .from('activities')
+    .select('id, type, assigned_to_email')
+    .in('assigned_to_email', emails)
+    .eq('status', 'concluida')
+    .gte('due_date', monthStart)
+    .lt('due_date', monthEnd);
+
+  // Para cada meta, conta as atividades do tipo correto
+  for (const goal of goals) {
+    const allowedTypes = (activityTypes as any[])
+      .filter(at => at.goal_id === goal.id)
+      .map(at => at.activity_type as string);
+
+    const count = (activities || []).filter(
+      a =>
+        a.assigned_to_email === goal.owner_email &&
+        allowedTypes.includes(a.type)
+    ).length;
+
+    result.set(goal.id, count);
+  }
+
+  return result;
+}
   // --- SHARE DE LOJA ---
   if (shareGoals.length > 0) {
     const emails = [...new Set(shareGoals.map(g => g.owner_email))];
