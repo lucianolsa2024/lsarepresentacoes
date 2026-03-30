@@ -148,15 +148,30 @@ export function ClientForm({
           <div className="space-y-2">
             <Label htmlFor="company" className="flex items-center gap-1">
               <Building className="h-3 w-3" />
-              Empresa *
+              Razão Social *
             </Label>
             <Input
               id="company"
-              placeholder="Nome da empresa"
+              placeholder="Razão social da empresa"
               value={client.company}
               onChange={(e) => updateField('company', e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="tradeName" className="flex items-center gap-1">
+              <Building className="h-3 w-3" />
+              Nome Fantasia
+            </Label>
+            <Input
+              id="tradeName"
+              placeholder="Nome fantasia"
+              value={client.tradeName || ''}
+              onChange={(e) => updateField('tradeName', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Contato</Label>
             <Input
