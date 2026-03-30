@@ -90,6 +90,7 @@ export interface ClientInfluencer {
 export interface ClientData {
   name: string;
   company: string;
+  tradeName?: string;
   document: string;
   phone: string;
   email: string;
@@ -168,6 +169,7 @@ export interface Quote {
 export const INITIAL_CLIENT: ClientData = {
   name: '',
   company: '',
+  tradeName: '',
   document: '',
   phone: '',
   email: '',

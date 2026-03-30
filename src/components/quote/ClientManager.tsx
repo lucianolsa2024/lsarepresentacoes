@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { clientDisplayName } from '@/utils/clientDisplayName';
 import { Client, ClientCurve } from '@/hooks/useClients';
 import { ClientData, ClientInfluencer, INITIAL_CLIENT } from '@/types/quote';
 import { Card, CardContent } from '@/components/ui/card';
@@ -144,6 +145,7 @@ export function ClientManager({
     setFormData({
       name: client.name,
       company: client.company,
+      tradeName: client.tradeName || '',
       document: client.document,
       phone: client.phone,
       email: client.email,
@@ -223,12 +225,14 @@ export function ClientManager({
     return result.filter((c) => {
       const matchesParent =
         c.company.toLowerCase().includes(query) ||
+        (c.tradeName || '').toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
         c.document.toLowerCase().includes(query) ||
         c.email.toLowerCase().includes(query);
       const branches = branchesByParent[c.id] || [];
       const matchesBranch = branches.some(b =>
         b.company.toLowerCase().includes(query) ||
+        (b.tradeName || '').toLowerCase().includes(query) ||
         b.name.toLowerCase().includes(query) ||
         b.address.city.toLowerCase().includes(query)
       );
@@ -358,13 +362,23 @@ export function ClientManager({
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Dados Cadastrais</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{isBranchMode ? 'Nome da Filial *' : 'Nome / Razão Social *'}</Label>
+                      <Label>{isBranchMode ? 'Nome da Filial *' : 'Razão Social *'}</Label>
                       <Input
                         value={formData.company}
                         onChange={(e) => updateField('company', e.target.value)}
                         placeholder={isBranchMode ? 'Ex: Loja Centro' : 'Razão social da empresa'}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Nome Fantasia</Label>
+                      <Input
+                        value={formData.tradeName || ''}
+                        onChange={(e) => updateField('tradeName', e.target.value)}
+                        placeholder="Nome fantasia da empresa"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                     <div className="space-y-2">
                       <Label>Nome do Contato</Label>
                       <Input
@@ -724,7 +738,7 @@ export function ClientManager({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome / Razão Social</TableHead>
+                      <TableHead>Nome Fantasia / Razão Social</TableHead>
                       <TableHead>Segmento</TableHead>
                       <TableHead>Cond. Pagamento</TableHead>
                       <TableHead>Responsável(eis)</TableHead>
@@ -747,7 +761,7 @@ export function ClientManager({
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
                                 <div>
-                                  <span className="font-medium">{client.company}</span>
+                                  <span className="font-medium">{clientDisplayName(client)}</span>
                                   {client.isNewClient && (
                                     <Badge variant="secondary" className="ml-2 text-xs">Novo</Badge>
                                   )}

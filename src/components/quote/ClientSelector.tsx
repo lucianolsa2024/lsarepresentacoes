@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Client } from '@/hooks/useClients';
 import { ClientData } from '@/types/quote';
+import { clientDisplayName } from '@/utils/clientDisplayName';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ export function ClientSelector({ clients, onSelect, onCreateNew }: ClientSelecto
     return clients.filter(
       c =>
         c.company.toLowerCase().includes(query) ||
+        (c.tradeName || '').toLowerCase().includes(query) ||
         c.name.toLowerCase().includes(query) ||
         c.document.includes(query) ||
         c.email.toLowerCase().includes(query)
@@ -102,7 +104,7 @@ export function ClientSelector({ clients, onSelect, onCreateNew }: ClientSelecto
                         <Building2 className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{client.company}</p>
+                        <p className="font-medium truncate">{clientDisplayName(client)}</p>
                         {client.name && (
                           <p className="text-sm text-muted-foreground truncate">
                             {client.name}

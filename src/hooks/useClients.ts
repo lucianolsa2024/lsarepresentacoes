@@ -22,6 +22,7 @@ const dbToClient = (row: any, reps: string[] = [], influencers: ClientInfluencer
   id: row.id,
   name: row.name || '',
   company: row.company,
+  tradeName: row.trade_name || '',
   document: row.document || '',
   phone: row.phone || '',
   email: row.email || '',
@@ -52,10 +53,12 @@ const dbToClient = (row: any, reps: string[] = [], influencers: ClientInfluencer
   updatedAt: row.updated_at,
 });
 
+
 // Convert Client to DB format
 const clientToDb = (client: ClientData & { curve?: string }) => ({
   name: client.name || null,
   company: client.company,
+  trade_name: client.tradeName || null,
   document: client.document || null,
   phone: client.phone || null,
   email: client.email || null,
@@ -251,6 +254,7 @@ export function useClients() {
     return clients.filter(
       c =>
         c.company.toLowerCase().includes(normalizedQuery) ||
+        (c.tradeName || '').toLowerCase().includes(normalizedQuery) ||
         c.name.toLowerCase().includes(normalizedQuery) ||
         c.document.toLowerCase().includes(normalizedQuery) ||
         c.email.toLowerCase().includes(normalizedQuery)
