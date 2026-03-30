@@ -105,7 +105,7 @@ export function StoreDetailSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {client.company}
+            {clientDisplayName(client)}
             {curve && (
               <Badge variant="outline" className={CURVE_BADGE[curve]?.className}>
                 {CURVE_BADGE[curve]?.label}
