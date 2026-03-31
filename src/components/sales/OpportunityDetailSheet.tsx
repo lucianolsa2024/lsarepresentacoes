@@ -73,6 +73,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
   const [historico, setHistorico] = useState<HistoricoRow[]>([]);
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   const opp = opportunity;
   const client = opp?.clientId ? clients.find(c => c.id === opp.clientId) : null;
