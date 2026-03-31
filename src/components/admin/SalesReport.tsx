@@ -42,14 +42,14 @@ export function SalesReport() {
     const map: Record<string, { revenue: number; volume: number; orders: Set<string> }> = {};
 
     rows.forEach((row) => {
-      const key = row.supplier_name || 'SEM FORNECEDOR';
+      const key = row.supplier || 'SEM FORNECEDOR';
       if (!map[key]) {
         map[key] = { revenue: 0, volume: 0, orders: new Set<string>() };
       }
 
-      map[key].revenue += Number(row.revenue || 0);
+      map[key].revenue += Number(row.line_revenue || 0);
       map[key].volume += Number(row.quantity || 0);
-      if (row.order_id) map[key].orders.add(row.order_id);
+      if (row.id) map[key].orders.add(row.id);
     });
 
     return Object.entries(map)
@@ -70,14 +70,14 @@ export function SalesReport() {
     const map: Record<string, { revenue: number; volume: number; orders: Set<string> }> = {};
 
     rows.forEach((row) => {
-      const key = row.rep_name || row.owner_email || 'SEM REPRESENTANTE';
+      const key = row.representative || row.owner_email || 'SEM REPRESENTANTE';
       if (!map[key]) {
         map[key] = { revenue: 0, volume: 0, orders: new Set<string>() };
       }
 
-      map[key].revenue += Number(row.revenue || 0);
+      map[key].revenue += Number(row.line_revenue || 0);
       map[key].volume += Number(row.quantity || 0);
-      if (row.order_id) map[key].orders.add(row.order_id);
+      if (row.id) map[key].orders.add(row.id);
     });
 
     return Object.entries(map)
@@ -103,9 +103,9 @@ export function SalesReport() {
         map[key] = { revenue: 0, volume: 0, orders: new Set<string>() };
       }
 
-      map[key].revenue += Number(row.revenue || 0);
+      map[key].revenue += Number(row.line_revenue || 0);
       map[key].volume += Number(row.quantity || 0);
-      if (row.order_id) map[key].orders.add(row.order_id);
+      if (row.id) map[key].orders.add(row.id);
     });
 
     return Object.entries(map)
@@ -128,12 +128,12 @@ export function SalesReport() {
     const suppliers = new Set<string>();
 
     rows.forEach((row) => {
-      const rep = row.rep_name || row.owner_email || 'SEM REPRESENTANTE';
-      const supplier = row.supplier_name || 'SEM FORNECEDOR';
+      const rep = row.representative || row.owner_email || 'SEM REPRESENTANTE';
+      const supplier = row.supplier || 'SEM FORNECEDOR';
       suppliers.add(supplier);
 
       if (!map[rep]) map[rep] = {};
-      map[rep][supplier] = (map[rep][supplier] || 0) + Number(row.revenue || 0);
+      map[rep][supplier] = (map[rep][supplier] || 0) + Number(row.line_revenue || 0);
     });
 
     const supplierList = Array.from(suppliers).sort();
@@ -255,7 +255,7 @@ export function SalesReport() {
                     <Badge variant="outline">{row.name}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.revenue)}
+                    {formatCurrency(row.line_revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
@@ -316,7 +316,7 @@ export function SalesReport() {
                     <Badge variant="outline">{row.name}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.revenue)}
+                    {formatCurrency(row.line_revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
@@ -349,7 +349,7 @@ export function SalesReport() {
                 <TableRow key={row.name}>
                   <TableCell className="font-medium">{row.name}</TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.revenue)}
+                    {formatCurrency(row.line_revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
