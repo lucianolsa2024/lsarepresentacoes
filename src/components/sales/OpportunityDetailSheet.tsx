@@ -106,7 +106,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
       if (opp.clientId) {
         const { data: q } = await supabase
           .from('quotes')
-          .select('id, total, status, created_at, version')
+          .select('id, total, status, created_at, version, client_data, items, payment, subtotal, discount, parent_quote_id')
           .eq('client_id', opp.clientId)
           .order('created_at', { ascending: false })
           .limit(20);
