@@ -20,6 +20,7 @@ import FunilChecklist from '@/components/funil/FunilChecklist';
 import type { AtividadeGerada } from '@/components/funil/FunilChecklist';
 import type { FaseId } from '@/components/funil/funil-config';
 import { useFunilActions } from '@/components/funil/useFunilActions';
+import { OpportunityDetailSheet } from './OpportunityDetailSheet';
 
 const STAGE_COLORS: Record<string, string> = {
   prospeccao: 'bg-blue-100 border-blue-300 text-blue-800',
