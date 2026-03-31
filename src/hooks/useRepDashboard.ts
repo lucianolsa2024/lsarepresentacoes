@@ -35,8 +35,8 @@ export interface RepMtdYoy {
   owner_email: string | null;
   revenue_mtd_current: number | null;
   revenue_mtd_previous: number | null;
-  yoy_diff: number | null;
-  yoy_pct: number | null;
+  revenue_mtd_diff: number | null;
+  revenue_mtd_yoy_pct: number | null;
 }
 
 export interface InactiveClient {
