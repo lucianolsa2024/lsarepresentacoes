@@ -239,6 +239,11 @@ export function QuoteHistory({
                   ({quote.client.name})
                 </span>
               )}
+              {quote.payment?.projectName && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  🏗️ {quote.payment.projectName}
+                </Badge>
+              )}
               {(() => {
                 const status = getFollowUpStatus(quote.id);
                 if (status === 'concluida') return (
