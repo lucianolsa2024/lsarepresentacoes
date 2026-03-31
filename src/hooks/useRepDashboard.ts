@@ -91,17 +91,21 @@ export function useRepDashboard(): UseRepDashboardResult {
         setLoading(true);
         const email = user.email;
 
+        // Meta, comparativo e YoY sempre filtram pelo próprio email
         let monthQuery = supabase
           .from('v_rep_month_dashboard')
-          .select('*');
+          .select('*')
+          .eq('owner_email', email);
 
         let compareQuery = supabase
           .from('v_rep_90d_compare')
-          .select('*');
+          .select('*')
+          .eq('owner_email', email);
 
         let yoyQuery = supabase
           .from('v_rep_mtd_yoy')
-          .select('*');
+          .select('*')
+          .eq('owner_email', email);
 
         let inactiveQuery = supabase
           .from('v_rep_clients_no_purchase_60d')
@@ -114,11 +118,8 @@ export function useRepDashboard(): UseRepDashboardResult {
           .order('revenue_90d', { ascending: false })
           .limit(5);
 
-        // Para não-admin, restringe ao próprio representante
+        // Para não-admin, restringe inativos e top clientes ao próprio representante
         if (!isAdmin) {
-          monthQuery = monthQuery.eq('owner_email', email);
-          compareQuery = compareQuery.eq('owner_email', email);
-          yoyQuery = yoyQuery.eq('owner_email', email);
           inactiveQuery = inactiveQuery.eq('owner_email', email);
           topClientsQuery = topClientsQuery.eq('owner_email', email);
         }
