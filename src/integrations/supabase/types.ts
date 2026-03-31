@@ -1773,6 +1773,42 @@ export type Database = {
         }
         Relationships: []
       }
+      v_rep_month_trend: {
+        Row: {
+          avg_ticket: number | null
+          month_ref: string | null
+          orders_count: number | null
+          orders_diff_month: number | null
+          orders_prev_month: number | null
+          owner_email: string | null
+          rep_name: string | null
+          revenue: number | null
+          revenue_change_pct: number | null
+          revenue_diff_month: number | null
+          revenue_prev_month: number | null
+          ticket_change_pct: number | null
+          ticket_diff_month: number | null
+          ticket_prev_month: number | null
+          trend_status: string | null
+          volume: number | null
+          volume_change_pct: number | null
+          volume_diff_month: number | null
+          volume_prev_month: number | null
+        }
+        Relationships: []
+      }
+      v_rep_month_trend_base: {
+        Row: {
+          avg_ticket: number | null
+          month_ref: string | null
+          orders_count: number | null
+          owner_email: string | null
+          rep_name: string | null
+          revenue: number | null
+          volume: number | null
+        }
+        Relationships: []
+      }
       v_rep_mtd_yoy: {
         Row: {
           orders_mtd_current: number | null
