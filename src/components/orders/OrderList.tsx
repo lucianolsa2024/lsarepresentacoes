@@ -222,7 +222,7 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
         </div>
       ) : (
         /* Desktop Table */
-        <div className="border rounded-lg overflow-auto max-h-[600px]">
+        <div className="border rounded-lg overflow-auto max-h-[600px]" style={{ overscrollBehaviorX: 'contain', touchAction: 'pan-x pan-y' }}>
           <Table>
             <TableHeader>
               <TableRow>
