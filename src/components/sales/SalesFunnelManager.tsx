@@ -53,7 +53,7 @@ function CorporateOpportunityCard({
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="bg-card border rounded-lg p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card border rounded-lg p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(opp)}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           {client && (
