@@ -40,11 +40,12 @@ function getDaysInStage(stageChangedAt: string): number {
 }
 
 function CorporateOpportunityCard({
-  opp, clients, representatives, onEdit, onDelete,
+  opp, clients, representatives, onEdit, onDelete, onView,
 }: {
   opp: SalesOpportunity; clients: Client[];
   representatives: { email: string; name: string }[];
   onEdit: (opp: SalesOpportunity) => void; onDelete: (id: string) => void;
+  onView: (opp: SalesOpportunity) => void;
 }) {
   const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
   const rep = opp.ownerEmail ? representatives.find(r => r.email === opp.ownerEmail) : null;
