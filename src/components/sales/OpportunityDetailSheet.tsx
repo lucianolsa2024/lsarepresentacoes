@@ -263,6 +263,9 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
                         )}
                       </div>
                     </div>
+                    {(q as any).payment?.projectName && (
+                      <p className="text-xs text-muted-foreground">🏗️ {(q as any).payment.projectName}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">{formatDate(q.created_at)}</p>
                     <p className="text-sm font-semibold text-primary">{formatCurrency(q.total)}</p>
                   </div>
