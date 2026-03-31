@@ -111,6 +111,7 @@ export function QuoteHistory({
     return (
       quote.client.name.toLowerCase().includes(search) ||
       quote.client.company?.toLowerCase().includes(search) ||
+      quote.payment?.projectName?.toLowerCase().includes(search) ||
       formatDate(quote.createdAt).includes(search) ||
       quoteNumber.includes(search)
     );
@@ -238,6 +239,11 @@ export function QuoteHistory({
                   ({quote.client.name})
                 </span>
               )}
+              {quote.payment?.projectName && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  🏗️ {quote.payment.projectName}
+                </Badge>
+              )}
               {(() => {
                 const status = getFollowUpStatus(quote.id);
                 if (status === 'concluida') return (
@@ -354,7 +360,7 @@ export function QuoteHistory({
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por cliente ou data..."
+              placeholder="Buscar por cliente, obra ou data..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
