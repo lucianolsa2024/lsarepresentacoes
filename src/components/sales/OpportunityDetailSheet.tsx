@@ -7,7 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { SalesOpportunity, FUNNEL_STAGES_CORPORATIVO } from '@/hooks/useSalesOpportunities';
 import { Client } from '@/hooks/useClients';
-import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { generateQuotePDF } from '@/utils/pdfGenerator';
+import { Quote, QuoteItem, ClientData, PaymentConditions } from '@/types/quote';
+import { toast } from 'sonner';
 import { format as fmtDate, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -45,6 +48,12 @@ interface QuoteRow {
   status: string;
   created_at: string;
   version: number;
+  client_data: any;
+  items: any;
+  payment: any;
+  subtotal: number;
+  discount: number;
+  parent_quote_id: string | null;
 }
 
 const stageLabel = (key: string) =>
@@ -64,6 +73,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
   const [historico, setHistorico] = useState<HistoricoRow[]>([]);
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   const opp = opportunity;
   const client = opp?.clientId ? clients.find(c => c.id === opp.clientId) : null;
@@ -96,7 +106,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
       if (opp.clientId) {
         const { data: q } = await supabase
           .from('quotes')
-          .select('id, total, status, created_at, version')
+          .select('id, total, status, created_at, version, client_data, items, payment, subtotal, discount, parent_quote_id')
           .eq('client_id', opp.clientId)
           .order('created_at', { ascending: false })
           .limit(20);
@@ -123,6 +133,32 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
   };
 
   if (!opp) return null;
+
+  const handleDownloadPdf = async (q: QuoteRow) => {
+    setGeneratingPdf(q.id);
+    try {
+      const quote: Quote = {
+        id: q.id,
+        createdAt: q.created_at,
+        client: q.client_data as ClientData,
+        items: q.items as QuoteItem[],
+        payment: q.payment as PaymentConditions,
+        subtotal: q.subtotal,
+        discount: q.discount,
+        total: q.total,
+        status: q.status as any,
+        version: q.version,
+        parentQuoteId: q.parent_quote_id,
+      };
+      await generateQuotePDF(quote);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar PDF');
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
 
   const pendingActs = activities.filter(a => a.status === 'pendente' || a.status === 'agendada' || a.status === 'em_andamento');
   const doneActs = activities.filter(a => a.status === 'concluida' || a.status === 'realizada');
@@ -213,12 +249,19 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhum orçamento encontrado para este cliente</p>
               ) : (
                 quotes.map(q => (
-                  <div key={q.id} className="border rounded-lg p-3 space-y-1 bg-card">
+                  <div key={q.id} className="border rounded-lg p-3 space-y-1 bg-card cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleDownloadPdf(q)}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Orçamento v{q.version}</span>
-                      <Badge variant={q.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
-                        {q.status === 'draft' ? 'Rascunho' : q.status === 'sent' ? 'Enviado' : q.status === 'approved' ? 'Aprovado' : q.status}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={q.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                          {q.status === 'orcamento' ? 'Orçamento' : q.status === 'pedido' ? 'Pedido' : q.status === 'cancelado' ? 'Cancelado' : q.status}
+                        </Badge>
+                        {generatingPdf === q.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{formatDate(q.created_at)}</p>
                     <p className="text-sm font-semibold text-primary">{formatCurrency(q.total)}</p>
