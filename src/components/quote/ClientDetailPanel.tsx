@@ -397,15 +397,15 @@ export function ClientDetailPanel({
                       <p className="font-medium">90 dias vs 90 anteriores</p>
                     </div>
                     <p className="text-xs text-muted-foreground">Últimos 90 dias</p>
-                    <p className="text-lg font-bold">{formatCurrency(compare90d?.revenue_current_90d)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Anterior: {formatCurrency(compare90d?.revenue_previous_90d)}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Dif.: {formatCurrency(compare90d?.diff_90d)}
-                      </span>
-                      <ChangeIndicator value={compare90d?.pct_90d} />
+                     <p className="text-lg font-bold">{formatCurrency(compare90d?.revenue_90d)}</p>
+                     <p className="mt-1 text-xs text-muted-foreground">
+                       Anterior: {formatCurrency(compare90d?.revenue_prev_90d)}
+                     </p>
+                     <div className="mt-2 flex items-center justify-between">
+                       <span className="text-xs text-muted-foreground">
+                         Dif.: {formatCurrency((compare90d?.revenue_90d ?? 0) - (compare90d?.revenue_prev_90d ?? 0))}
+                       </span>
+                       <ChangeIndicator value={compare90d?.revenue_change_pct} />
                     </div>
                   </div>
 
