@@ -1,0 +1,1 @@
+UPDATE orders SET supplier = 'SOHOME' WHERE supplier = 'TURA' AND issue_date BETWEEN '2025-01-01' AND '2025-03-31';
