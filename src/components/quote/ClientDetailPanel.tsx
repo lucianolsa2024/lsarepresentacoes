@@ -13,14 +13,15 @@ import { Separator } from '@/components/ui/separator';
 import {
   Phone, Mail, RefreshCcw, MapPin, Users, ClipboardList, Plus, CheckCircle, Clock, XCircle,
   GraduationCap, Wrench, Heart, MoreHorizontal, ClipboardCheck, Building2,
-  TrendingUp, ShoppingCart, DollarSign, Calendar, FileText, UserCheck, FileSpreadsheet,
-  Eye
+  TrendingUp, TrendingDown, ShoppingCart, DollarSign, Calendar, FileText, UserCheck, FileSpreadsheet,
+  Minus, BarChart3, PieChart
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { ClientShareWidget } from './ClientShareWidget';
+import { useClientAnalytics } from '@/hooks/useClientAnalytics';
 
 interface ClientDetailPanelProps {
   clientId: string;
@@ -34,7 +35,6 @@ interface ClientDetailPanelProps {
   onOpportunityClick?: (opp: SalesOpportunity) => void;
   onQuoteClick?: (quote: Quote) => void;
   onOpenChecklist?: (activity: Activity) => void;
-  // Legacy prop kept for backward compat
   clientName?: string;
 }
 
@@ -66,6 +66,44 @@ const statusIcons: Record<string, React.ComponentType<{ className?: string }>> =
   cancelada: XCircle,
 };
 
+const formatCurrency = (v: number | null | undefined) =>
+  (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function ChangeIndicator({ value }: { value: number | null | undefined }) {
+  if (value == null) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+        <Minus className="h-3.5 w-3.5" />
+        —
+      </span>
+    );
+  }
+
+  if (value > 0) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-medium text-whatsapp">
+        <TrendingUp className="h-3.5 w-3.5" />+{value.toFixed(1)}%
+      </span>
+    );
+  }
+
+  if (value < 0) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-medium text-destructive">
+        <TrendingDown className="h-3.5 w-3.5" />
+        {value.toFixed(1)}%
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+      <Minus className="h-3.5 w-3.5" />
+      0,0%
+    </span>
+  );
+}
+
 export function ClientDetailPanel({
   clientId,
   client,
@@ -81,6 +119,7 @@ export function ClientDetailPanel({
 }: ClientDetailPanelProps) {
   const [tab, setTab] = useState('info');
   const { emailToName } = useRepresentatives();
+  const { mtdYoy, compare90d, supplierShare } = useClientAnalytics(clientId);
 
   const clientActivities = useMemo(() => {
     return activities
@@ -99,20 +138,19 @@ export function ClientDetailPanel({
   }, [orders, clientId]);
 
   const clientQuotes = useMemo(() => {
-    return quotes.filter(q => {
-      // Match by client_id from DB or by company name
-      if ((q as any).clientId === clientId) return true;
-      if (client && q.client?.company?.toUpperCase().trim() === client.company.toUpperCase().trim()) return true;
-      return false;
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return quotes
+      .filter(q => {
+        if ((q as any).clientId === clientId) return true;
+        if (client && q.client?.company?.toUpperCase().trim() === client.company.toUpperCase().trim()) return true;
+        return false;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [quotes, clientId, client]);
 
-  // Checklists from activities of type checklist_loja
   const checklists = useMemo(() => {
     return clientActivities.filter(a => a.type === 'checklist_loja' && a.description);
   }, [clientActivities]);
 
-  // Upcoming activities (pending/in-progress, future or today)
   const upcomingActivities = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return clientActivities
@@ -138,11 +176,17 @@ export function ClientDetailPanel({
   }, [clientOpportunities]);
 
   const orderStats = useMemo(() => {
-    const totalRevenue = clientOrders.reduce((s, o) => s + (o.price || 0), 0);
-    return { count: clientOrders.length, totalRevenue };
-  }, [clientOrders]);
+    const totalRevenue = clientOrders.reduce((sum, order) => {
+      const price = Number(order.price || 0);
+      const quantity = Number((order as any).quantity || 1);
+      return sum + (price * quantity);
+    }, 0);
 
-  const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return {
+      count: clientOrders.length,
+      totalRevenue,
+    };
+  }, [clientOrders]);
 
   const clientTypeLabel = client?.clientType
     ? CLIENT_TYPE_OPTIONS.find(o => o.value === client.clientType)?.label || client.clientType
@@ -150,22 +194,21 @@ export function ClientDetailPanel({
 
   return (
     <div className="space-y-4">
-      {/* Client Header Info */}
       {client && (
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <Building2 className="h-6 w-6 text-primary" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold">{client.company}</h2>
               {client.name && <p className="text-sm text-muted-foreground">{client.name}</p>}
-              <div className="flex flex-wrap gap-2 mt-1">
+              <div className="mt-1 flex flex-wrap gap-2">
                 {clientTypeLabel && (
                   <Badge variant="secondary" className="text-xs">{clientTypeLabel}</Badge>
                 )}
                 {client.ownerEmail && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge variant="outline" className="flex items-center gap-1 text-xs">
                     <UserCheck className="h-3 w-3" />
                     {emailToName[client.ownerEmail] || client.ownerEmail}
                   </Badge>
@@ -177,8 +220,7 @@ export function ClientDetailPanel({
             </div>
           </div>
 
-          {/* Contact & Address row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             <div className="space-y-1">
               {client.phone && (
                 <p className="flex items-center gap-2">
@@ -189,7 +231,7 @@ export function ClientDetailPanel({
               {client.email && (
                 <p className="flex items-center gap-2">
                   <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  <a href={`mailto:${client.email}`} className="hover:underline truncate">{client.email}</a>
+                  <a href={`mailto:${client.email}`} className="truncate hover:underline">{client.email}</a>
                 </p>
               )}
               {client.document && (
@@ -199,13 +241,18 @@ export function ClientDetailPanel({
                 </p>
               )}
             </div>
+
             <div className="space-y-1">
               {(client.address.street || client.address.city) && (
                 <div className="flex items-start gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
                   <div>
                     {client.address.street && (
-                      <p>{client.address.street}{client.address.number ? `, ${client.address.number}` : ''}{client.address.complement ? ` - ${client.address.complement}` : ''}</p>
+                      <p>
+                        {client.address.street}
+                        {client.address.number ? `, ${client.address.number}` : ''}
+                        {client.address.complement ? ` - ${client.address.complement}` : ''}
+                      </p>
                     )}
                     {(client.address.neighborhood || client.address.city) && (
                       <p className="text-muted-foreground">
@@ -223,8 +270,8 @@ export function ClientDetailPanel({
         </div>
       )}
 
-      {/* KPI Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      {/* KPIs rápidos */}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Card>
           <CardContent className="p-2.5 text-center">
             <p className="text-lg font-bold">{activityStats.total}</p>
@@ -234,6 +281,7 @@ export function ClientDetailPanel({
             )}
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-2.5 text-center">
             <p className="text-lg font-bold">{oppStats.active + oppStats.won}</p>
@@ -243,86 +291,153 @@ export function ClientDetailPanel({
             )}
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-2.5 text-center">
             <p className="text-lg font-bold">{orderStats.count}</p>
             <p className="text-[10px] text-muted-foreground">Pedidos</p>
             {orderStats.totalRevenue > 0 && (
-              <p className="text-[10px] text-primary truncate">{formatCurrency(orderStats.totalRevenue)}</p>
+              <p className="truncate text-[10px] text-primary">{formatCurrency(orderStats.totalRevenue)}</p>
             )}
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-2.5 text-center">
-            <p className="text-lg font-bold text-primary truncate">{formatCurrency(oppStats.totalValue)}</p>
+            <p className="truncate text-lg font-bold text-primary">{formatCurrency(oppStats.totalValue)}</p>
             <p className="text-[10px] text-muted-foreground">Pipeline</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Share de Loja Widget */}
       <ClientShareWidget activities={clientActivities} />
 
-      {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center justify-between gap-2">
-          <TabsList className="flex-wrap h-auto">
+          <TabsList className="h-auto flex-wrap">
             {client && (
               <TabsTrigger value="info" className="text-xs">
-                <Building2 className="h-3.5 w-3.5 mr-1" /> Info
+                <Building2 className="mr-1 h-3.5 w-3.5" /> Info
               </TabsTrigger>
             )}
             <TabsTrigger value="activities" className="text-xs">
-              <ClipboardList className="h-3.5 w-3.5 mr-1" /> Atividades ({clientActivities.length})
+              <ClipboardList className="mr-1 h-3.5 w-3.5" /> Atividades ({clientActivities.length})
             </TabsTrigger>
             <TabsTrigger value="checklists" className="text-xs">
-              <ClipboardCheck className="h-3.5 w-3.5 mr-1" /> Checklists ({checklists.length})
+              <ClipboardCheck className="mr-1 h-3.5 w-3.5" /> Checklists ({checklists.length})
             </TabsTrigger>
             <TabsTrigger value="opportunities" className="text-xs">
-              <TrendingUp className="h-3.5 w-3.5 mr-1" /> Negociações ({clientOpportunities.length})
+              <TrendingUp className="mr-1 h-3.5 w-3.5" /> Negociações ({clientOpportunities.length})
             </TabsTrigger>
             <TabsTrigger value="orders" className="text-xs">
-              <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Pedidos ({clientOrders.length})
+              <ShoppingCart className="mr-1 h-3.5 w-3.5" /> Pedidos ({clientOrders.length})
             </TabsTrigger>
             <TabsTrigger value="quotes" className="text-xs">
-              <FileText className="h-3.5 w-3.5 mr-1" /> Orçamentos ({clientQuotes.length})
+              <FileText className="mr-1 h-3.5 w-3.5" /> Orçamentos ({clientQuotes.length})
             </TabsTrigger>
           </TabsList>
+
           <Button size="sm" onClick={onNewActivity} className="shrink-0">
-            <Plus className="h-4 w-4 mr-1" /> Atividade
+            <Plus className="mr-1 h-4 w-4" /> Atividade
           </Button>
         </div>
 
-        {/* Info Tab */}
         {client && (
           <TabsContent value="info" className="mt-3">
             <div className="space-y-4 text-sm">
               <div>
-                <h4 className="font-semibold mb-2">Resumo do Relacionamento</h4>
+                <h4 className="mb-2 font-semibold">Resumo do Relacionamento</h4>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-muted-foreground text-xs">Total Pedidos (valor)</p>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Total Pedidos (valor)</p>
                     <p className="font-bold">{formatCurrency(orderStats.totalRevenue)}</p>
                   </div>
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-muted-foreground text-xs">Pipeline ativo</p>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Pipeline ativo</p>
                     <p className="font-bold">{formatCurrency(oppStats.totalValue)}</p>
                   </div>
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-muted-foreground text-xs">Negociações ganhas</p>
-                    <p className="font-bold text-green-600">{oppStats.won} ({formatCurrency(oppStats.wonValue)})</p>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Negociações ganhas</p>
+                    <p className="font-bold text-green-600">
+                      {oppStats.won} ({formatCurrency(oppStats.wonValue)})
+                    </p>
                   </div>
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-muted-foreground text-xs">Taxa conclusão atividades</p>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Taxa conclusão atividades</p>
                     <p className="font-bold">{activityStats.rate}%</p>
                   </div>
                 </div>
               </div>
 
-              {/* Upcoming activities */}
+              {/* Analytics novos */}
+              <div>
+                <h4 className="mb-2 font-semibold">Indicadores Comerciais</h4>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                  <div className="rounded-lg border p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">YoY MTD</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Mês atual até hoje</p>
+                    <p className="text-lg font-bold">{formatCurrency(mtdYoy?.revenue_mtd_current)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ano anterior: {formatCurrency(mtdYoy?.revenue_mtd_previous)}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Dif.: {formatCurrency(mtdYoy?.yoy_diff)}
+                      </span>
+                      <ChangeIndicator value={mtdYoy?.yoy_pct} />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">90 dias vs 90 anteriores</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Últimos 90 dias</p>
+                    <p className="text-lg font-bold">{formatCurrency(compare90d?.revenue_current_90d)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Anterior: {formatCurrency(compare90d?.revenue_previous_90d)}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Dif.: {formatCurrency(compare90d?.diff_90d)}
+                      </span>
+                      <ChangeIndicator value={compare90d?.pct_90d} />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <PieChart className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">Share da representada</p>
+                    </div>
+                    {supplierShare.length > 0 ? (
+                      <div className="space-y-2">
+                        {supplierShare.slice(0, 4).map((row, index) => (
+                          <div key={`${row.supplier_id}-${index}`} className="flex items-center justify-between gap-2">
+                            <span className="truncate text-xs">{row.supplier_name}</span>
+                            <div className="text-right">
+                              <p className="text-xs font-medium">{formatCurrency(row.revenue_12m)}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {(row.share_pct ?? 0).toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Sem dados de share ainda.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {upcomingActivities.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Próximas Atividades</h4>
+                  <h4 className="mb-2 font-semibold">Próximas Atividades</h4>
                   <div className="space-y-2">
                     {upcomingActivities.map(act => {
                       const TypeIcon = typeIcons[act.type] || MoreHorizontal;
@@ -330,13 +445,13 @@ export function ClientDetailPanel({
                         <button
                           key={act.id}
                           onClick={() => onActivityClick?.(act)}
-                          className="w-full text-left p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
+                          className="w-full rounded-lg border p-2.5 text-left transition-colors hover:bg-muted/50"
                         >
                           <div className="flex items-center gap-2">
                             <TypeIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium text-sm flex-1 truncate">{act.title}</span>
+                            <span className="flex-1 truncate text-sm font-medium">{act.title}</span>
                             <span className="text-xs text-muted-foreground">
-                              {format(parseISO(act.due_date), "dd/MM", { locale: ptBR })}
+                              {format(parseISO(act.due_date), 'dd/MM', { locale: ptBR })}
                             </span>
                           </div>
                         </button>
@@ -346,14 +461,14 @@ export function ClientDetailPanel({
                 </div>
               )}
 
-              {/* Recent activity */}
               {clientActivities.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Última Atividade</h4>
-                  <div className="p-3 rounded-lg border">
+                  <h4 className="mb-2 font-semibold">Última Atividade</h4>
+                  <div className="rounded-lg border p-3">
                     <p className="font-medium">{clientActivities[0].title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(parseISO(clientActivities[0].due_date), "dd/MM/yyyy", { locale: ptBR })} • {ACTIVITY_STATUS_CONFIG[clientActivities[0].status]?.label}
+                      {format(parseISO(clientActivities[0].due_date), 'dd/MM/yyyy', { locale: ptBR })} •{' '}
+                      {ACTIVITY_STATUS_CONFIG[clientActivities[0].status]?.label}
                     </p>
                   </div>
                 </div>
@@ -362,7 +477,6 @@ export function ClientDetailPanel({
           </TabsContent>
         )}
 
-        {/* Activities */}
         <TabsContent value="activities" className="mt-3">
           <ScrollArea className="h-[350px]">
             {clientActivities.length > 0 ? (
@@ -376,25 +490,27 @@ export function ClientDetailPanel({
                     <button
                       key={activity.id}
                       onClick={() => onActivityClick?.(activity)}
-                      className="w-full text-left p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50"
                     >
                       <div className="flex items-start gap-3">
-                        <TypeIcon className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        <div className="flex-1 min-w-0">
+                        <TypeIcon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{activity.title}</span>
-                            <Badge variant="outline" className="text-xs shrink-0">{typeConfig?.label}</Badge>
+                            <span className="truncate text-sm font-medium">{activity.title}</span>
+                            <Badge variant="outline" className="shrink-0 text-xs">{typeConfig?.label}</Badge>
                           </div>
                           {activity.description && activity.type !== 'checklist_loja' && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{activity.description}</p>
+                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{activity.description}</p>
                           )}
-                          <div className="flex items-center gap-2 mt-1">
-                            <StatusIcon className={cn("h-3 w-3", statusColors[activity.status])} />
+                          <div className="mt-1 flex items-center gap-2">
+                            <StatusIcon className={cn('h-3 w-3', statusColors[activity.status])} />
                             <span className="text-xs text-muted-foreground">
-                              {format(parseISO(activity.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                              {format(parseISO(activity.due_date), 'dd/MM/yyyy', { locale: ptBR })}
                             </span>
                             {activity.completed_notes && (
-                              <span className="text-xs text-muted-foreground italic truncate">• {activity.completed_notes}</span>
+                              <span className="truncate text-xs italic text-muted-foreground">
+                                • {activity.completed_notes}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -404,15 +520,14 @@ export function ClientDetailPanel({
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <ClipboardList className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhuma atividade registrada</p>
               </div>
             )}
           </ScrollArea>
         </TabsContent>
 
-        {/* Opportunities */}
         <TabsContent value="opportunities" className="mt-3">
           <ScrollArea className="h-[350px]">
             {clientOpportunities.length > 0 ? (
@@ -421,18 +536,18 @@ export function ClientDetailPanel({
                   <button
                     key={opp.id}
                     onClick={() => onOpportunityClick?.(opp)}
-                    className="w-full text-left p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{opp.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <p className="truncate text-sm font-medium">{opp.title}</p>
+                        <div className="mt-1 flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">{opp.stage}</Badge>
                           <Badge variant="outline" className="text-xs">{opp.funnelType}</Badge>
                         </div>
                       </div>
                       {opp.value > 0 && (
-                        <p className="text-sm font-semibold text-primary flex items-center gap-1 shrink-0">
+                        <p className="flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
                           <DollarSign className="h-3 w-3" /> {formatCurrency(opp.value)}
                         </p>
                       )}
@@ -441,24 +556,23 @@ export function ClientDetailPanel({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <TrendingUp className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhuma negociação registrada</p>
               </div>
             )}
           </ScrollArea>
         </TabsContent>
 
-        {/* Orders */}
         <TabsContent value="orders" className="mt-3">
           <ScrollArea className="h-[350px]">
             {clientOrders.length > 0 ? (
               <div className="space-y-2">
                 {clientOrders.map(order => (
-                  <div key={order.id} className="p-3 rounded-lg border bg-card">
+                  <div key={order.id} className="rounded-lg border bg-card p-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-sm">{order.product || 'Pedido'}</p>
+                        <p className="text-sm font-medium">{order.product || 'Pedido'}</p>
                         <p className="text-xs text-muted-foreground">
                           {order.orderNumber && `#${order.orderNumber} • `}
                           {order.supplier && `${order.supplier} • `}
@@ -466,27 +580,29 @@ export function ClientDetailPanel({
                         </p>
                       </div>
                       {order.price > 0 && (
-                        <p className="text-sm font-semibold">{formatCurrency(order.price)}</p>
+                        <p className="text-sm font-semibold">
+                          {formatCurrency(Number(order.price || 0) * Number((order as any).quantity || 1))}
+                        </p>
                       )}
                     </div>
                     {order.deliveryDate && (
-                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> Entrega: {format(parseISO(order.deliveryDate), 'dd/MM/yyyy')}
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Entrega: {format(parseISO(order.deliveryDate), 'dd/MM/yyyy')}
                       </p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <ShoppingCart className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhum pedido registrado</p>
               </div>
             )}
           </ScrollArea>
         </TabsContent>
 
-        {/* Quotes */}
         <TabsContent value="quotes" className="mt-3">
           <ScrollArea className="h-[350px]">
             {clientQuotes.length > 0 ? (
@@ -495,22 +611,29 @@ export function ClientDetailPanel({
                   <button
                     key={quote.id}
                     onClick={() => onQuoteClick?.(quote)}
-                    className="w-full text-left p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className="text-sm font-medium">
                           Orç. #{quote.id.slice(0, 8).toUpperCase()}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(parseISO(quote.createdAt), 'dd/MM/yyyy')} • {quote.items?.length || 0} itens
                         </p>
                         {quote.status && (
-                          <Badge variant="outline" className={cn("text-xs mt-1", {
-                            'border-green-500 text-green-700': quote.status === 'pedido',
-                            'border-red-500 text-red-700': quote.status === 'cancelado',
-                          })}>
-                            {quote.status === 'pedido' ? 'Pedido' : quote.status === 'cancelado' ? 'Cancelado' : 'Orçamento'}
+                          <Badge
+                            variant="outline"
+                            className={cn('mt-1 text-xs', {
+                              'border-green-500 text-green-700': quote.status === 'pedido',
+                              'border-red-500 text-red-700': quote.status === 'cancelado',
+                            })}
+                          >
+                            {quote.status === 'pedido'
+                              ? 'Pedido'
+                              : quote.status === 'cancelado'
+                                ? 'Cancelado'
+                                : 'Orçamento'}
                           </Badge>
                         )}
                       </div>
@@ -520,15 +643,14 @@ export function ClientDetailPanel({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <FileText className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhum orçamento registrado</p>
               </div>
             )}
           </ScrollArea>
         </TabsContent>
 
-        {/* Checklists */}
         <TabsContent value="checklists" className="mt-3">
           <ScrollArea className="h-[350px]">
             {checklists.length > 0 ? (
@@ -540,69 +662,82 @@ export function ClientDetailPanel({
                   } catch {}
 
                   const checkDate = checklistData?.dataVisita || activity.due_date;
-                  const shareNosso = checklistData?.qtdProdutosNossos != null && checklistData?.qtdProdutosConcorrentes != null
-                    ? Math.round((checklistData.qtdProdutosNossos / (checklistData.qtdProdutosNossos + checklistData.qtdProdutosConcorrentes)) * 100)
-                    : null;
+                  const shareNosso =
+                    checklistData?.qtdProdutosNossos != null && checklistData?.qtdProdutosConcorrentes != null
+                      ? Math.round(
+                          (checklistData.qtdProdutosNossos /
+                            (checklistData.qtdProdutosNossos + checklistData.qtdProdutosConcorrentes)) *
+                            100
+                        )
+                      : null;
 
                   return (
                     <button
                       key={activity.id}
                       onClick={() => onOpenChecklist?.(activity)}
-                      className="w-full text-left p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-sm">{activity.title}</span>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-medium">{activity.title}</span>
                         <span className="text-xs text-muted-foreground">
                           {format(parseISO(checkDate), 'dd/MM/yyyy')}
                         </span>
                       </div>
+
                       {checklistData && (
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           {checklistData.qtdProdutosNossos != null && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Nossos:</span>{' '}
                               <span className="font-medium">{checklistData.qtdProdutosNossos}</span>
                             </div>
                           )}
+
                           {shareNosso != null && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Share:</span>{' '}
                               <span className="font-bold">{shareNosso}%</span>
                             </div>
                           )}
+
                           {checklistData.scoreLoja && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Score:</span>{' '}
                               <span className="font-bold">{checklistData.scoreLoja}</span>
                             </div>
                           )}
+
                           {checklistData.fluxoLoja && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Fluxo:</span>{' '}
                               <span className="font-medium">{checklistData.fluxoLoja}</span>
                             </div>
                           )}
+
                           {checklistData.humorLojista && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Humor:</span>{' '}
                               <span className="font-medium">{checklistData.humorLojista}</span>
                             </div>
                           )}
+
                           {checklistData.ticketMedio && (
-                            <div className="p-1.5 rounded bg-muted">
+                            <div className="rounded bg-muted p-1.5">
                               <span className="text-muted-foreground">Ticket:</span>{' '}
                               <span className="font-medium">{checklistData.ticketMedio}</span>
                             </div>
                           )}
                         </div>
                       )}
+
                       {checklistData?.oportunidadeIdentificada && (
-                        <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
+                        <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">
                           💡 {checklistData.oportunidadeIdentificada}
                         </p>
                       )}
+
                       {checklistData?.proximoPasso && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
                           ➡️ {checklistData.proximoPasso}
                         </p>
                       )}
@@ -611,8 +746,8 @@ export function ClientDetailPanel({
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <ClipboardCheck className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhum checklist registrado</p>
               </div>
             )}
