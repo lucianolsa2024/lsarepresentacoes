@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { CorporateOpportunityForm } from './CorporateOpportunityForm';
@@ -20,6 +20,7 @@ import FunilChecklist from '@/components/funil/FunilChecklist';
 import type { AtividadeGerada } from '@/components/funil/FunilChecklist';
 import type { FaseId } from '@/components/funil/funil-config';
 import { useFunilActions } from '@/components/funil/useFunilActions';
+import { OpportunityDetailSheet } from './OpportunityDetailSheet';
 
 const STAGE_COLORS: Record<string, string> = {
   prospeccao: 'bg-blue-100 border-blue-300 text-blue-800',
@@ -39,11 +40,12 @@ function getDaysInStage(stageChangedAt: string): number {
 }
 
 function CorporateOpportunityCard({
-  opp, clients, representatives, onEdit, onDelete,
+  opp, clients, representatives, onEdit, onDelete, onView,
 }: {
   opp: SalesOpportunity; clients: Client[];
   representatives: { email: string; name: string }[];
   onEdit: (opp: SalesOpportunity) => void; onDelete: (id: string) => void;
+  onView: (opp: SalesOpportunity) => void;
 }) {
   const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
   const rep = opp.ownerEmail ? representatives.find(r => r.email === opp.ownerEmail) : null;
@@ -51,7 +53,7 @@ function CorporateOpportunityCard({
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="bg-card border rounded-lg p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card border rounded-lg p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(opp)}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           {client && (
@@ -112,6 +114,7 @@ export function SalesFunnelManager() {
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
+  const [viewingOpp, setViewingOpp] = useState<SalesOpportunity | null>(null);
   const [checklistPending, setChecklistPending] = useState<{
     opp: SalesOpportunity;
     destStage: string;
@@ -358,7 +361,7 @@ export function SalesFunnelManager() {
                         <Draggable key={opp.id} draggableId={opp.id} index={index}>
                           {(provided) => (
                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} />
+                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} onView={setViewingOpp} />
                             </div>
                           )}
                         </Draggable>
@@ -480,6 +483,15 @@ export function SalesFunnelManager() {
           )}
         </div>
       )}
+
+      {/* Opportunity Detail Sheet */}
+      <OpportunityDetailSheet
+        opportunity={viewingOpp}
+        clients={clients}
+        representatives={representatives}
+        open={!!viewingOpp}
+        onOpenChange={(open) => !open && setViewingOpp(null)}
+      />
     </div>
   );
 }
