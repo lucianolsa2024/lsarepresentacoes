@@ -772,7 +772,7 @@ const Index = () => {
 
               {isAdmin && (
                 <TabsContent value="admin" className="mt-0">
-                  <AdminPanel orders={orders} />
+                  <AdminPanel />
                 </TabsContent>
               )}
             </div>
