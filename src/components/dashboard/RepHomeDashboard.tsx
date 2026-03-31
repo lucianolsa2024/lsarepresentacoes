@@ -179,9 +179,9 @@ export function RepHomeDashboard() {
             <div className="flex items-center justify-between rounded-lg bg-muted p-3">
               <div>
                 <p className="text-xs text-muted-foreground">Variação</p>
-                <p className="text-base font-semibold">{fmt(mtdYoy?.yoy_diff)}</p>
+                <p className="text-base font-semibold">{fmt(mtdYoy?.revenue_mtd_diff)}</p>
               </div>
-              <ChangeIndicator value={mtdYoy?.yoy_pct} />
+              <ChangeIndicator value={mtdYoy?.revenue_mtd_yoy_pct} />
             </div>
           </CardContent>
         </Card>
