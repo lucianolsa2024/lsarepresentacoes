@@ -62,12 +62,33 @@ export interface TopClient90d {
   rank_position?: number | null;
 }
 
+export interface MtdBySupplier {
+  owner_email: string | null;
+  supplier: string | null;
+  revenue_mtd: number | null;
+  volume_mtd: number | null;
+  orders_mtd: number | null;
+  ticket_mtd: number | null;
+}
+
+export interface MtdByClient {
+  owner_email: string | null;
+  client_id: string | null;
+  client_name: string | null;
+  revenue_mtd: number | null;
+  volume_mtd: number | null;
+  orders_mtd: number | null;
+  ticket_mtd: number | null;
+}
+
 interface UseRepDashboardResult {
   monthData: RepMonthDashboard | null;
   compare90d: Rep90dCompare | null;
   mtdYoy: RepMtdYoy | null;
   inactiveClients: InactiveClient[];
   topClients90d: TopClient90d[];
+  mtdBySupplier: MtdBySupplier[];
+  mtdByClient: MtdByClient[];
   loading: boolean;
   isAdmin: boolean | null;
 }
@@ -81,6 +102,8 @@ export function useRepDashboard(): UseRepDashboardResult {
   const [mtdYoy, setMtdYoy] = useState<RepMtdYoy | null>(null);
   const [inactiveClients, setInactiveClients] = useState<InactiveClient[]>([]);
   const [topClients90d, setTopClients90d] = useState<TopClient90d[]>([]);
+  const [mtdBySupplier, setMtdBySupplier] = useState<MtdBySupplier[]>([]);
+  const [mtdByClient, setMtdByClient] = useState<MtdByClient[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -125,6 +148,19 @@ export function useRepDashboard(): UseRepDashboardResult {
         }
 
         // Busca clientes corporativos para exclusão da lista de inativos
+        let supplierMtdQuery = supabase
+          .from('v_sales_mtd_by_supplier')
+          .select('*')
+          .eq('owner_email', email)
+          .order('revenue_mtd', { ascending: false });
+
+        let clientMtdQuery = supabase
+          .from('v_sales_mtd_by_client')
+          .select('*')
+          .eq('owner_email', email)
+          .order('revenue_mtd', { ascending: false })
+          .limit(10);
+
         const corpQuery = supabase
           .from('clients')
           .select('id')
@@ -141,6 +177,8 @@ export function useRepDashboard(): UseRepDashboardResult {
           yoyRes,
           inactiveRes,
           topClientsRes,
+          supplierMtdRes,
+          clientMtdRes,
           corpRes,
         ] = await Promise.all([
           monthQuery,
@@ -148,6 +186,8 @@ export function useRepDashboard(): UseRepDashboardResult {
           yoyQuery,
           inactiveQuery,
           topClientsQuery,
+          supplierMtdQuery,
+          clientMtdQuery,
           corpQuery,
         ]);
 
@@ -156,6 +196,8 @@ export function useRepDashboard(): UseRepDashboardResult {
         if (yoyRes.error) throw yoyRes.error;
         if (inactiveRes.error) throw inactiveRes.error;
         if (topClientsRes.error) throw topClientsRes.error;
+        if (supplierMtdRes.error) throw supplierMtdRes.error;
+        if (clientMtdRes.error) throw clientMtdRes.error;
         if (corpRes.error) throw corpRes.error;
 
         const corpIds = new Set((corpRes.data ?? []).map((c: { id: string }) => c.id));
@@ -175,6 +217,8 @@ export function useRepDashboard(): UseRepDashboardResult {
         setMtdYoy((yoyRow as RepMtdYoy) ?? null);
         setInactiveClients(filteredInactive);
         setTopClients90d((topClientsRes.data as TopClient90d[] | null) ?? []);
+        setMtdBySupplier((supplierMtdRes.data as MtdBySupplier[] | null) ?? []);
+        setMtdByClient((clientMtdRes.data as MtdByClient[] | null) ?? []);
       } catch (error) {
         console.error('Erro ao carregar dashboard do representante:', error);
         setMonthData(null);
@@ -182,6 +226,8 @@ export function useRepDashboard(): UseRepDashboardResult {
         setMtdYoy(null);
         setInactiveClients([]);
         setTopClients90d([]);
+        setMtdBySupplier([]);
+        setMtdByClient([]);
       } finally {
         setLoading(false);
       }
@@ -196,6 +242,8 @@ export function useRepDashboard(): UseRepDashboardResult {
     mtdYoy,
     inactiveClients,
     topClients90d,
+    mtdBySupplier,
+    mtdByClient,
     loading,
     isAdmin,
   };
