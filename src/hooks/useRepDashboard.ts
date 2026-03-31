@@ -31,6 +31,14 @@ export interface Rep90dCompare {
   ticket_change_pct: number | null;
 }
 
+export interface RepMtdYoy {
+  owner_email: string | null;
+  revenue_mtd_current: number | null;
+  revenue_mtd_previous: number | null;
+  yoy_diff: number | null;
+  yoy_pct: number | null;
+}
+
 export interface InactiveClient {
   owner_email: string | null;
   client_id: string | null;
@@ -43,68 +51,151 @@ export interface InactiveClient {
   ticket_avg_12m: number | null;
 }
 
-export function useRepDashboard() {
+export interface TopClient90d {
+  owner_email: string | null;
+  client_id: string | null;
+  client_name: string | null;
+  revenue_90d: number | null;
+  volume_90d: number | null;
+  orders_90d: number | null;
+  ticket_90d: number | null;
+  rank_position?: number | null;
+}
+
+interface UseRepDashboardResult {
+  monthData: RepMonthDashboard | null;
+  compare90d: Rep90dCompare | null;
+  mtdYoy: RepMtdYoy | null;
+  inactiveClients: InactiveClient[];
+  topClients90d: TopClient90d[];
+  loading: boolean;
+  isAdmin: boolean | null;
+}
+
+export function useRepDashboard(): UseRepDashboardResult {
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
+
   const [monthData, setMonthData] = useState<RepMonthDashboard | null>(null);
   const [compare90d, setCompare90d] = useState<Rep90dCompare | null>(null);
+  const [mtdYoy, setMtdYoy] = useState<RepMtdYoy | null>(null);
   const [inactiveClients, setInactiveClients] = useState<InactiveClient[]>([]);
+  const [topClients90d, setTopClients90d] = useState<TopClient90d[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.email || isAdmin === null) return;
 
     const fetchData = async () => {
-      setLoading(true);
-      const email = user.email!;
+      try {
+        setLoading(true);
+        const email = user.email;
 
-      const monthQuery = supabase
-        .from('v_rep_month_dashboard')
-        .select('*')
-        .eq('owner_email', email)
-        .maybeSingle();
+        let monthQuery = supabase
+          .from('v_rep_month_dashboard')
+          .select('*');
 
-      const compareQuery = supabase
-        .from('v_rep_90d_compare')
-        .select('*')
-        .eq('owner_email', email)
-        .maybeSingle();
+        let compareQuery = supabase
+          .from('v_rep_90d_compare')
+          .select('*');
 
-      let inactiveQuery = supabase
-        .from('v_rep_clients_no_purchase_60d')
-        .select('*')
-        .order('revenue_12m', { ascending: false });
+        let yoyQuery = supabase
+          .from('v_rep_mtd_yoy')
+          .select('*');
 
-      // Non-admin: filter by own email only
-      if (!isAdmin) {
-        inactiveQuery = inactiveQuery.eq('owner_email', email);
+        let inactiveQuery = supabase
+          .from('v_rep_clients_no_purchase_60d')
+          .select('*')
+          .order('revenue_12m', { ascending: false });
+
+        let topClientsQuery = supabase
+          .from('v_rep_top_clients_90d')
+          .select('*')
+          .order('revenue_90d', { ascending: false })
+          .limit(5);
+
+        // Para não-admin, restringe ao próprio representante
+        if (!isAdmin) {
+          monthQuery = monthQuery.eq('owner_email', email);
+          compareQuery = compareQuery.eq('owner_email', email);
+          yoyQuery = yoyQuery.eq('owner_email', email);
+          inactiveQuery = inactiveQuery.eq('owner_email', email);
+          topClientsQuery = topClientsQuery.eq('owner_email', email);
+        }
+
+        // Busca clientes corporativos para exclusão da lista de inativos
+        const corpQuery = supabase
+          .from('clients')
+          .select('id')
+          .or([
+            'segment.ilike.%Construtora%',
+            'segment.ilike.%Incorporadora%',
+            'segment.ilike.%Escritório de Arquitetura%',
+            'segment.ilike.%corporativo%',
+          ].join(','));
+
+        const [
+          monthRes,
+          compareRes,
+          yoyRes,
+          inactiveRes,
+          topClientsRes,
+          corpRes,
+        ] = await Promise.all([
+          monthQuery,
+          compareQuery,
+          yoyQuery,
+          inactiveQuery,
+          topClientsQuery,
+          corpQuery,
+        ]);
+
+        if (monthRes.error) throw monthRes.error;
+        if (compareRes.error) throw compareRes.error;
+        if (yoyRes.error) throw yoyRes.error;
+        if (inactiveRes.error) throw inactiveRes.error;
+        if (topClientsRes.error) throw topClientsRes.error;
+        if (corpRes.error) throw corpRes.error;
+
+        const corpIds = new Set((corpRes.data ?? []).map((c: { id: string }) => c.id));
+
+        const filteredInactive = ((inactiveRes.data as InactiveClient[] | null) ?? [])
+          .filter((client) => client.client_id && !corpIds.has(client.client_id));
+
+        // Em caso de admin, as views podem retornar várias linhas
+        // Aqui pegamos a primeira apenas para manter compatibilidade com a tela atual.
+        // Se depois você quiser dashboard consolidado/admin, o ideal é criar uma tela separada.
+        const monthRow = Array.isArray(monthRes.data) ? monthRes.data[0] : monthRes.data;
+        const compareRow = Array.isArray(compareRes.data) ? compareRes.data[0] : compareRes.data;
+        const yoyRow = Array.isArray(yoyRes.data) ? yoyRes.data[0] : yoyRes.data;
+
+        setMonthData((monthRow as RepMonthDashboard) ?? null);
+        setCompare90d((compareRow as Rep90dCompare) ?? null);
+        setMtdYoy((yoyRow as RepMtdYoy) ?? null);
+        setInactiveClients(filteredInactive);
+        setTopClients90d((topClientsRes.data as TopClient90d[] | null) ?? []);
+      } catch (error) {
+        console.error('Erro ao carregar dashboard do representante:', error);
+        setMonthData(null);
+        setCompare90d(null);
+        setMtdYoy(null);
+        setInactiveClients([]);
+        setTopClients90d([]);
+      } finally {
+        setLoading(false);
       }
-
-      // Fetch corporativo client IDs to exclude
-      const corpQuery = supabase
-        .from('clients')
-        .select('id')
-        .or('segment.ilike.Construtora,segment.ilike.Incorporadora,segment.ilike.Escritório de Arquitetura,segment.ilike.corporativo');
-
-      const [monthRes, compareRes, inactiveRes, corpRes] = await Promise.all([
-        monthQuery,
-        compareQuery,
-        inactiveQuery,
-        corpQuery,
-      ]);
-
-      const corpIds = new Set((corpRes.data ?? []).map((c: any) => c.id));
-      const filtered = ((inactiveRes.data as InactiveClient[] | null) ?? [])
-        .filter(c => !corpIds.has(c.client_id));
-
-      setMonthData(monthRes.data as RepMonthDashboard | null);
-      setCompare90d(compareRes.data as Rep90dCompare | null);
-      setInactiveClients(filtered);
-      setLoading(false);
     };
 
     fetchData();
   }, [user?.email, isAdmin]);
 
-  return { monthData, compare90d, inactiveClients, loading, isAdmin };
+  return {
+    monthData,
+    compare90d,
+    mtdYoy,
+    inactiveClients,
+    topClients90d,
+    loading,
+    isAdmin,
+  };
 }
