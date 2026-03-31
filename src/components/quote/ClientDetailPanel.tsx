@@ -379,15 +379,15 @@ export function ClientDetailPanel({
                       <p className="font-medium">YoY MTD</p>
                     </div>
                     <p className="text-xs text-muted-foreground">Mês atual até hoje</p>
-                    <p className="text-lg font-bold">{formatCurrency(mtdYoy?.revenue_mtd_current)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ano anterior: {formatCurrency(mtdYoy?.revenue_mtd_previous)}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Dif.: {formatCurrency(mtdYoy?.yoy_diff)}
-                      </span>
-                      <ChangeIndicator value={mtdYoy?.yoy_pct} />
+                     <p className="text-lg font-bold">{formatCurrency(mtdYoy?.revenue_mtd_current)}</p>
+                     <p className="mt-1 text-xs text-muted-foreground">
+                       Ano anterior: {formatCurrency(mtdYoy?.revenue_mtd_previous)}
+                     </p>
+                     <div className="mt-2 flex items-center justify-between">
+                       <span className="text-xs text-muted-foreground">
+                         Dif.: {formatCurrency((mtdYoy?.revenue_mtd_current ?? 0) - (mtdYoy?.revenue_mtd_previous ?? 0))}
+                       </span>
+                       <ChangeIndicator value={mtdYoy?.revenue_mtd_yoy_pct} />
                     </div>
                   </div>
 
