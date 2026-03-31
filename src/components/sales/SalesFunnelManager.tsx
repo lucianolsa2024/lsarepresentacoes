@@ -483,6 +483,15 @@ export function SalesFunnelManager() {
           )}
         </div>
       )}
+
+      {/* Opportunity Detail Sheet */}
+      <OpportunityDetailSheet
+        opportunity={viewingOpp}
+        clients={clients}
+        representatives={representatives}
+        open={!!viewingOpp}
+        onOpenChange={(open) => !open && setViewingOpp(null)}
+      />
     </div>
   );
 }
