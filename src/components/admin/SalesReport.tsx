@@ -255,7 +255,7 @@ export function SalesReport() {
                     <Badge variant="outline">{row.name}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.line_revenue)}
+                    {formatCurrency(row.revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
@@ -316,7 +316,7 @@ export function SalesReport() {
                     <Badge variant="outline">{row.name}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.line_revenue)}
+                    {formatCurrency(row.revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
@@ -349,7 +349,7 @@ export function SalesReport() {
                 <TableRow key={row.name}>
                   <TableCell className="font-medium">{row.name}</TableCell>
                   <TableCell className="text-right font-semibold">
-                    {formatCurrency(row.line_revenue)}
+                    {formatCurrency(row.revenue)}
                   </TableCell>
                   <TableCell className="text-right">{formatInt(row.volume)}</TableCell>
                   <TableCell className="text-right">{formatInt(row.orders)}</TableCell>
