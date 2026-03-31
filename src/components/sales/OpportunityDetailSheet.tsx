@@ -249,12 +249,19 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhum orçamento encontrado para este cliente</p>
               ) : (
                 quotes.map(q => (
-                  <div key={q.id} className="border rounded-lg p-3 space-y-1 bg-card">
+                  <div key={q.id} className="border rounded-lg p-3 space-y-1 bg-card cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleDownloadPdf(q)}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Orçamento v{q.version}</span>
-                      <Badge variant={q.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
-                        {q.status === 'draft' ? 'Rascunho' : q.status === 'sent' ? 'Enviado' : q.status === 'approved' ? 'Aprovado' : q.status}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={q.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                          {q.status === 'orcamento' ? 'Orçamento' : q.status === 'pedido' ? 'Pedido' : q.status === 'cancelado' ? 'Cancelado' : q.status}
+                        </Badge>
+                        {generatingPdf === q.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{formatDate(q.created_at)}</p>
                     <p className="text-sm font-semibold text-primary">{formatCurrency(q.total)}</p>
