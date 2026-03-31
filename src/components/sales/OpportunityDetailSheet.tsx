@@ -7,7 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { SalesOpportunity, FUNNEL_STAGES_CORPORATIVO } from '@/hooks/useSalesOpportunities';
 import { Client } from '@/hooks/useClients';
-import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { generateQuotePDF } from '@/utils/pdfGenerator';
+import { Quote, QuoteItem, ClientData, PaymentConditions } from '@/types/quote';
+import { toast } from 'sonner';
 import { format as fmtDate, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
