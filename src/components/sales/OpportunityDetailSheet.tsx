@@ -48,6 +48,12 @@ interface QuoteRow {
   status: string;
   created_at: string;
   version: number;
+  client_data: any;
+  items: any;
+  payment: any;
+  subtotal: number;
+  discount: number;
+  parent_quote_id: string | null;
 }
 
 const stageLabel = (key: string) =>
