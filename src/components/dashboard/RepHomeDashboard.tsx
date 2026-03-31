@@ -25,6 +25,8 @@ import {
   Trophy,
   Loader2,
   BarChart3,
+  Factory,
+  Users,
 } from 'lucide-react';
 
 const fmt = (v: number | null | undefined) =>
@@ -84,6 +86,8 @@ export function RepHomeDashboard() {
     mtdYoy,
     inactiveClients,
     topClients90d,
+    mtdBySupplier,
+    mtdByClient,
     loading,
     isAdmin,
   } = useRepDashboard();
@@ -253,6 +257,98 @@ export function RepHomeDashboard() {
                 <p className="text-xs text-muted-foreground">
                   Ant.: {fmt(compare90d?.ticket_prev_90d)}
                 </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top clientes 90d + clientes inativos */}
+      {/* MTD por Fornecedor + MTD por Cliente */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Factory className="h-5 w-5 text-primary" />
+              Vendas do Mês por Fornecedor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {mtdBySupplier.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhuma venda registrada neste mês.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {mtdBySupplier.map((s) => {
+                  const totalRevenue = mtdBySupplier.reduce((sum, item) => sum + (item.revenue_mtd ?? 0), 0);
+                  const pct = totalRevenue > 0 ? ((s.revenue_mtd ?? 0) / totalRevenue) * 100 : 0;
+                  return (
+                    <div key={s.supplier} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{s.supplier}</span>
+                        <span className="text-muted-foreground">
+                          {fmt(s.revenue_mtd)} · {fmtInt(s.orders_mtd)} ped.
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </div>
+                  );
+                })}
+                <div className="mt-3 rounded-lg bg-muted p-3 flex items-center justify-between">
+                  <span className="text-sm font-medium">Total MTD</span>
+                  <span className="text-sm font-bold">
+                    {fmt(mtdBySupplier.reduce((sum, s) => sum + (s.revenue_mtd ?? 0), 0))}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-primary" />
+              Top Clientes do Mês
+              <Badge variant="secondary" className="ml-auto">
+                {mtdByClient.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {mtdByClient.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhuma venda registrada neste mês.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">Faturamento</TableHead>
+                      <TableHead className="text-right">Pedidos</TableHead>
+                      <TableHead className="text-right">Ticket</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mtdByClient.map((c, i) => (
+                      <TableRow key={c.client_id ?? i}>
+                        <TableCell>
+                          <Badge variant="secondary">{i + 1}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[200px] truncate">
+                          {c.client_name}
+                        </TableCell>
+                        <TableCell className="text-right">{fmt(c.revenue_mtd)}</TableCell>
+                        <TableCell className="text-right">{fmtInt(c.orders_mtd)}</TableCell>
+                        <TableCell className="text-right">{fmt(c.ticket_mtd)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
