@@ -380,6 +380,18 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
           />
         </div>
 
+        {/* Project Name */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1">
+            🏗️ Obra / Empreendimento
+          </Label>
+          <Input
+            value={payment.projectName || ''}
+            onChange={(e) => updateField('projectName', e.target.value)}
+            placeholder="Ex: Hotel Marina, Ed. Aurora, Projeto Plaenge..."
+          />
+        </div>
+
         {/* Estimated Closing Date */}
         <div className="space-y-2">
           <Label className="flex items-center gap-1">

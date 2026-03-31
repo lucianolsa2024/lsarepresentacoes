@@ -209,4 +209,5 @@ export const INITIAL_PAYMENT: PaymentConditions = {
   representativeName: '',
   estimatedClosingDate: '',
   estimatedPrice: 0,
+  projectName: '',
 };
