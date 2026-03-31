@@ -196,12 +196,14 @@ export function RepHomeDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(compare90d?.revenue_90d)}</p>
-            <div className="mt-1 flex items-center justify-between">
-              <ChangeIndicator value={compare90d?.revenue_change_pct} />
-              <p className="text-xs text-muted-foreground">
-                Ant.: {fmt(compare90d?.revenue_prev_90d)}
-              </p>
-            </div>
+            {(compare90d?.revenue_prev_90d ?? 0) > 0 && (
+              <div className="mt-1 flex items-center justify-between">
+                <ChangeIndicator value={compare90d?.revenue_change_pct} />
+                <p className="text-xs text-muted-foreground">
+                  Ant.: {fmt(compare90d?.revenue_prev_90d)}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -212,12 +214,14 @@ export function RepHomeDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtInt(compare90d?.volume_90d)}</p>
-            <div className="mt-1 flex items-center justify-between">
-              <ChangeIndicator value={compare90d?.volume_change_pct} />
-              <p className="text-xs text-muted-foreground">
-                Ant.: {fmtInt(compare90d?.volume_prev_90d)}
-              </p>
-            </div>
+            {(compare90d?.volume_prev_90d ?? 0) > 0 && (
+              <div className="mt-1 flex items-center justify-between">
+                <ChangeIndicator value={compare90d?.volume_change_pct} />
+                <p className="text-xs text-muted-foreground">
+                  Ant.: {fmtInt(compare90d?.volume_prev_90d)}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -228,9 +232,11 @@ export function RepHomeDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtInt(compare90d?.orders_90d)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Anterior: {fmtInt(compare90d?.orders_prev_90d)}
-            </p>
+            {(compare90d?.orders_prev_90d ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Anterior: {fmtInt(compare90d?.orders_prev_90d)}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -241,12 +247,14 @@ export function RepHomeDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmt(compare90d?.ticket_90d)}</p>
-            <div className="mt-1 flex items-center justify-between">
-              <ChangeIndicator value={compare90d?.ticket_change_pct} />
-              <p className="text-xs text-muted-foreground">
-                Ant.: {fmt(compare90d?.ticket_prev_90d)}
-              </p>
-            </div>
+            {(compare90d?.ticket_prev_90d ?? 0) > 0 && (
+              <div className="mt-1 flex items-center justify-between">
+                <ChangeIndicator value={compare90d?.ticket_change_pct} />
+                <p className="text-xs text-muted-foreground">
+                  Ant.: {fmt(compare90d?.ticket_prev_90d)}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
