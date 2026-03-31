@@ -142,6 +142,7 @@ export interface PaymentConditions {
   representativeName: string;
   estimatedClosingDate: string;
   estimatedPrice: number;
+  projectName?: string;
 }
 
 export type QuoteStatus = 'orcamento' | 'pedido' | 'cancelado';
