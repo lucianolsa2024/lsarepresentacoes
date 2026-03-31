@@ -114,6 +114,7 @@ export function SalesFunnelManager() {
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
   const [showLost, setShowLost] = useState(false);
+  const [viewingOpp, setViewingOpp] = useState<SalesOpportunity | null>(null);
   const [checklistPending, setChecklistPending] = useState<{
     opp: SalesOpportunity;
     destStage: string;
