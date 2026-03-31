@@ -379,15 +379,15 @@ export function ClientDetailPanel({
                       <p className="font-medium">YoY MTD</p>
                     </div>
                     <p className="text-xs text-muted-foreground">Mês atual até hoje</p>
-                    <p className="text-lg font-bold">{formatCurrency(mtdYoy?.revenue_mtd_current)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ano anterior: {formatCurrency(mtdYoy?.revenue_mtd_previous)}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Dif.: {formatCurrency(mtdYoy?.yoy_diff)}
-                      </span>
-                      <ChangeIndicator value={mtdYoy?.yoy_pct} />
+                     <p className="text-lg font-bold">{formatCurrency(mtdYoy?.revenue_mtd_current)}</p>
+                     <p className="mt-1 text-xs text-muted-foreground">
+                       Ano anterior: {formatCurrency(mtdYoy?.revenue_mtd_previous)}
+                     </p>
+                     <div className="mt-2 flex items-center justify-between">
+                       <span className="text-xs text-muted-foreground">
+                         Dif.: {formatCurrency((mtdYoy?.revenue_mtd_current ?? 0) - (mtdYoy?.revenue_mtd_previous ?? 0))}
+                       </span>
+                       <ChangeIndicator value={mtdYoy?.revenue_mtd_yoy_pct} />
                     </div>
                   </div>
 
@@ -397,15 +397,15 @@ export function ClientDetailPanel({
                       <p className="font-medium">90 dias vs 90 anteriores</p>
                     </div>
                     <p className="text-xs text-muted-foreground">Últimos 90 dias</p>
-                    <p className="text-lg font-bold">{formatCurrency(compare90d?.revenue_current_90d)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Anterior: {formatCurrency(compare90d?.revenue_previous_90d)}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Dif.: {formatCurrency(compare90d?.diff_90d)}
-                      </span>
-                      <ChangeIndicator value={compare90d?.pct_90d} />
+                     <p className="text-lg font-bold">{formatCurrency(compare90d?.revenue_90d)}</p>
+                     <p className="mt-1 text-xs text-muted-foreground">
+                       Anterior: {formatCurrency(compare90d?.revenue_prev_90d)}
+                     </p>
+                     <div className="mt-2 flex items-center justify-between">
+                       <span className="text-xs text-muted-foreground">
+                         Dif.: {formatCurrency((compare90d?.revenue_90d ?? 0) - (compare90d?.revenue_prev_90d ?? 0))}
+                       </span>
+                       <ChangeIndicator value={compare90d?.revenue_change_pct} />
                     </div>
                   </div>
 
@@ -417,13 +417,13 @@ export function ClientDetailPanel({
                     {supplierShare.length > 0 ? (
                       <div className="space-y-2">
                         {supplierShare.slice(0, 4).map((row, index) => (
-                          <div key={`${row.supplier_id}-${index}`} className="flex items-center justify-between gap-2">
-                            <span className="truncate text-xs">{row.supplier_name}</span>
-                            <div className="text-right">
-                              <p className="text-xs font-medium">{formatCurrency(row.revenue_12m)}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {(row.share_pct ?? 0).toFixed(1)}%
-                              </p>
+                           <div key={`${row.supplier}-${index}`} className="flex items-center justify-between gap-2">
+                             <span className="truncate text-xs">{row.supplier}</span>
+                             <div className="text-right">
+                               <p className="text-xs font-medium">{formatCurrency(row.revenue_12m)}</p>
+                               <p className="text-[10px] text-muted-foreground">
+                                 {(row.revenue_share_pct ?? 0).toFixed(1)}%
+                               </p>
                             </div>
                           </div>
                         ))}

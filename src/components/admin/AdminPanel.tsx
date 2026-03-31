@@ -53,7 +53,7 @@ export function AdminPanel({ orders }: AdminPanelProps) {
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
-        <SalesReport orders={orders} />
+        <SalesReport />
       </TabsContent>
       <TabsContent value="goals" className="mt-0">
         <GoalManager />

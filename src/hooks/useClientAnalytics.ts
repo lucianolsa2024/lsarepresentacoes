@@ -6,27 +6,49 @@ export interface ClientMtdYoyRow {
   client_name: string | null;
   revenue_mtd_current: number | null;
   revenue_mtd_previous: number | null;
-  yoy_diff: number | null;
-  yoy_pct: number | null;
+  revenue_mtd_yoy_pct: number | null;
+  orders_mtd_current: number | null;
+  orders_mtd_previous: number | null;
+  orders_mtd_yoy_pct: number | null;
+  volume_mtd_current: number | null;
+  volume_mtd_previous: number | null;
+  volume_mtd_yoy_pct: number | null;
+  ticket_mtd_current: number | null;
+  ticket_mtd_previous: number | null;
+  owner_email: string | null;
 }
 
 export interface Client90dCompareRow {
   client_id: string | null;
   client_name: string | null;
-  revenue_current_90d: number | null;
-  revenue_previous_90d: number | null;
-  diff_90d: number | null;
-  pct_90d: number | null;
+  revenue_90d: number | null;
+  revenue_prev_90d: number | null;
+  revenue_change_pct: number | null;
+  volume_90d: number | null;
+  volume_prev_90d: number | null;
+  volume_change_pct: number | null;
+  orders_90d: number | null;
+  orders_prev_90d: number | null;
+  ticket_90d: number | null;
+  ticket_prev_90d: number | null;
+  ticket_change_pct: number | null;
+  owner_email: string | null;
 }
 
 export interface ClientSupplierShareRow {
   client_id: string | null;
   client_name: string | null;
-  supplier_id: string | null;
-  supplier_name: string | null;
+  supplier: string | null;
   revenue_12m: number | null;
-  total_client_12m: number | null;
-  share_pct: number | null;
+  volume_12m: number | null;
+  orders_12m: number | null;
+  total_client_revenue_12m: number | null;
+  total_client_volume_12m: number | null;
+  total_client_orders_12m: number | null;
+  revenue_share_pct: number | null;
+  volume_share_pct: number | null;
+  orders_share_pct: number | null;
+  owner_email: string | null;
 }
 
 export function useClientAnalytics(clientId?: string) {
