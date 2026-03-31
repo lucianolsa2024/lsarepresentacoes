@@ -19,6 +19,7 @@ export type Database = {
           activity_category: string
           assigned_to_email: string | null
           client_id: string | null
+          client_name: string | null
           completed_at: string | null
           completed_notes: string | null
           created_at: string | null
@@ -52,6 +53,7 @@ export type Database = {
           activity_category?: string
           assigned_to_email?: string | null
           client_id?: string | null
+          client_name?: string | null
           completed_at?: string | null
           completed_notes?: string | null
           created_at?: string | null
@@ -85,6 +87,7 @@ export type Database = {
           activity_category?: string
           assigned_to_email?: string | null
           client_id?: string | null
+          client_name?: string | null
           completed_at?: string | null
           completed_notes?: string | null
           created_at?: string | null
@@ -431,6 +434,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          avg_ticket: number | null
           city: string | null
           client_type: string | null
           company: string
@@ -444,23 +448,30 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           is_new_client: boolean | null
+          last_interaction_date: string | null
+          last_purchase_date: string | null
+          milestone: string | null
           name: string | null
           neighborhood: string | null
+          next_action_date: string | null
           notes: string | null
           number: string | null
           owner_email: string | null
           parent_client_id: string | null
           phone: string | null
           portfolio_status: string | null
+          purchase_frequency_days: number | null
           segment: string | null
           site: string | null
           state: string | null
+          status: string | null
           street: string | null
           trade_name: string | null
           updated_at: string
           zip_code: string | null
         }
         Insert: {
+          avg_ticket?: number | null
           city?: string | null
           client_type?: string | null
           company: string
@@ -474,23 +485,30 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           is_new_client?: boolean | null
+          last_interaction_date?: string | null
+          last_purchase_date?: string | null
+          milestone?: string | null
           name?: string | null
           neighborhood?: string | null
+          next_action_date?: string | null
           notes?: string | null
           number?: string | null
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
           portfolio_status?: string | null
+          purchase_frequency_days?: number | null
           segment?: string | null
           site?: string | null
           state?: string | null
+          status?: string | null
           street?: string | null
           trade_name?: string | null
           updated_at?: string
           zip_code?: string | null
         }
         Update: {
+          avg_ticket?: number | null
           city?: string | null
           client_type?: string | null
           company?: string
@@ -504,17 +522,23 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           is_new_client?: boolean | null
+          last_interaction_date?: string | null
+          last_purchase_date?: string | null
+          milestone?: string | null
           name?: string | null
           neighborhood?: string | null
+          next_action_date?: string | null
           notes?: string | null
           number?: string | null
           owner_email?: string | null
           parent_client_id?: string | null
           phone?: string | null
           portfolio_status?: string | null
+          purchase_frequency_days?: number | null
           segment?: string | null
           site?: string | null
           state?: string | null
+          status?: string | null
           street?: string | null
           trade_name?: string | null
           updated_at?: string
