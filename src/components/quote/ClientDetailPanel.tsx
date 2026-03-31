@@ -417,13 +417,13 @@ export function ClientDetailPanel({
                     {supplierShare.length > 0 ? (
                       <div className="space-y-2">
                         {supplierShare.slice(0, 4).map((row, index) => (
-                          <div key={`${row.supplier_id}-${index}`} className="flex items-center justify-between gap-2">
-                            <span className="truncate text-xs">{row.supplier_name}</span>
-                            <div className="text-right">
-                              <p className="text-xs font-medium">{formatCurrency(row.revenue_12m)}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {(row.share_pct ?? 0).toFixed(1)}%
-                              </p>
+                           <div key={`${row.supplier}-${index}`} className="flex items-center justify-between gap-2">
+                             <span className="truncate text-xs">{row.supplier}</span>
+                             <div className="text-right">
+                               <p className="text-xs font-medium">{formatCurrency(row.revenue_12m)}</p>
+                               <p className="text-[10px] text-muted-foreground">
+                                 {(row.revenue_share_pct ?? 0).toFixed(1)}%
+                               </p>
                             </div>
                           </div>
                         ))}
