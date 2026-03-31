@@ -111,6 +111,7 @@ export function QuoteHistory({
     return (
       quote.client.name.toLowerCase().includes(search) ||
       quote.client.company?.toLowerCase().includes(search) ||
+      quote.payment?.projectName?.toLowerCase().includes(search) ||
       formatDate(quote.createdAt).includes(search) ||
       quoteNumber.includes(search)
     );
