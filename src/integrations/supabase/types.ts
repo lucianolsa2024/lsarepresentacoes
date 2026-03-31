@@ -130,6 +130,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_sales_base"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_parent_fkey"
             columns: ["parent_activity_id"]
             isOneToOne: false
@@ -1624,6 +1631,51 @@ export type Database = {
           },
         ]
       }
+      v_client_mtd_yoy: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_mtd_current: number | null
+          orders_mtd_previous: number | null
+          orders_mtd_yoy_pct: number | null
+          owner_email: string | null
+          revenue_mtd_current: number | null
+          revenue_mtd_previous: number | null
+          revenue_mtd_yoy_pct: number | null
+          ticket_mtd_current: number | null
+          ticket_mtd_previous: number | null
+          volume_mtd_current: number | null
+          volume_mtd_previous: number | null
+          volume_mtd_yoy_pct: number | null
+        }
+        Relationships: []
+      }
+      v_client_supplier_share_12m: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_12m: number | null
+          orders_share_pct: number | null
+          owner_email: string | null
+          revenue_12m: number | null
+          revenue_share_pct: number | null
+          supplier: string | null
+          total_client_orders_12m: number | null
+          total_client_revenue_12m: number | null
+          total_client_volume_12m: number | null
+          volume_12m: number | null
+          volume_share_pct: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_client_suppliers_12m: {
         Row: {
           client_id: string | null
@@ -1721,6 +1773,25 @@ export type Database = {
         }
         Relationships: []
       }
+      v_rep_mtd_yoy: {
+        Row: {
+          orders_mtd_current: number | null
+          orders_mtd_previous: number | null
+          orders_mtd_yoy_pct: number | null
+          owner_email: string | null
+          revenue_mtd_current: number | null
+          revenue_mtd_diff: number | null
+          revenue_mtd_previous: number | null
+          revenue_mtd_yoy_pct: number | null
+          ticket_mtd_current: number | null
+          ticket_mtd_previous: number | null
+          ticket_mtd_yoy_pct: number | null
+          volume_mtd_current: number | null
+          volume_mtd_previous: number | null
+          volume_mtd_yoy_pct: number | null
+        }
+        Relationships: []
+      }
       v_rep_supplier_90d_compare: {
         Row: {
           orders_90d: number | null
@@ -1778,6 +1849,117 @@ export type Database = {
           revenue_month: number | null
           supplier: string | null
           volume_month: number | null
+        }
+        Relationships: []
+      }
+      v_rep_top_clients_90d: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_90d: number | null
+          owner_email: string | null
+          rank_90d: number | null
+          revenue_90d: number | null
+          ticket_90d: number | null
+          volume_90d: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_sales_90d_by_client: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_90d: number | null
+          owner_email: string | null
+          revenue_90d: number | null
+          ticket_90d: number | null
+          volume_90d: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_sales_base: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          id: string | null
+          issue_date: string | null
+          line_revenue: number | null
+          month_num: number | null
+          month_ref: string | null
+          order_number: string | null
+          owner_email: string | null
+          price: number | null
+          quantity: number | null
+          representative: string | null
+          revenue_status: string | null
+          supplier: string | null
+          year_ref: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_sales_mtd_by_client: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_mtd: number | null
+          owner_email: string | null
+          revenue_mtd: number | null
+          ticket_mtd: number | null
+          volume_mtd: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_sales_mtd_by_representative: {
+        Row: {
+          orders_mtd: number | null
+          owner_email: string | null
+          representative: string | null
+          revenue_mtd: number | null
+          ticket_mtd: number | null
+          volume_mtd: number | null
+        }
+        Relationships: []
+      }
+      v_sales_mtd_by_supplier: {
+        Row: {
+          orders_mtd: number | null
+          owner_email: string | null
+          revenue_mtd: number | null
+          supplier: string | null
+          ticket_mtd: number | null
+          volume_mtd: number | null
         }
         Relationships: []
       }
