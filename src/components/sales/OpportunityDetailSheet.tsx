@@ -134,6 +134,32 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
 
   if (!opp) return null;
 
+  const handleDownloadPdf = async (q: QuoteRow) => {
+    setGeneratingPdf(q.id);
+    try {
+      const quote: Quote = {
+        id: q.id,
+        createdAt: q.created_at,
+        client: q.client_data as ClientData,
+        items: q.items as QuoteItem[],
+        payment: q.payment as PaymentConditions,
+        subtotal: q.subtotal,
+        discount: q.discount,
+        total: q.total,
+        status: q.status as any,
+        version: q.version,
+        parentQuoteId: q.parent_quote_id,
+      };
+      await generateQuotePDF(quote);
+      toast.success('PDF gerado com sucesso');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar PDF');
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
+
   const pendingActs = activities.filter(a => a.status === 'pendente' || a.status === 'agendada' || a.status === 'em_andamento');
   const doneActs = activities.filter(a => a.status === 'concluida' || a.status === 'realizada');
 
