@@ -19,15 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 const CARRIER_OPTIONS = [
-  'A combinar',
-  'Braspress',
-  'Jamef',
-  'TNT',
-  'Jadlog',
-  'Rodonaves',
-  'Patrus',
-  'Total Express',
-  'Outro',
+  'VIPEX',
+  'SEGATTO',
+  '__other__',
 ];
 
 const INSTALLMENT_OPTIONS = [
