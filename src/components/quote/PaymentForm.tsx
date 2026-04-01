@@ -19,15 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 const CARRIER_OPTIONS = [
-  'A combinar',
-  'Braspress',
-  'Jamef',
-  'TNT',
-  'Jadlog',
-  'Rodonaves',
-  'Patrus',
-  'Total Express',
-  'Outro',
+  'VIPEX',
+  'SEGATTO',
+  '__other__',
 ];
 
 const INSTALLMENT_OPTIONS = [
@@ -435,21 +429,48 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label className="text-xs text-muted-foreground">Transportadora</Label>
-              <Select
-                value={payment.carrier || ''}
-                onValueChange={(value) => updateField('carrier', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a transportadora..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARRIER_OPTIONS.map((carrier) => (
-                    <SelectItem key={carrier} value={carrier}>
-                      {carrier}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(() => {
+                const isCustom = payment.carrier && !['VIPEX', 'SEGATTO', ''].includes(payment.carrier);
+                if (isCustom) {
+                  return (
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={payment.carrier || ''}
+                        onChange={(e) => updateField('carrier', e.target.value)}
+                        placeholder="Nome da transportadora..."
+                      />
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap px-2"
+                        onClick={() => updateField('carrier', '')}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <Select
+                    value={payment.carrier || ''}
+                    onValueChange={(value) => {
+                      if (value === '__other__') {
+                        updateField('carrier', ' ');
+                      } else {
+                        updateField('carrier', value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a transportadora..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VIPEX">VIPEX</SelectItem>
+                      <SelectItem value="SEGATTO">SEGATTO</SelectItem>
+                      <SelectItem value="__other__">Outra (cadastrar)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Tipo de Frete</Label>
