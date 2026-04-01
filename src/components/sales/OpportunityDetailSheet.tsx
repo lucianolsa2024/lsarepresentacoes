@@ -226,18 +226,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
                 size="sm"
                 variant="outline"
                 className="w-full gap-1.5"
-                onClick={() => {
-                  onOpenChange(false);
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('create-activity-for-opportunity', {
-                      detail: {
-                        opportunityId: opp.id,
-                        clientId: opp.clientId,
-                        opportunityTitle: opp.title,
-                      },
-                    }));
-                  }, 300);
-                }}
+                onClick={() => setActivityFormOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" /> Nova Atividade
               </Button>
