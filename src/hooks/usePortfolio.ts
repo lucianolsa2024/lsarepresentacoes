@@ -221,7 +221,12 @@ export function usePortfolio() {
 
   const buildPortfolioClients = useCallback((clients: Client[]): PortfolioClient[] => {
     const now = new Date();
-    return clients.map(client => {
+    // Only include lojista clients in the portfolio
+    const lojistas = clients.filter(c => {
+      const ct = c.clientType;
+      return !ct || ct === 'lojista_alto' || ct === 'lojista_medio';
+    });
+    return lojistas.map(client => {
       const lastVisitStr = lastVisits[client.id];
       const daysSinceLastVisit = lastVisitStr
         ? Math.floor((now.getTime() - new Date(lastVisitStr + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
