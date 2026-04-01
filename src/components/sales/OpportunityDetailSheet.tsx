@@ -77,6 +77,8 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
+  const [activityFormOpen, setActivityFormOpen] = useState(false);
+  const { addActivity } = useActivities();
 
   const opp = opportunity;
   const client = opp?.clientId ? clients.find(c => c.id === opp.clientId) : null;
