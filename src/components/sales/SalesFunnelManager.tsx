@@ -83,8 +83,8 @@ function CorporateOpportunityCard({
           <User className="h-3 w-3" /> {rep.name}
         </p>
       )}
-      {opp.description && opp.description.includes('Obra:') && (
-        <p className="text-xs text-muted-foreground truncate">🏗️ {opp.description.replace(/.*Obra:\s*/, '').split('\n')[0]}</p>
+      {projectNames?.[opp.clientId || ''] && (
+        <p className="text-xs text-muted-foreground truncate">🏗️ {projectNames[opp.clientId || '']}</p>
       )}
       {opp.nextFollowupDate && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
