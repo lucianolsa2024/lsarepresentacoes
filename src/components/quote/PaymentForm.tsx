@@ -429,56 +429,48 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
               <Label className="text-xs text-muted-foreground">Transportadora</Label>
-              {payment.carrier && !CARRIER_OPTIONS.includes(payment.carrier) && payment.carrier !== '__other__' ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={payment.carrier}
-                    onChange={(e) => updateField('carrier', e.target.value)}
-                    placeholder="Nome da transportadora..."
-                  />
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
-                    onClick={() => updateField('carrier', '')}
+              {(() => {
+                const isCustom = payment.carrier && !['VIPEX', 'SEGATTO', ''].includes(payment.carrier);
+                if (isCustom) {
+                  return (
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={payment.carrier || ''}
+                        onChange={(e) => updateField('carrier', e.target.value)}
+                        placeholder="Nome da transportadora..."
+                      />
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap px-2"
+                        onClick={() => updateField('carrier', '')}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <Select
+                    value={payment.carrier || ''}
+                    onValueChange={(value) => {
+                      if (value === '__other__') {
+                        updateField('carrier', ' ');
+                      } else {
+                        updateField('carrier', value);
+                      }
+                    }}
                   >
-                    Voltar
-                  </button>
-                </div>
-              ) : (
-                <Select
-                  value={CARRIER_OPTIONS.includes(payment.carrier || '') ? payment.carrier || '' : ''}
-                  onValueChange={(value) => {
-                    if (value === '__other__') {
-                      updateField('carrier', ' ');
-                      setTimeout(() => updateField('carrier', ''), 0);
-                      updateField('carrier', '');
-                    } else {
-                      updateField('carrier', value);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a transportadora..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CARRIER_OPTIONS.filter(c => c !== '__other__').map((carrier) => (
-                      <SelectItem key={carrier} value={carrier}>
-                        {carrier}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__other__">Outra (cadastrar)</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              {payment.carrier === '' && (
-                <Input
-                  autoFocus
-                  value=""
-                  onChange={(e) => updateField('carrier', e.target.value)}
-                  placeholder="Digite o nome da transportadora..."
-                  className="mt-1"
-                />
-              )}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a transportadora..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VIPEX">VIPEX</SelectItem>
+                      <SelectItem value="SEGATTO">SEGATTO</SelectItem>
+                      <SelectItem value="__other__">Outra (cadastrar)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Tipo de Frete</Label>
