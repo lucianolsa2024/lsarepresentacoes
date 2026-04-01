@@ -389,7 +389,7 @@ export function SalesFunnelManager() {
                         <Draggable key={opp.id} draggableId={opp.id} index={index}>
                           {(provided) => (
                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} onView={setViewingOpp} />
+                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} onView={setViewingOpp} projectNames={projectNames} />
                             </div>
                           )}
                         </Draggable>
