@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSalesOpportunities, SalesOpportunity, FUNNEL_STAGES_CORPORATIVO, LOST_REASONS, OpportunityFormData } from '@/hooks/useSalesOpportunities';
 import { useClients, Client } from '@/hooks/useClients';
@@ -40,12 +41,13 @@ function getDaysInStage(stageChangedAt: string): number {
 }
 
 function CorporateOpportunityCard({
-  opp, clients, representatives, onEdit, onDelete, onView,
+  opp, clients, representatives, onEdit, onDelete, onView, projectNames,
 }: {
   opp: SalesOpportunity; clients: Client[];
   representatives: { email: string; name: string }[];
   onEdit: (opp: SalesOpportunity) => void; onDelete: (id: string) => void;
   onView: (opp: SalesOpportunity) => void;
+  projectNames?: Record<string, string>;
 }) {
   const client = opp.clientId ? clients.find(c => c.id === opp.clientId) : null;
   const rep = opp.ownerEmail ? representatives.find(r => r.email === opp.ownerEmail) : null;
@@ -81,6 +83,9 @@ function CorporateOpportunityCard({
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <User className="h-3 w-3" /> {rep.name}
         </p>
+      )}
+      {projectNames?.[opp.clientId || ''] && (
+        <p className="text-xs text-muted-foreground truncate">🏗️ {projectNames[opp.clientId || '']}</p>
       )}
       {opp.nextFollowupDate && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -119,8 +124,31 @@ export function SalesFunnelManager() {
     opp: SalesOpportunity;
     destStage: string;
   } | null>(null);
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
 
-  // Listen for external edit-opportunity events (from ClientDetailPanel)
+  // Fetch project names from quotes for all client IDs in opportunities
+  useEffect(() => {
+    const corpOpps = opportunities.filter(o => o.funnelType === 'corporativo' && o.clientId);
+    const clientIds = [...new Set(corpOpps.map(o => o.clientId!))];
+    if (clientIds.length === 0) return;
+    
+    supabase
+      .from('quotes')
+      .select('client_id, payment')
+      .in('client_id', clientIds)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach((q: any) => {
+          const pn = q.payment?.projectName;
+          if (pn && q.client_id && !map[q.client_id]) {
+            map[q.client_id] = pn;
+          }
+        });
+        setProjectNames(map);
+      });
+  }, [opportunities]);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const opp = (e as CustomEvent).detail as SalesOpportunity;
@@ -361,7 +389,7 @@ export function SalesFunnelManager() {
                         <Draggable key={opp.id} draggableId={opp.id} index={index}>
                           {(provided) => (
                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} onView={setViewingOpp} />
+                              <CorporateOpportunityCard opp={opp} clients={clients} representatives={representatives} onEdit={handleEdit} onDelete={deleteOpportunity} onView={setViewingOpp} projectNames={projectNames} />
                             </div>
                           )}
                         </Draggable>

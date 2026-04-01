@@ -7,7 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { SalesOpportunity, FUNNEL_STAGES_CORPORATIVO } from '@/hooks/useSalesOpportunities';
 import { Client } from '@/hooks/useClients';
-import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { useActivities } from '@/hooks/useActivities';
+import { ActivityForm } from '@/components/activities/ActivityForm';
+import { CreateActivityInput } from '@/types/activity';
+import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2, Plus } from 'lucide-react';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Quote, QuoteItem, ClientData, PaymentConditions } from '@/types/quote';
 import { toast } from 'sonner';
@@ -74,6 +77,8 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
+  const [activityFormOpen, setActivityFormOpen] = useState(false);
+  const { addActivity } = useActivities();
 
   const opp = opportunity;
   const client = opp?.clientId ? clients.find(c => c.id === opp.clientId) : null;
@@ -217,6 +222,14 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
           <ScrollArea className="h-[calc(100vh-280px)]">
             {/* Activities tab */}
             <TabsContent value="activities" className="p-4 space-y-4 mt-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full gap-1.5"
+                onClick={() => setActivityFormOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" /> Nova Atividade
+              </Button>
               {loading ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
               ) : activities.length === 0 ? (
@@ -299,6 +312,42 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             </TabsContent>
           </ScrollArea>
         </Tabs>
+
+        {/* Activity creation form */}
+        <ActivityForm
+          open={activityFormOpen}
+          onOpenChange={setActivityFormOpen}
+          onSubmit={async (data: CreateActivityInput) => {
+            // Inject the sales_opportunity_id
+            const insertData: Record<string, any> = {
+              ...data,
+              activity_category: 'crm',
+              client_id: opp.clientId || data.client_id || null,
+              sales_opportunity_id: opp.id,
+            };
+            if ((insertData as any).status === undefined) insertData.status = 'pendente';
+            
+            const { error } = await supabase
+              .from('activities')
+              .insert(insertData as any);
+
+            if (error) {
+              toast.error('Erro ao criar atividade');
+              console.error(error);
+              return;
+            }
+            toast.success('Atividade criada!');
+            // Refresh activities list
+            const { data: acts } = await supabase
+              .from('activities')
+              .select('id, title, type, status, due_date, due_time, completed_at, completed_notes, description, priority')
+              .eq('sales_opportunity_id', opp.id)
+              .order('due_date', { ascending: false });
+            setActivities((acts as ActivityRow[]) || []);
+          }}
+          defaultClientId={opp.clientId || undefined}
+          defaultCategory="crm"
+        />
       </SheetContent>
     </Sheet>
   );
