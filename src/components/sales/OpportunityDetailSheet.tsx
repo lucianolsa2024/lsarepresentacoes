@@ -312,6 +312,42 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             </TabsContent>
           </ScrollArea>
         </Tabs>
+
+        {/* Activity creation form */}
+        <ActivityForm
+          open={activityFormOpen}
+          onOpenChange={setActivityFormOpen}
+          onSubmit={async (data: CreateActivityInput) => {
+            // Inject the sales_opportunity_id
+            const insertData: Record<string, any> = {
+              ...data,
+              activity_category: 'crm',
+              client_id: opp.clientId || data.client_id || null,
+              sales_opportunity_id: opp.id,
+            };
+            if ((insertData as any).status === undefined) insertData.status = 'pendente';
+            
+            const { error } = await supabase
+              .from('activities')
+              .insert(insertData as any);
+
+            if (error) {
+              toast.error('Erro ao criar atividade');
+              console.error(error);
+              return;
+            }
+            toast.success('Atividade criada!');
+            // Refresh activities list
+            const { data: acts } = await supabase
+              .from('activities')
+              .select('id, title, type, status, due_date, due_time, completed_at, completed_notes, description, priority')
+              .eq('sales_opportunity_id', opp.id)
+              .order('due_date', { ascending: false });
+            setActivities((acts as ActivityRow[]) || []);
+          }}
+          defaultClientId={opp.clientId || undefined}
+          defaultCategory="crm"
+        />
       </SheetContent>
     </Sheet>
   );
