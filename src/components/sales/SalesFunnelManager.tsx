@@ -123,8 +123,31 @@ export function SalesFunnelManager() {
     opp: SalesOpportunity;
     destStage: string;
   } | null>(null);
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
 
-  // Listen for external edit-opportunity events (from ClientDetailPanel)
+  // Fetch project names from quotes for all client IDs in opportunities
+  useEffect(() => {
+    const corpOpps = opportunities.filter(o => o.funnelType === 'corporativo' && o.clientId);
+    const clientIds = [...new Set(corpOpps.map(o => o.clientId!))];
+    if (clientIds.length === 0) return;
+    
+    supabase
+      .from('quotes')
+      .select('client_id, payment')
+      .in('client_id', clientIds)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach((q: any) => {
+          const pn = q.payment?.projectName;
+          if (pn && q.client_id && !map[q.client_id]) {
+            map[q.client_id] = pn;
+          }
+        });
+        setProjectNames(map);
+      });
+  }, [opportunities]);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const opp = (e as CustomEvent).detail as SalesOpportunity;
