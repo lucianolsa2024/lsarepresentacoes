@@ -923,7 +923,47 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
               </div>
             )}
 
-            {(status === 'clearing' || status === 'parsing' || status === 'importing') && (
+            {status === 'idle' && importMode === 'csv' && (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <p className="font-medium">Formato esperado do CSV:</p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    marca, categoria, modelo, variante, tamanho_label, comprimento_m, largura_m, altura_m, acabamento_grupo, acabamento_detalhe, preco
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <strong>acabamento_grupo</strong>: Espelho/Vidro, Laca/Lamina, Marmore Especial, Marmore Normal, Recoro
+                  </p>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Selecionar arquivo CSV
+                </Button>
+                
+                {csvPreview && (
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                    <p className="font-medium text-sm">Prévia do arquivo:</p>
+                    <p className="text-sm"><strong>{csvPreview.rows}</strong> linhas de dados</p>
+                    <p className="text-sm">Marcas: {csvPreview.factories.join(', ') || '—'}</p>
+                    <p className="text-sm">Produtos: {csvPreview.products.join(', ')}{csvPreview.products.length >= 10 ? '...' : ''}</p>
+                  </div>
+                )}
+                
+                <Button 
+                  onClick={handleCsvImport} 
+                  className="w-full"
+                  disabled={!csvPreview}
+                >
+                  Importar CSV
+                </Button>
+              </div>
+            )}
+
+
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
