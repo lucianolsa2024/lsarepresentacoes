@@ -49,19 +49,17 @@ export function createQuoteReminderUrl(quote: Quote): string | null {
   const closingDate = new Date(quote.payment.estimatedClosingDate);
   closingDate.setHours(9, 0, 0, 0);
   
-  const clientName = quote.client.company || quote.client.name;
-  const quoteNumber = quote.id.slice(0, 8).toUpperCase();
-  const subject = `Fechamento Orçamento - ${clientName} #${quoteNumber}`;
+  const { getQuoteLabel } = await import('@/utils/quoteLabel');
+  const label = getQuoteLabel(quote);
+  const subject = `Fechamento ${label}`;
   const totalFormatted = quote.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   
   const body = [
     `Lembrete de fechamento de orçamento`,
     ``,
-    `Cliente: ${clientName}`,
+    `${label}`,
     `Valor: ${totalFormatted}`,
     `Itens: ${quote.items.length}`,
-    ``,
-    `Orçamento #${quoteNumber}`,
   ].join('\n');
   
   return generateOutlookCalendarUrl({ subject, startDate: closingDate, body });
