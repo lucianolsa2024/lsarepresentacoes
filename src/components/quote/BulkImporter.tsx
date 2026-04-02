@@ -831,15 +831,26 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
   return (
     <>
-      <div className="flex gap-2">
-        <Button variant="default" onClick={() => { setImportMode('full'); setIsOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+      <div className="flex gap-2 flex-wrap">
+        <Button variant="default" onClick={() => { setImportMode('full'); setIsOpen(true); }} className="bg-primary hover:bg-primary/90">
           <Database className="h-4 w-4 mr-2" />
           Atualizar Base Completa
         </Button>
         <Button variant="outline" onClick={() => { setImportMode('individual'); setIsOpen(true); }}>
           <FilePlus className="h-4 w-4 mr-2" />
-          Adicionar Arquivo
+          Adicionar Arquivo Excel
         </Button>
+        <Button variant="outline" onClick={() => { setImportMode('csv'); setIsOpen(true); }}>
+          <Upload className="h-4 w-4 mr-2" />
+          Importar CSV
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleCsvFileSelect}
+        />
       </div>
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
