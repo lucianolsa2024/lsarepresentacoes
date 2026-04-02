@@ -696,7 +696,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
   // ======================== END CSV IMPORT LOGIC ========================
 
-
+  const handleBulkImport = async () => {
     setIsProcessing(true);
     setStatus('clearing');
     setProgress(5);
