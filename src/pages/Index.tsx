@@ -344,14 +344,6 @@ const Index = () => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
               <img src={logoLsa} alt="LSA Representações" className="h-10 sm:h-14 w-auto" />
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-3xl font-bold text-primary mb-0.5 sm:mb-2 truncate">
-                  Sistema LSA
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                  Gestão LSA
-                </p>
-              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <span className="text-xs text-muted-foreground hidden md:block">
