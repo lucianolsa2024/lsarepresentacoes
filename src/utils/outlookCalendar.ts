@@ -3,6 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { Quote } from '@/types/quote';
 import { RouteWithVisits, RouteVisit, RouteClient } from '@/types/route';
 import { formatAddress } from '@/utils/mapUtils';
+import { getQuoteLabel } from '@/utils/quoteLabel';
 
 export interface OutlookCalendarParams {
   subject: string;
