@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Database, CheckCircle2, AlertCircle, Loader2, FilePlus } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, Loader2, FilePlus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BulkImporterProps {
