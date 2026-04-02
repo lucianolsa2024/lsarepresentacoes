@@ -133,13 +133,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "activities_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "v_sales_base"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "activities_parent_fkey"
             columns: ["parent_activity_id"]
             isOneToOne: false
@@ -1033,6 +1026,96 @@ export type Database = {
           },
         ]
       }
+      orders_history: {
+        Row: {
+          client_id: string | null
+          client_name: string
+          created_at: string
+          delivery_date: string | null
+          dimensions: string | null
+          fabric: string | null
+          fabric_arrival_date: string | null
+          fabric_provided: string | null
+          id: string
+          issue_date: string
+          nf_number: string | null
+          nf_pdf_url: string | null
+          oc: string | null
+          order_number: string | null
+          order_type: string | null
+          owner_email: string | null
+          payment_terms: string | null
+          pdf_url: string | null
+          price: number | null
+          product: string | null
+          quantity: number | null
+          representative: string | null
+          reschedule_date: string | null
+          reschedule_history: Json | null
+          status: string
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_name: string
+          created_at?: string
+          delivery_date?: string | null
+          dimensions?: string | null
+          fabric?: string | null
+          fabric_arrival_date?: string | null
+          fabric_provided?: string | null
+          id?: string
+          issue_date: string
+          nf_number?: string | null
+          nf_pdf_url?: string | null
+          oc?: string | null
+          order_number?: string | null
+          order_type?: string | null
+          owner_email?: string | null
+          payment_terms?: string | null
+          pdf_url?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          representative?: string | null
+          reschedule_date?: string | null
+          reschedule_history?: Json | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string
+          created_at?: string
+          delivery_date?: string | null
+          dimensions?: string | null
+          fabric?: string | null
+          fabric_arrival_date?: string | null
+          fabric_provided?: string | null
+          id?: string
+          issue_date?: string
+          nf_number?: string | null
+          nf_pdf_url?: string | null
+          oc?: string | null
+          order_number?: string | null
+          order_type?: string | null
+          owner_email?: string | null
+          payment_terms?: string | null
+          pdf_url?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          representative?: string | null
+          reschedule_date?: string | null
+          reschedule_history?: Json | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_modulations: {
         Row: {
           created_at: string | null
@@ -1625,15 +1708,7 @@ export type Database = {
           volume_change_pct: number | null
           volume_prev_90d: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_client_monthly_12m: {
         Row: {
@@ -1690,15 +1765,7 @@ export type Database = {
           volume_12m: number | null
           volume_share_pct: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_client_suppliers_12m: {
         Row: {
@@ -1733,15 +1800,7 @@ export type Database = {
           ticket_avg_12m: number | null
           volume_12m: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_rep_90d_compare: {
         Row: {
@@ -1772,15 +1831,7 @@ export type Database = {
           ticket_avg_12m: number | null
           volume_12m: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_rep_month_dashboard: {
         Row: {
@@ -1923,15 +1974,7 @@ export type Database = {
           ticket_90d: number | null
           volume_90d: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_sales_90d_by_client: {
         Row: {
@@ -1943,15 +1986,7 @@ export type Database = {
           ticket_90d: number | null
           volume_90d: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_sales_base: {
         Row: {
@@ -1971,15 +2006,7 @@ export type Database = {
           supplier: string | null
           year_ref: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_sales_mtd_by_client: {
         Row: {
@@ -1991,15 +2018,7 @@ export type Database = {
           ticket_mtd: number | null
           volume_mtd: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_sales_mtd_by_representative: {
         Row: {
