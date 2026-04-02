@@ -361,7 +361,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`w-full grid ${isRep === false ? (isAdmin ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6') : (isAdmin ? 'grid-cols-4 sm:grid-cols-8' : 'grid-cols-4 sm:grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
+            <TabsList className={`hidden md:grid w-full ${isRep === false ? (isAdmin ? 'grid-cols-7' : 'grid-cols-6') : (isAdmin ? 'grid-cols-8' : 'grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
