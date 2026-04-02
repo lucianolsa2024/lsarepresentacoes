@@ -502,6 +502,5 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
   // Save
-  const { getQuoteFileName } = await import('@/utils/quoteLabel');
   doc.save(getQuoteFileName(quote));
 }
