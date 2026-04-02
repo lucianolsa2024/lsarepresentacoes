@@ -857,11 +857,13 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {importMode === 'full' ? 'Atualizar Base de Produtos' : 'Importar Arquivo Individual'}
+              {importMode === 'full' ? 'Atualizar Base de Produtos' : importMode === 'csv' ? 'Importar CSV de Produtos' : 'Importar Arquivo Individual'}
             </DialogTitle>
             <DialogDescription>
               {importMode === 'full' 
                 ? 'Esta ação irá limpar toda a base atual e importar os produtos dos 3 arquivos Excel pré-carregados.'
+                : importMode === 'csv'
+                ? 'Faça upload de um CSV no formato: marca, categoria, modelo, variante, tamanho_label, acabamento_grupo, preco'
                 : 'Selecione os arquivos que deseja importar. Os produtos existentes serão atualizados ou novos serão adicionados.'}
             </DialogDescription>
           </DialogHeader>
