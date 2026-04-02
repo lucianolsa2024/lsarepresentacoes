@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import logoLsa from '@/assets/logo-lsa.png';
+import logoLsa from '@/assets/logo-lsa.jpg';
 import {
   ClientData,
   QuoteItem,
