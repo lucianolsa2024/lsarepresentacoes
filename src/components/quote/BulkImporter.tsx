@@ -65,6 +65,9 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
   const [stats, setStats] = useState({ products: 0, modulations: 0, sizes: 0 });
   const [errorMessage, setErrorMessage] = useState('');
   const [currentFile, setCurrentFile] = useState('');
+  const [csvPreview, setCsvPreview] = useState<{ rows: number; products: string[]; factories: string[] } | null>(null);
+  const csvFileRef = useRef<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
     setProgress(0);
@@ -73,6 +76,8 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     setErrorMessage('');
     setCurrentFile('');
     setSelectedFiles([]);
+    setCsvPreview(null);
+    csvFileRef.current = null;
   };
 
   const toggleFileSelection = (fileId: string) => {
