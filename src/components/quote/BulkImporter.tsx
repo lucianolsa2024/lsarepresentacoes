@@ -964,6 +964,7 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
             )}
 
 
+            {(status === 'clearing' || status === 'parsing' || status === 'importing') && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
