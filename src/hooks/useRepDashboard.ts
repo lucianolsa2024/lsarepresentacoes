@@ -331,11 +331,12 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
           const goalAchievedPct = goalValue > 0 ? soldMonth / goalValue : null;
 
           // For historical months, calculate the next month end
-          const ms = new Date(monthStart);
-          const nextMonth = new Date(ms.getFullYear(), ms.getMonth() + 1, 1);
-          const monthEnd = nextMonth.toISOString().slice(0, 10);
+          const [hy, hm] = monthStart.split('-').map(Number);
+          const hNextM = hm === 12 ? 1 : hm + 1;
+          const hNextY = hm === 12 ? hy + 1 : hy;
+          const monthEnd = `${hNextY}-${String(hNextM).padStart(2, '0')}-01`;
           // Days in month
-          const lastDay = new Date(ms.getFullYear(), ms.getMonth() + 1, 0).getDate();
+          const lastDay = new Date(hy, hm, 0).getDate();
 
           setMonthData({
             owner_email: email,
