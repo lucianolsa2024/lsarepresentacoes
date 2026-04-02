@@ -111,9 +111,11 @@ async function fetchMonthFromSalesBase(
   email: string,
   monthStart: string,
 ): Promise<{ sold: number; bySupplier: MtdBySupplier[]; byClient: MtdByClient[] }> {
-  const ms = new Date(monthStart);
-  const nextMonth = new Date(ms.getFullYear(), ms.getMonth() + 1, 1);
-  const monthEnd = nextMonth.toISOString().slice(0, 10);
+  // Parse date parts manually to avoid timezone issues
+  const [y, m] = monthStart.split('-').map(Number);
+  const nextM = m === 12 ? 1 : m + 1;
+  const nextY = m === 12 ? y + 1 : y;
+  const monthEnd = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
 
   const { data, error } = await supabase
     .from('v_sales_base')
