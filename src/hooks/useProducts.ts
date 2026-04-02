@@ -127,7 +127,7 @@ export function useProducts() {
       };
       let allSizesData: SizeRow[] = [];
       let offset = 0;
-      const batchSize = 1000;
+      // batchSize already declared above
       let hasMore = true;
       
       while (hasMore) {
