@@ -42,6 +42,7 @@ import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
@@ -337,7 +338,7 @@ const Index = () => {
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 pb-20 md:pb-0">
       <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
         {/* Header */}
         <div className="bg-card rounded-lg shadow-lg p-3 sm:p-6 mb-4 sm:mb-6">
@@ -360,7 +361,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`w-full grid ${isRep === false ? (isAdmin ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6') : (isAdmin ? 'grid-cols-4 sm:grid-cols-8' : 'grid-cols-4 sm:grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
+            <TabsList className={`hidden md:grid w-full ${isRep === false ? (isAdmin ? 'grid-cols-7' : 'grid-cols-6') : (isAdmin ? 'grid-cols-8' : 'grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -831,6 +832,12 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isRep={isRep}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };
