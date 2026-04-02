@@ -157,8 +157,8 @@ export function useProducts() {
       });
       
       // Group modulations by product_id
-      const modulationsByProduct: Record<string, (typeof modulationsData[0] & { sizes: ModulationSize[] })[]> = {};
-      modulationsData?.forEach(mod => {
+      const modulationsByProduct: Record<string, (typeof allModulationsData[0] & { sizes: ModulationSize[] })[]> = {};
+      allModulationsData?.forEach(mod => {
         if (!modulationsByProduct[mod.product_id]) {
           modulationsByProduct[mod.product_id] = [];
         }
