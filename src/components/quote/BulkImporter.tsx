@@ -445,11 +445,18 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
   // ======================== CSV IMPORT LOGIC ========================
 
   const ACABAMENTO_TO_PRICE_COL: Record<string, string> = {
-    'espelho/vidro': 'FX B',
+    'vidro fosco/clear': 'FX B',
     'laca/lamina': 'FX C',
     'marmore especial': 'FX D',
     'marmore normal': 'FX E',
     'recoro': 'FX F',
+    'espelho/vidro': 'FX G',
+    'laca/lamina - espelho bronze/fume': 'FX H',
+    'laca/lamina - espelho prata': 'FX I',
+    'recoro - espelho bronze/fume': 'FX J',
+    'recoro - espelho prata': 'FX 3D',
+    'marmore/porcelana especial': 'FX D',
+    'marmore/porcelana normal': 'FX E',
   };
 
   const parseCsvText = (text: string) => {
