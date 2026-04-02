@@ -442,7 +442,261 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     }
   };
 
-  const handleBulkImport = async () => {
+  // ======================== CSV IMPORT LOGIC ========================
+
+  const ACABAMENTO_TO_PRICE_COL: Record<string, string> = {
+    'espelho/vidro': 'FX B',
+    'laca/lamina': 'FX C',
+    'marmore especial': 'FX D',
+    'marmore normal': 'FX E',
+    'recoro': 'FX F',
+  };
+
+  const parseCsvText = (text: string) => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) throw new Error('CSV vazio ou sem dados');
+    
+    // Parse header
+    const headerLine = lines[0];
+    const headers = parseCsvLine(headerLine).map(h => h.toLowerCase().trim());
+    
+    const idx = {
+      marca: headers.indexOf('marca'),
+      categoria: headers.indexOf('categoria'),
+      modelo: headers.indexOf('modelo'),
+      variante: headers.indexOf('variante'),
+      tamanho: headers.indexOf('tamanho_label'),
+      diametro: headers.indexOf('diametro_m'),
+      comprimento: headers.indexOf('comprimento_m'),
+      largura: headers.indexOf('largura_m'),
+      altura: headers.indexOf('altura_m'),
+      acabGrupo: headers.indexOf('acabamento_grupo'),
+      acabDetalhe: headers.indexOf('acabamento_detalhe'),
+      preco: headers.indexOf('preco'),
+      // Support fabric tiers for upholstery CSV
+      faixaTecido: headers.indexOf('faixa_tecido'),
+      baseFinish: headers.indexOf('acabamento_base'),
+    };
+    
+    if (idx.modelo === -1) throw new Error('Coluna "modelo" não encontrada no CSV');
+    if (idx.preco === -1) throw new Error('Coluna "preco" não encontrada no CSV');
+    
+    const isWoodFormat = idx.acabGrupo !== -1;
+    const isUpholsteryFormat = idx.faixaTecido !== -1;
+    
+    // Parse rows and group by product
+    type SizeAccum = {
+      description: string;
+      dimensions: string;
+      length: string;
+      depth: string;
+      height: string;
+      fabricQuantity: number;
+      prices: Record<string, number>;
+    };
+    
+    const productMap = new Map<string, {
+      factory: string;
+      category: string;
+      modMap: Map<string, Map<string, SizeAccum>>;
+    }>();
+    
+    let rowCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      if (cols.length < 3) continue;
+      
+      const factory = idx.marca !== -1 ? cols[idx.marca]?.trim().toUpperCase() || '' : '';
+      const category = idx.categoria !== -1 ? cols[idx.categoria]?.trim() || '' : '';
+      const modelo = cols[idx.modelo]?.trim().toUpperCase() || '';
+      const variante = idx.variante !== -1 ? cols[idx.variante]?.trim() || '' : '';
+      const tamanho = idx.tamanho !== -1 ? cols[idx.tamanho]?.trim() || '' : '';
+      const comprimento = idx.comprimento !== -1 ? cols[idx.comprimento]?.trim() || '' : '';
+      const largura = idx.largura !== -1 ? cols[idx.largura]?.trim() || '' : '';
+      const altura = idx.altura !== -1 ? cols[idx.altura]?.trim() || '' : '';
+      const preco = parseFloat(cols[idx.preco]?.replace(',', '.').replace(/[^\d.]/g, '') || '0') || 0;
+      
+      if (!modelo) continue;
+      rowCount++;
+      
+      // Determine modulation name: use variante if exists, otherwise categoria
+      const modName = variante || category || modelo;
+      
+      // Build size key (tamanho_label or dimensions)
+      const sizeKey = tamanho || [comprimento, largura, altura].filter(Boolean).join('x');
+      const dimensions = [comprimento, largura].filter(Boolean).join(' x ');
+      const description = `${modelo} ${modName} ${sizeKey}`.trim();
+      
+      // Get or create product entry
+      const productKey = `${factory}|${modelo}`;
+      if (!productMap.has(productKey)) {
+        productMap.set(productKey, { factory, category, modMap: new Map() });
+      }
+      const productEntry = productMap.get(productKey)!;
+      
+      if (!productEntry.modMap.has(modName)) {
+        productEntry.modMap.set(modName, new Map());
+      }
+      const sizeMap = productEntry.modMap.get(modName)!;
+      
+      if (!sizeMap.has(sizeKey)) {
+        sizeMap.set(sizeKey, {
+          description,
+          dimensions,
+          length: comprimento,
+          depth: largura,
+          height: altura,
+          fabricQuantity: 0,
+          prices: {},
+        });
+      }
+      
+      const sizeEntry = sizeMap.get(sizeKey)!;
+      
+      if (isWoodFormat && idx.acabGrupo !== -1) {
+        const acabGrupo = cols[idx.acabGrupo]?.trim().toLowerCase() || '';
+        const priceCol = ACABAMENTO_TO_PRICE_COL[acabGrupo];
+        if (priceCol) {
+          sizeEntry.prices[priceCol] = preco;
+        }
+      } else if (isUpholsteryFormat && idx.faixaTecido !== -1) {
+        const faixa = cols[idx.faixaTecido]?.trim().toUpperCase() || '';
+        // Map to standard tier names
+        const normalized = faixa.replace(/\s+/g, ' ');
+        sizeEntry.prices[normalized] = preco;
+      }
+    }
+    
+    // Convert to ParsedProduct[]
+    const products: ParsedProduct[] = [];
+    productMap.forEach((entry, key) => {
+      const modelo = key.split('|')[1];
+      const modulations: ParsedProduct['modulations'] = [];
+      
+      entry.modMap.forEach((sizeMap, modName) => {
+        modulations.push({
+          name: modName.toUpperCase(),
+          sizes: Array.from(sizeMap.values()),
+        });
+      });
+      
+      products.push({
+        name: modelo,
+        factory: entry.factory,
+        category: mapCsvCategory(entry.category),
+        modulations,
+      });
+    });
+    
+    return { products, rowCount };
+  };
+  
+  const mapCsvCategory = (cat: string): string => {
+    const lower = cat.toLowerCase();
+    if (lower.includes('aparador') || lower.includes('buffet')) return 'Buffets';
+    if (lower.includes('mesa de centro')) return 'Mesas de Centro';
+    if (lower.includes('mesa lateral')) return 'Mesas Laterais';
+    if (lower.includes('mesa de cabeceira') || lower.includes('cabeceira') || lower.includes('criado')) return 'Mesas de Cabeceira';
+    if (lower.includes('mesa')) return 'Mesas';
+    if (lower.includes('sofá') || lower.includes('sofa')) return 'Sofás';
+    if (lower.includes('poltrona')) return 'Poltronas';
+    if (lower.includes('cadeira')) return 'Cadeiras';
+    if (lower.includes('puff')) return 'Puffs';
+    if (lower.includes('banqueta')) return 'Banquetas';
+    if (lower.includes('cama')) return 'Outros';
+    if (lower.includes('tapete')) return 'Tapetes';
+    if (lower.includes('espelho')) return 'Outros';
+    return 'Outros';
+  };
+  
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  };
+
+  const handleCsvFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    csvFileRef.current = file;
+    
+    try {
+      const text = await file.text();
+      const { products, rowCount } = parseCsvText(text);
+      const factories = [...new Set(products.map(p => p.factory))];
+      const productNames = products.map(p => p.name).slice(0, 10);
+      
+      setCsvPreview({
+        rows: rowCount,
+        products: productNames,
+        factories,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao ler CSV');
+      csvFileRef.current = null;
+    }
+  };
+  
+  const handleCsvImport = async () => {
+    if (!csvFileRef.current) {
+      toast.error('Selecione um arquivo CSV');
+      return;
+    }
+    
+    setIsProcessing(true);
+    setStatus('parsing');
+    setProgress(10);
+    
+    try {
+      const text = await csvFileRef.current.text();
+      setCurrentFile(`Processando ${csvFileRef.current.name}...`);
+      const { products } = parseCsvText(text);
+      
+      setProgress(30);
+      setStatus('importing');
+      setCurrentFile(`Importando ${products.length} produtos...`);
+      
+      await importToDatabase(products, 30, 95);
+      
+      setStatus('success');
+      setProgress(100);
+      setCurrentFile('');
+      toast.success(`Importação CSV concluída! ${stats.products} produtos, ${stats.sizes} configurações.`);
+      onImportComplete();
+    } catch (error) {
+      console.error('CSV import error:', error);
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
+      toast.error('Erro ao importar CSV');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ======================== END CSV IMPORT LOGIC ========================
+
+
     setIsProcessing(true);
     setStatus('clearing');
     setProgress(5);
