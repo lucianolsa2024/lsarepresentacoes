@@ -36,7 +36,7 @@ interface ParsedProduct {
   }[];
 }
 
-type ImportMode = 'full' | 'individual';
+type ImportMode = 'full' | 'individual' | 'csv';
 
 interface FileOption {
   id: string;
