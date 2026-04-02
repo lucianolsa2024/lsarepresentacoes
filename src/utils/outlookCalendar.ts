@@ -51,7 +51,6 @@ export function createQuoteReminderUrl(quote: Quote): string | null {
   closingDate.setHours(9, 0, 0, 0);
   
   const label = getQuoteLabel(quote);
-  const label = getQuoteLabel(quote);
   const subject = `Fechamento ${label}`;
   const totalFormatted = quote.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   
