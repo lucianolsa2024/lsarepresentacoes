@@ -42,6 +42,7 @@ import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
