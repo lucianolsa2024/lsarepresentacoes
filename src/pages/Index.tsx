@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import logoLsa from '@/assets/logo-lsa.png';
 import {
   ClientData,
   QuoteItem,
