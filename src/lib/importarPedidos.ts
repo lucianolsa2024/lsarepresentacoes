@@ -163,17 +163,18 @@ export async function importarPedidosExcel(file: File): Promise<ImportacaoResult
 
   // Ler o arquivo
   const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', raw: true });
 
   // Usar a primeira aba (Export)
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
 
   // Converter para JSON (cabeçalho na primeira linha)
+  // IMPORTANTE: raw: true para evitar formatação de números com separador de milhar
+  // que causa valores como "2.658" serem interpretados como 2.658 ao invés de 2658
   const raw: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
-    raw: false,
+    raw: true,
     defval: null,
-    dateNF: 'yyyy-mm-dd',
   });
 
   const linhas: PedidoLinha[] = [];
