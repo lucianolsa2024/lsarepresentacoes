@@ -72,12 +72,32 @@ export function useProducts() {
       
       if (productsError) throw productsError;
       
-      // Fetch modulations
-      const { data: modulationsData, error: modulationsError } = await supabase
-        .from('product_modulations')
-        .select('*');
-      
-      if (modulationsError) throw modulationsError;
+      // Fetch modulations in batches to handle more than 1000 records
+      let allModulationsData: {
+        id: string;
+        product_id: string;
+        name: string;
+        description: string | null;
+        created_at: string | null;
+      }[] = [];
+      {
+        let modOffset = 0;
+        let modHasMore = true;
+        while (modHasMore) {
+          const { data: modBatch, error: modulationsError } = await supabase
+            .from('product_modulations')
+            .select('*')
+            .range(modOffset, modOffset + batchSize - 1);
+          if (modulationsError) throw modulationsError;
+          if (modBatch && modBatch.length > 0) {
+            allModulationsData = [...allModulationsData, ...modBatch];
+            modOffset += batchSize;
+            modHasMore = modBatch.length === batchSize;
+          } else {
+            modHasMore = false;
+          }
+        }
+      }
       
       // Fetch sizes in batches to handle more than 1000 records
       type SizeRow = {
