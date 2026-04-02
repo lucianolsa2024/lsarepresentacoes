@@ -35,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getQuoteLabel } from '@/utils/quoteLabel';
 import {
   Search,
   Download,
