@@ -1,0 +1,1 @@
+ALTER VIEW public.v_rep_month_dashboard SET (security_invoker = true);
