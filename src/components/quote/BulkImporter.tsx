@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Database, CheckCircle2, AlertCircle, Loader2, FilePlus } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, Loader2, FilePlus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BulkImporterProps {
@@ -36,7 +36,7 @@ interface ParsedProduct {
   }[];
 }
 
-type ImportMode = 'full' | 'individual';
+type ImportMode = 'full' | 'individual' | 'csv';
 
 interface FileOption {
   id: string;
@@ -65,6 +65,9 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
   const [stats, setStats] = useState({ products: 0, modulations: 0, sizes: 0 });
   const [errorMessage, setErrorMessage] = useState('');
   const [currentFile, setCurrentFile] = useState('');
+  const [csvPreview, setCsvPreview] = useState<{ rows: number; products: string[]; factories: string[] } | null>(null);
+  const csvFileRef = useRef<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
     setProgress(0);
@@ -73,6 +76,8 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     setErrorMessage('');
     setCurrentFile('');
     setSelectedFiles([]);
+    setCsvPreview(null);
+    csvFileRef.current = null;
   };
 
   const toggleFileSelection = (fileId: string) => {
@@ -437,7 +442,261 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
     }
   };
 
-  const handleBulkImport = async () => {
+  // ======================== CSV IMPORT LOGIC ========================
+
+  const ACABAMENTO_TO_PRICE_COL: Record<string, string> = {
+    'espelho/vidro': 'FX B',
+    'laca/lamina': 'FX C',
+    'marmore especial': 'FX D',
+    'marmore normal': 'FX E',
+    'recoro': 'FX F',
+  };
+
+  const parseCsvText = (text: string) => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) throw new Error('CSV vazio ou sem dados');
+    
+    // Parse header
+    const headerLine = lines[0];
+    const headers = parseCsvLine(headerLine).map(h => h.toLowerCase().trim());
+    
+    const idx = {
+      marca: headers.indexOf('marca'),
+      categoria: headers.indexOf('categoria'),
+      modelo: headers.indexOf('modelo'),
+      variante: headers.indexOf('variante'),
+      tamanho: headers.indexOf('tamanho_label'),
+      diametro: headers.indexOf('diametro_m'),
+      comprimento: headers.indexOf('comprimento_m'),
+      largura: headers.indexOf('largura_m'),
+      altura: headers.indexOf('altura_m'),
+      acabGrupo: headers.indexOf('acabamento_grupo'),
+      acabDetalhe: headers.indexOf('acabamento_detalhe'),
+      preco: headers.indexOf('preco'),
+      // Support fabric tiers for upholstery CSV
+      faixaTecido: headers.indexOf('faixa_tecido'),
+      baseFinish: headers.indexOf('acabamento_base'),
+    };
+    
+    if (idx.modelo === -1) throw new Error('Coluna "modelo" não encontrada no CSV');
+    if (idx.preco === -1) throw new Error('Coluna "preco" não encontrada no CSV');
+    
+    const isWoodFormat = idx.acabGrupo !== -1;
+    const isUpholsteryFormat = idx.faixaTecido !== -1;
+    
+    // Parse rows and group by product
+    type SizeAccum = {
+      description: string;
+      dimensions: string;
+      length: string;
+      depth: string;
+      height: string;
+      fabricQuantity: number;
+      prices: Record<string, number>;
+    };
+    
+    const productMap = new Map<string, {
+      factory: string;
+      category: string;
+      modMap: Map<string, Map<string, SizeAccum>>;
+    }>();
+    
+    let rowCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      if (cols.length < 3) continue;
+      
+      const factory = idx.marca !== -1 ? cols[idx.marca]?.trim().toUpperCase() || '' : '';
+      const category = idx.categoria !== -1 ? cols[idx.categoria]?.trim() || '' : '';
+      const modelo = cols[idx.modelo]?.trim().toUpperCase() || '';
+      const variante = idx.variante !== -1 ? cols[idx.variante]?.trim() || '' : '';
+      const tamanho = idx.tamanho !== -1 ? cols[idx.tamanho]?.trim() || '' : '';
+      const comprimento = idx.comprimento !== -1 ? cols[idx.comprimento]?.trim() || '' : '';
+      const largura = idx.largura !== -1 ? cols[idx.largura]?.trim() || '' : '';
+      const altura = idx.altura !== -1 ? cols[idx.altura]?.trim() || '' : '';
+      const preco = parseFloat(cols[idx.preco]?.replace(',', '.').replace(/[^\d.]/g, '') || '0') || 0;
+      
+      if (!modelo) continue;
+      rowCount++;
+      
+      // Determine modulation name: use variante if exists, otherwise categoria
+      const modName = variante || category || modelo;
+      
+      // Build size key (tamanho_label or dimensions)
+      const sizeKey = tamanho || [comprimento, largura, altura].filter(Boolean).join('x');
+      const dimensions = [comprimento, largura].filter(Boolean).join(' x ');
+      const description = `${modelo} ${modName} ${sizeKey}`.trim();
+      
+      // Get or create product entry
+      const productKey = `${factory}|${modelo}`;
+      if (!productMap.has(productKey)) {
+        productMap.set(productKey, { factory, category, modMap: new Map() });
+      }
+      const productEntry = productMap.get(productKey)!;
+      
+      if (!productEntry.modMap.has(modName)) {
+        productEntry.modMap.set(modName, new Map());
+      }
+      const sizeMap = productEntry.modMap.get(modName)!;
+      
+      if (!sizeMap.has(sizeKey)) {
+        sizeMap.set(sizeKey, {
+          description,
+          dimensions,
+          length: comprimento,
+          depth: largura,
+          height: altura,
+          fabricQuantity: 0,
+          prices: {},
+        });
+      }
+      
+      const sizeEntry = sizeMap.get(sizeKey)!;
+      
+      if (isWoodFormat && idx.acabGrupo !== -1) {
+        const acabGrupo = cols[idx.acabGrupo]?.trim().toLowerCase() || '';
+        const priceCol = ACABAMENTO_TO_PRICE_COL[acabGrupo];
+        if (priceCol) {
+          sizeEntry.prices[priceCol] = preco;
+        }
+      } else if (isUpholsteryFormat && idx.faixaTecido !== -1) {
+        const faixa = cols[idx.faixaTecido]?.trim().toUpperCase() || '';
+        // Map to standard tier names
+        const normalized = faixa.replace(/\s+/g, ' ');
+        sizeEntry.prices[normalized] = preco;
+      }
+    }
+    
+    // Convert to ParsedProduct[]
+    const products: ParsedProduct[] = [];
+    productMap.forEach((entry, key) => {
+      const modelo = key.split('|')[1];
+      const modulations: ParsedProduct['modulations'] = [];
+      
+      entry.modMap.forEach((sizeMap, modName) => {
+        modulations.push({
+          name: modName.toUpperCase(),
+          sizes: Array.from(sizeMap.values()),
+        });
+      });
+      
+      products.push({
+        name: modelo,
+        factory: entry.factory,
+        category: mapCsvCategory(entry.category),
+        modulations,
+      });
+    });
+    
+    return { products, rowCount };
+  };
+  
+  const mapCsvCategory = (cat: string): string => {
+    const lower = cat.toLowerCase();
+    if (lower.includes('aparador') || lower.includes('buffet')) return 'Buffets';
+    if (lower.includes('mesa de centro')) return 'Mesas de Centro';
+    if (lower.includes('mesa lateral')) return 'Mesas Laterais';
+    if (lower.includes('mesa de cabeceira') || lower.includes('cabeceira') || lower.includes('criado')) return 'Mesas de Cabeceira';
+    if (lower.includes('mesa')) return 'Mesas';
+    if (lower.includes('sofá') || lower.includes('sofa')) return 'Sofás';
+    if (lower.includes('poltrona')) return 'Poltronas';
+    if (lower.includes('cadeira')) return 'Cadeiras';
+    if (lower.includes('puff')) return 'Puffs';
+    if (lower.includes('banqueta')) return 'Banquetas';
+    if (lower.includes('cama')) return 'Outros';
+    if (lower.includes('tapete')) return 'Tapetes';
+    if (lower.includes('espelho')) return 'Outros';
+    return 'Outros';
+  };
+  
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  };
+
+  const handleCsvFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    csvFileRef.current = file;
+    
+    try {
+      const text = await file.text();
+      const { products, rowCount } = parseCsvText(text);
+      const factories = [...new Set(products.map(p => p.factory))];
+      const productNames = products.map(p => p.name).slice(0, 10);
+      
+      setCsvPreview({
+        rows: rowCount,
+        products: productNames,
+        factories,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao ler CSV');
+      csvFileRef.current = null;
+    }
+  };
+  
+  const handleCsvImport = async () => {
+    if (!csvFileRef.current) {
+      toast.error('Selecione um arquivo CSV');
+      return;
+    }
+    
+    setIsProcessing(true);
+    setStatus('parsing');
+    setProgress(10);
+    
+    try {
+      const text = await csvFileRef.current.text();
+      setCurrentFile(`Processando ${csvFileRef.current.name}...`);
+      const { products } = parseCsvText(text);
+      
+      setProgress(30);
+      setStatus('importing');
+      setCurrentFile(`Importando ${products.length} produtos...`);
+      
+      await importToDatabase(products, 30, 95);
+      
+      setStatus('success');
+      setProgress(100);
+      setCurrentFile('');
+      toast.success(`Importação CSV concluída! ${stats.products} produtos, ${stats.sizes} configurações.`);
+      onImportComplete();
+    } catch (error) {
+      console.error('CSV import error:', error);
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
+      toast.error('Erro ao importar CSV');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ======================== END CSV IMPORT LOGIC ========================
+
+
     setIsProcessing(true);
     setStatus('clearing');
     setProgress(5);
@@ -572,26 +831,39 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
 
   return (
     <>
-      <div className="flex gap-2">
-        <Button variant="default" onClick={() => { setImportMode('full'); setIsOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+      <div className="flex gap-2 flex-wrap">
+        <Button variant="default" onClick={() => { setImportMode('full'); setIsOpen(true); }} className="bg-primary hover:bg-primary/90">
           <Database className="h-4 w-4 mr-2" />
           Atualizar Base Completa
         </Button>
         <Button variant="outline" onClick={() => { setImportMode('individual'); setIsOpen(true); }}>
           <FilePlus className="h-4 w-4 mr-2" />
-          Adicionar Arquivo
+          Adicionar Arquivo Excel
         </Button>
+        <Button variant="outline" onClick={() => { setImportMode('csv'); setIsOpen(true); }}>
+          <Upload className="h-4 w-4 mr-2" />
+          Importar CSV
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleCsvFileSelect}
+        />
       </div>
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {importMode === 'full' ? 'Atualizar Base de Produtos' : 'Importar Arquivo Individual'}
+              {importMode === 'full' ? 'Atualizar Base de Produtos' : importMode === 'csv' ? 'Importar CSV de Produtos' : 'Importar Arquivo Individual'}
             </DialogTitle>
             <DialogDescription>
               {importMode === 'full' 
                 ? 'Esta ação irá limpar toda a base atual e importar os produtos dos 3 arquivos Excel pré-carregados.'
+                : importMode === 'csv'
+                ? 'Faça upload de um CSV no formato: marca, categoria, modelo, variante, tamanho_label, acabamento_grupo, preco'
                 : 'Selecione os arquivos que deseja importar. Os produtos existentes serão atualizados ou novos serão adicionados.'}
             </DialogDescription>
           </DialogHeader>
@@ -650,6 +922,47 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
                 </Button>
               </div>
             )}
+
+            {status === 'idle' && importMode === 'csv' && (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <p className="font-medium">Formato esperado do CSV:</p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    marca, categoria, modelo, variante, tamanho_label, comprimento_m, largura_m, altura_m, acabamento_grupo, acabamento_detalhe, preco
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <strong>acabamento_grupo</strong>: Espelho/Vidro, Laca/Lamina, Marmore Especial, Marmore Normal, Recoro
+                  </p>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Selecionar arquivo CSV
+                </Button>
+                
+                {csvPreview && (
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                    <p className="font-medium text-sm">Prévia do arquivo:</p>
+                    <p className="text-sm"><strong>{csvPreview.rows}</strong> linhas de dados</p>
+                    <p className="text-sm">Marcas: {csvPreview.factories.join(', ') || '—'}</p>
+                    <p className="text-sm">Produtos: {csvPreview.products.join(', ')}{csvPreview.products.length >= 10 ? '...' : ''}</p>
+                  </div>
+                )}
+                
+                <Button 
+                  onClick={handleCsvImport} 
+                  className="w-full"
+                  disabled={!csvPreview}
+                >
+                  Importar CSV
+                </Button>
+              </div>
+            )}
+
 
             {(status === 'clearing' || status === 'parsing' || status === 'importing') && (
               <div className="space-y-4">
