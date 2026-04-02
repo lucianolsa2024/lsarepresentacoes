@@ -1,9 +1,13 @@
+import { useState } from 'react';
+import { format, subMonths, addMonths, startOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useRepDashboard } from '@/hooks/useRepDashboard';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { RepShareWidget } from './RepShareWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -18,15 +22,14 @@ import {
   TrendingDown,
   Minus,
   AlertTriangle,
-  Gauge,
-  DollarSign,
-  Package,
-  ShoppingCart,
   Trophy,
   Loader2,
   BarChart3,
   Factory,
   Users,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
 } from 'lucide-react';
 
 const fmt = (v: number | null | undefined) =>
