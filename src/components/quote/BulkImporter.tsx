@@ -680,6 +680,36 @@ export function BulkImporter({ onImportComplete }: BulkImporterProps) {
       setCurrentFile(`Processando ${csvFileRef.current.name}...`);
       const { products } = parseCsvText(text);
       
+      // Identify factories in CSV and clean existing products for those factories
+      const factories = [...new Set(products.map(p => p.factory).filter(Boolean))];
+      if (factories.length > 0) {
+        setStatus('clearing');
+        setCurrentFile(`Limpando produtos existentes de: ${factories.join(', ')}...`);
+        setProgress(15);
+        
+        for (const factory of factories) {
+          // Get product IDs for this factory
+          const { data: existingProducts } = await supabase
+            .from('products')
+            .select('id')
+            .eq('factory', factory);
+          
+          if (existingProducts && existingProducts.length > 0) {
+            const productIds = existingProducts.map(p => p.id);
+            
+            // Delete modulations (cascade deletes sizes)
+            for (const pid of productIds) {
+              await supabase.from('product_modulations').delete().eq('product_id', pid);
+            }
+            
+            // Delete products
+            for (const pid of productIds) {
+              await supabase.from('products').delete().eq('id', pid);
+            }
+          }
+        }
+      }
+      
       setProgress(30);
       setStatus('importing');
       setCurrentFile(`Importando ${products.length} produtos...`);
