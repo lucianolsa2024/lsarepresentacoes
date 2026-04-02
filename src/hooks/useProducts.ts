@@ -72,6 +72,8 @@ export function useProducts() {
       
       if (productsError) throw productsError;
       
+      const batchSize = 1000;
+
       // Fetch modulations in batches to handle more than 1000 records
       let allModulationsData: {
         id: string;
