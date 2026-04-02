@@ -233,19 +233,21 @@ const Index = () => {
     const clientLabel = quote.client.company || quote.client.name;
     if (existingFollowUp) {
       // Update existing follow-up to point to latest version
+      const label = getQuoteLabel(quote);
       await updateActivity(existingFollowUp.id, {
         quote_id: quote.id,
-        title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
-        description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        title: `Follow-up ${label}`,
+        description: `Lembrete automático de follow-up: ${label}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       });
     } else {
       const followUpDate = new Date();
       followUpDate.setDate(followUpDate.getDate() + 5);
+      const label = getQuoteLabel(quote);
       await addActivity({
         activity_category: 'crm',
         type: 'followup',
-        title: `Follow-up orçamento #${quote.id.slice(0, 8).toUpperCase()} - ${clientLabel}`,
-        description: `Lembrete automático de follow-up do orçamento #${quote.id.slice(0, 8).toUpperCase()} para ${clientLabel}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        title: `Follow-up ${label}`,
+        description: `Lembrete automático de follow-up: ${label}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         due_date: followUpDate.toISOString().split('T')[0],
         priority: 'media',
         client_id: selectedClientId || undefined,
