@@ -187,7 +187,8 @@ export function QuoteHistory({
     const itemsSummary = quote.items
       .map((item, i) => `${i + 1}. ${item.productName} - ${item.modulation} (${item.quantity}x ${formatCurrency(item.price)})`)
       .join('\n');
-    const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu orçamento #${quote.id.slice(0, 8).toUpperCase()}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
+    const label = getQuoteLabel(quote);
+    const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu ${label}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank');
     toast.success('PDF baixado! Anexe-o na conversa do WhatsApp.');
   };

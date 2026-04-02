@@ -501,7 +501,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
   // Save
-  const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
-  const date = formatDate(quote.createdAt).replace(/\//g, '-');
-  doc.save(`orcamento_sohome_${clientName}_${date}.pdf`);
+  const { getQuoteFileName } = await import('@/utils/quoteLabel');
+  doc.save(getQuoteFileName(quote));
 }
