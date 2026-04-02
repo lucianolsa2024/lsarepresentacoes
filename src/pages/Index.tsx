@@ -832,6 +832,12 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isRep={isRep}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };
