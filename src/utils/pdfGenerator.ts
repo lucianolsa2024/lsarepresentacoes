@@ -3,6 +3,7 @@ import { addDays, format } from 'date-fns';
 import { Quote, QuoteItem } from '@/types/quote';
 import logoLsa from '@/assets/logo-lsa.png';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
+import { getQuoteFileName } from '@/utils/quoteLabel';
 
 // Helper to check if URL is external
 function isExternalUrl(url: string): boolean {
@@ -501,7 +502,5 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
   // Save
-  const clientName = quote.client.name.replace(/\s/g, '_') || 'cliente';
-  const date = formatDate(quote.createdAt).replace(/\//g, '-');
-  doc.save(`orcamento_sohome_${clientName}_${date}.pdf`);
+  doc.save(getQuoteFileName(quote));
 }

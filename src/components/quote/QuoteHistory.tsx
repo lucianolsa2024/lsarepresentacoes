@@ -35,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getQuoteLabel } from '@/utils/quoteLabel';
 import {
   Search,
   Download,
@@ -186,7 +187,8 @@ export function QuoteHistory({
     const itemsSummary = quote.items
       .map((item, i) => `${i + 1}. ${item.productName} - ${item.modulation} (${item.quantity}x ${formatCurrency(item.price)})`)
       .join('\n');
-    const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu orçamento #${quote.id.slice(0, 8).toUpperCase()}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
+    const label = getQuoteLabel(quote);
+    const message = `Olá ${quote.client.name || quote.client.company}!\n\nSegue o resumo do seu ${label}:\n\n${itemsSummary}\n\n*Total: ${formatCurrency(quote.total)}*\n\nFicamos à disposição!`;
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank');
     toast.success('PDF baixado! Anexe-o na conversa do WhatsApp.');
   };
@@ -218,9 +220,9 @@ export function QuoteHistory({
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                <FileText className="h-3 w-3" />
-                #{(quote.parentQuoteId || quote.id).slice(0, 8).toUpperCase()}
+              <span className="flex items-center gap-1 text-sm font-semibold truncate">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                {getQuoteLabel(quote)}
               </span>
               {(quote.version || 1) > 1 && (
                 <Badge variant="outline" className="text-xs font-mono">
@@ -229,20 +231,6 @@ export function QuoteHistory({
               )}
               {(quote.version || 1) === 1 && quote.parentQuoteId == null && extraBadge && (
                 <Badge variant="outline" className="text-xs font-mono">v1</Badge>
-              )}
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold truncate">
-                {quote.client.company || quote.client.name}
-              </span>
-              {quote.client.company && quote.client.name && (
-                <span className="text-sm text-muted-foreground truncate">
-                  ({quote.client.name})
-                </span>
-              )}
-              {quote.payment?.projectName && (
-                <Badge variant="outline" className="text-xs gap-1">
-                  🏗️ {quote.payment.projectName}
-                </Badge>
               )}
               {(() => {
                 const status = getFollowUpStatus(quote.id);
