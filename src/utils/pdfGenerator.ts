@@ -3,6 +3,7 @@ import { addDays, format } from 'date-fns';
 import { Quote, QuoteItem } from '@/types/quote';
 import logoLsa from '@/assets/logo-lsa.png';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
+import { getQuoteFileName } from '@/utils/quoteLabel';
 
 // Helper to check if URL is external
 function isExternalUrl(url: string): boolean {
