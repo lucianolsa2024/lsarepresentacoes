@@ -1,9 +1,13 @@
+import { useState } from 'react';
+import { format, subMonths, addMonths, startOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useRepDashboard } from '@/hooks/useRepDashboard';
 import { useRepresentatives } from '@/hooks/useRepresentatives';
 import { RepShareWidget } from './RepShareWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -18,15 +22,14 @@ import {
   TrendingDown,
   Minus,
   AlertTriangle,
-  Gauge,
-  DollarSign,
-  Package,
-  ShoppingCart,
   Trophy,
   Loader2,
   BarChart3,
   Factory,
   Users,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
 } from 'lucide-react';
 
 const fmt = (v: number | null | undefined) =>
@@ -80,6 +83,11 @@ function ChangeIndicator({ value }: { value: number | null | undefined }) {
 }
 
 export function RepHomeDashboard() {
+  const [selectedDate, setSelectedDate] = useState(() => startOfMonth(new Date()));
+
+  const selectedMonth = format(selectedDate, 'yyyy-MM-dd');
+  const isCurrentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd') === selectedMonth;
+
   const {
     monthData,
     compare90d,
@@ -90,9 +98,16 @@ export function RepHomeDashboard() {
     mtdByClient,
     loading,
     isAdmin,
-  } = useRepDashboard();
+  } = useRepDashboard(selectedMonth);
 
   const { emailToName } = useRepresentatives();
+
+  const handlePrevMonth = () => setSelectedDate((d) => startOfMonth(subMonths(d, 1)));
+  const handleNextMonth = () => {
+    const next = startOfMonth(addMonths(selectedDate, 1));
+    if (next <= startOfMonth(new Date())) setSelectedDate(next);
+  };
+  const handleCurrentMonth = () => setSelectedDate(startOfMonth(new Date()));
 
   if (loading) {
     return (
@@ -109,6 +124,38 @@ export function RepHomeDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Month selector */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold capitalize">
+            {format(selectedDate, 'MMMM yyyy', { locale: ptBR })}
+          </h2>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" onClick={handlePrevMonth} className="h-8 w-8">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={isCurrentMonth ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleCurrentMonth}
+            className="h-8 text-xs"
+          >
+            Atual
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextMonth}
+            disabled={isCurrentMonth}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       {/* Meta + YoY MTD */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
