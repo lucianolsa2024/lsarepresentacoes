@@ -254,8 +254,8 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           ].join(','));
 
         // --- Month-specific queries ---
-        if (currentMonth) {
-          // Use optimized views for current month
+        if (currentMonth && !showAll) {
+          // Use optimized views for current month with specific rep
           const monthQuery = supabase
             .from('v_rep_month_dashboard')
             .select('*')
