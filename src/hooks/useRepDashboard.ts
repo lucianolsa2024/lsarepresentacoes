@@ -326,8 +326,8 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
               topClientsQuery,
               corpQuery,
               goalQuery,
-              fetchMonthFromSalesBase(email, monthStart, isAdmin ?? false),
-              fetchMonthFromSalesBase(email, prevYearMonthStart, isAdmin ?? false),
+              fetchMonthFromSalesBase(email, monthStart, showAll),
+              fetchMonthFromSalesBase(email, prevYearMonthStart, showAll),
             ]);
 
           if (compareRes.error) throw compareRes.error;
