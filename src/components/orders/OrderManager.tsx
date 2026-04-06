@@ -6,6 +6,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
+import { OrderReportPdfImporter } from './OrderReportPdfImporter';
 import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
@@ -13,7 +14,7 @@ import { FaturadosImporter } from './FaturadosImporter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste, Trash2, Receipt } from 'lucide-react';
+import { List, Plus, Upload, FileText, FileSpreadsheet, ClipboardPaste, Trash2, Receipt, Table } from 'lucide-react';
 import { OrderFormData } from '@/types/order';
 
 export function OrderManager() {
@@ -114,6 +115,10 @@ export function OrderManager() {
             <Receipt className="h-4 w-4 mr-2" />
             Faturados
           </TabsTrigger>
+          <TabsTrigger value="report-pdf">
+            <Table className="h-4 w-4 mr-2" />
+            Relatório PDF
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-4">
@@ -213,6 +218,24 @@ export function OrderManager() {
 
         <TabsContent value="faturados" className="mt-4">
           <FaturadosImporter onComplete={() => setActiveTab('list')} />
+        </TabsContent>
+
+        <TabsContent value="report-pdf" className="mt-4">
+          <OrderReportPdfImporter
+            clients={clients}
+            existingOrderKeys={existingOrderKeys}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
+            onAddClient={addClient}
+            onComplete={() => setActiveTab('list')}
+          />
         </TabsContent>
       </Tabs>
     </div>
