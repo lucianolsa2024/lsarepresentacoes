@@ -306,7 +306,11 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
             .eq('month_start', monthStart)
             .maybeSingle();
 
-          const [compareRes, inactiveRes, topClientsRes, corpRes, goalRes, salesData] =
+          // Calculate previous year same month for YoY
+          const [hy0, hm0] = monthStart.split('-').map(Number);
+          const prevYearMonthStart = `${hy0 - 1}-${String(hm0).padStart(2, '0')}-01`;
+
+          const [compareRes, inactiveRes, topClientsRes, corpRes, goalRes, salesData, prevYearSalesData] =
             await Promise.all([
               compareQuery,
               inactiveQuery,
@@ -314,6 +318,7 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
               corpQuery,
               goalQuery,
               fetchMonthFromSalesBase(email, monthStart),
+              fetchMonthFromSalesBase(email, prevYearMonthStart),
             ]);
 
           if (compareRes.error) throw compareRes.error;
@@ -353,7 +358,17 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
 
           const compareRow = Array.isArray(compareRes.data) ? compareRes.data[0] : compareRes.data;
           setCompare90d((compareRow as Rep90dCompare) ?? null);
-          setMtdYoy(null); // YoY not applicable for historical navigation
+          // Calculate YoY for historical month
+          const revCurrent = salesData.sold;
+          const revPrev = prevYearSalesData.sold;
+          const yoyPct = revPrev > 0 ? ((revCurrent - revPrev) / revPrev) * 100 : null;
+          setMtdYoy({
+            owner_email: email,
+            revenue_mtd_current: revCurrent,
+            revenue_mtd_previous: revPrev,
+            revenue_mtd_diff: revCurrent - revPrev,
+            revenue_mtd_yoy_pct: yoyPct,
+          });
           setInactiveClients(filteredInactive);
           setTopClients90d((topClientsRes.data as TopClient90d[] | null) ?? []);
           setMtdBySupplier(salesData.bySupplier);
