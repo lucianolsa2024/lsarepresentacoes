@@ -6,6 +6,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import { OrderImporter } from './OrderImporter';
+import { OrderReportPdfImporter } from './OrderReportPdfImporter';
 import { OrderCsvImporter } from './OrderCsvImporter';
 import { OrderPasteImporter } from './OrderPasteImporter';
 import { OrderPdfImporter } from './OrderPdfImporter';
