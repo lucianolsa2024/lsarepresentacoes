@@ -97,6 +97,7 @@ function ChangeIndicator({ value }: { value: number | null | undefined }) {
 
 export function RepHomeDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => startOfMonth(new Date()));
+  const [selectedRep, setSelectedRep] = useState<string>('');
 
   const selectedMonth = format(selectedDate, 'yyyy-MM-dd');
   const isCurrentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd') === selectedMonth;
@@ -111,9 +112,9 @@ export function RepHomeDashboard() {
     mtdByClient,
     loading,
     isAdmin,
-  } = useRepDashboard(selectedMonth);
+  } = useRepDashboard(selectedMonth, selectedRep || undefined);
 
-  const { emailToName } = useRepresentatives();
+  const { emailToName, activeReps } = useRepresentatives();
 
   const handlePrevMonth = () => setSelectedDate((d) => startOfMonth(subMonths(d, 1)));
   const handleNextMonth = () => {
