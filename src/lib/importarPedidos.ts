@@ -195,9 +195,12 @@ export async function importarPedidosExcel(file: File): Promise<ImportacaoResult
         return;
       }
 
+      // "DT CLI" is an alternative column name for delivery date
+      const dataEntrega = toDate(row['data de entrega']) ?? toDate(row['DT CLI']);
+
       linhas.push({
         tipo_pedido:      toStr(row['TIPO PEDIDO']) ?? '',
-        tabela_preco:     toStr(row['TABELA DE PREÇO']) ?? '',
+        tabela_preco:     toStr(row['TABELA DE PREÇO']) ?? toStr(row['TABELA DE PRECO']) ?? '',
         dt_emissao:       toDate(row['DT EMISSAO']),
         dt_fat:           toDate(row['DT FAT']),
         cliente:          toStr(row['CLIENTE']) ?? '',
@@ -210,7 +213,7 @@ export async function importarPedidosExcel(file: File): Promise<ImportacaoResult
         numero_nf:        numeroNF,
         representante:    toStr(row['REPRESENTANTE PF']) ?? '',
         produto_completo: toStr(row['PRODUTO COMPLETO']) ?? '',
-        data_entrega:     toDate(row['data de entrega']),
+        data_entrega:     dataEntrega,
         qtde:             toInt(row['QTDE ( # )']),
         valor:            valor,
       });
