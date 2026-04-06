@@ -90,8 +90,8 @@ export function OrderList({ orders, loading, onDelete, onUpdate, onUpdateNf, cli
     }
   };
 
-  const uniqueClients = useMemo(() => [...new Set(orders.map(o => o.clientName))].sort(), [orders]);
-  const uniqueReps = useMemo(() => [...new Set(orders.map(o => o.representative).filter(Boolean))].sort(), [orders]);
+  const uniqueClients = useMemo(() => [...new Set(orders.map(o => o.clientName).filter(n => !!n))].sort(), [orders]);
+  const uniqueReps = useMemo(() => [...new Set(orders.map(o => o.representative).filter(n => !!n))].sort(), [orders]);
 
   const filtered = useMemo(() => {
     let result = orders;
