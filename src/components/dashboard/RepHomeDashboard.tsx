@@ -112,7 +112,7 @@ export function RepHomeDashboard() {
     mtdByClient,
     loading,
     isAdmin,
-  } = useRepDashboard(selectedMonth, selectedRep || undefined);
+  } = useRepDashboard(selectedMonth, selectedRep === 'all' ? undefined : selectedRep);
 
   const { emailToName, activeReps } = useRepresentatives();
 
