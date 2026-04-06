@@ -219,6 +219,24 @@ export function OrderManager() {
         <TabsContent value="faturados" className="mt-4">
           <FaturadosImporter onComplete={() => setActiveTab('list')} />
         </TabsContent>
+
+        <TabsContent value="report-pdf" className="mt-4">
+          <OrderReportPdfImporter
+            clients={clients}
+            existingOrderKeys={existingOrderKeys}
+            onImport={async (ordersData) => {
+              const count = await addOrders(ordersData);
+              for (const d of ordersData) {
+                if (d.order.deliveryDate) {
+                  await createDeliveryActivity({ ...d.order }, d.clientId);
+                }
+              }
+              return count;
+            }}
+            onAddClient={addClient}
+            onComplete={() => setActiveTab('list')}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
