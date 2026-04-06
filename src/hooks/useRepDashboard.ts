@@ -306,7 +306,11 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
             .eq('month_start', monthStart)
             .maybeSingle();
 
-          const [compareRes, inactiveRes, topClientsRes, corpRes, goalRes, salesData] =
+          // Calculate previous year same month for YoY
+          const [hy0, hm0] = monthStart.split('-').map(Number);
+          const prevYearMonthStart = `${hy0 - 1}-${String(hm0).padStart(2, '0')}-01`;
+
+          const [compareRes, inactiveRes, topClientsRes, corpRes, goalRes, salesData, prevYearSalesData] =
             await Promise.all([
               compareQuery,
               inactiveQuery,
@@ -314,6 +318,7 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
               corpQuery,
               goalQuery,
               fetchMonthFromSalesBase(email, monthStart),
+              fetchMonthFromSalesBase(email, prevYearMonthStart),
             ]);
 
           if (compareRes.error) throw compareRes.error;
