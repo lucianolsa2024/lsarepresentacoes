@@ -238,7 +238,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           .order('revenue_90d', { ascending: false })
           .limit(5);
 
-        if (!isAdmin) {
+        if (!showAll) {
           inactiveQuery = inactiveQuery.eq('owner_email', email);
           topClientsQuery = topClientsQuery.eq('owner_email', email);
         }
