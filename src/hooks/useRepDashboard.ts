@@ -398,7 +398,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
     };
 
     fetchData();
-  }, [user?.email, isAdmin, monthStart]);
+  }, [user?.email, isAdmin, monthStart, filterEmail]);
 
   return {
     monthData,
