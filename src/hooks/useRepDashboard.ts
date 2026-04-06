@@ -110,6 +110,7 @@ function isCurrentMonth(monthStart: string): boolean {
 async function fetchMonthFromSalesBase(
   email: string,
   monthStart: string,
+  isAdminUser?: boolean,
 ): Promise<{ sold: number; bySupplier: MtdBySupplier[]; byClient: MtdByClient[] }> {
   // Parse date parts manually to avoid timezone issues
   const [y, m] = monthStart.split('-').map(Number);
@@ -117,12 +118,17 @@ async function fetchMonthFromSalesBase(
   const nextY = m === 12 ? y + 1 : y;
   const monthEnd = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('v_sales_base')
     .select('client_id, client_name, supplier, owner_email, line_revenue, quantity')
-    .eq('owner_email', email)
     .gte('issue_date', monthStart)
     .lt('issue_date', monthEnd);
+
+  if (!isAdminUser) {
+    query = query.eq('owner_email', email);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -317,8 +323,8 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
               topClientsQuery,
               corpQuery,
               goalQuery,
-              fetchMonthFromSalesBase(email, monthStart),
-              fetchMonthFromSalesBase(email, prevYearMonthStart),
+              fetchMonthFromSalesBase(email, monthStart, isAdmin ?? false),
+              fetchMonthFromSalesBase(email, prevYearMonthStart, isAdmin ?? false),
             ]);
 
           if (compareRes.error) throw compareRes.error;
