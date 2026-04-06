@@ -115,6 +115,10 @@ export function OrderManager() {
             <Receipt className="h-4 w-4 mr-2" />
             Faturados
           </TabsTrigger>
+          <TabsTrigger value="report-pdf">
+            <Table className="h-4 w-4 mr-2" />
+            Relatório PDF
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-4">
