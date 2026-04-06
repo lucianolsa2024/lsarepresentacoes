@@ -194,7 +194,7 @@ async function fetchMonthFromSalesBase(
   return { sold, bySupplier, byClient };
 }
 
-export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
+export function useRepDashboard(selectedMonth?: string, filterEmail?: string): UseRepDashboardResult {
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
 
@@ -216,7 +216,10 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const email = user.email!;
+        // If admin selected a specific rep, use that email; otherwise use logged-in user
+        const email = (isAdmin && filterEmail) ? filterEmail : user.email!;
+        // showAll = admin with no specific rep filter
+        const showAll = isAdmin === true && !filterEmail;
 
         // --- Always fetch: 90d compare, inactive, top clients, corp ids ---
         let compareQuery = supabase
@@ -235,7 +238,7 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
           .order('revenue_90d', { ascending: false })
           .limit(5);
 
-        if (!isAdmin) {
+        if (!showAll) {
           inactiveQuery = inactiveQuery.eq('owner_email', email);
           topClientsQuery = topClientsQuery.eq('owner_email', email);
         }
@@ -251,8 +254,8 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
           ].join(','));
 
         // --- Month-specific queries ---
-        if (currentMonth) {
-          // Use optimized views for current month
+        if (currentMonth && !showAll) {
+          // Use optimized views for current month with specific rep
           const monthQuery = supabase
             .from('v_rep_month_dashboard')
             .select('*')
@@ -323,8 +326,8 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
               topClientsQuery,
               corpQuery,
               goalQuery,
-              fetchMonthFromSalesBase(email, monthStart, isAdmin ?? false),
-              fetchMonthFromSalesBase(email, prevYearMonthStart, isAdmin ?? false),
+              fetchMonthFromSalesBase(email, monthStart, showAll),
+              fetchMonthFromSalesBase(email, prevYearMonthStart, showAll),
             ]);
 
           if (compareRes.error) throw compareRes.error;
@@ -395,7 +398,7 @@ export function useRepDashboard(selectedMonth?: string): UseRepDashboardResult {
     };
 
     fetchData();
-  }, [user?.email, isAdmin, monthStart]);
+  }, [user?.email, isAdmin, monthStart, filterEmail]);
 
   return {
     monthData,

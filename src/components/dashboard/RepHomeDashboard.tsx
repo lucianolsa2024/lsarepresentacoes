@@ -9,6 +9,13 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -90,6 +97,7 @@ function ChangeIndicator({ value }: { value: number | null | undefined }) {
 
 export function RepHomeDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => startOfMonth(new Date()));
+  const [selectedRep, setSelectedRep] = useState<string>('all');
 
   const selectedMonth = format(selectedDate, 'yyyy-MM-dd');
   const isCurrentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd') === selectedMonth;
@@ -104,9 +112,9 @@ export function RepHomeDashboard() {
     mtdByClient,
     loading,
     isAdmin,
-  } = useRepDashboard(selectedMonth);
+  } = useRepDashboard(selectedMonth, selectedRep === 'all' ? undefined : selectedRep);
 
-  const { emailToName } = useRepresentatives();
+  const { emailToName, activeReps } = useRepresentatives();
 
   const handlePrevMonth = () => setSelectedDate((d) => startOfMonth(subMonths(d, 1)));
   const handleNextMonth = () => {
@@ -130,35 +138,52 @@ export function RepHomeDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Month selector */}
-      <div className="flex items-center justify-between">
+      {/* Month selector + Rep filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
           <h2 className="text-base sm:text-lg font-semibold capitalize">
             {format(selectedDate, 'MMMM yyyy', { locale: ptBR })}
           </h2>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth} className="h-8 w-8">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={isCurrentMonth ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleCurrentMonth}
-            className="h-8 text-xs"
-          >
-            Atual
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleNextMonth}
-            disabled={isCurrentMonth}
-            className="h-8 w-8"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && (
+            <Select value={selectedRep} onValueChange={setSelectedRep}>
+              <SelectTrigger className="h-8 w-[180px] text-xs">
+                <SelectValue placeholder="Todos os reps" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os reps</SelectItem>
+                {activeReps.map((r) => (
+                  <SelectItem key={r.email} value={r.email}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" onClick={handlePrevMonth} className="h-8 w-8">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={isCurrentMonth ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleCurrentMonth}
+              className="h-8 text-xs"
+            >
+              Atual
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNextMonth}
+              disabled={isCurrentMonth}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
