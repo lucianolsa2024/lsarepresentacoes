@@ -248,26 +248,26 @@ export function ActivityCard({
         
         {/* Quick Actions */}
         {isActive && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t flex-wrap">
-            {activity.type === 'checklist_loja' && onOpenChecklist && (
-              <Button size="sm" variant="outline" onClick={() => onOpenChecklist(activity)}>
-                <ClipboardCheck className="h-4 w-4 mr-1" />Preencher Checklist
-              </Button>
-            )}
-            {activity.quote_id && onViewQuote && (
-              <Button size="sm" variant="outline" onClick={() => onViewQuote(activity.quote_id!)}>
-                <FileText className="h-4 w-4 mr-1" />Ver Orçamento
-              </Button>
-            )}
-            <Button size="sm" onClick={() => onComplete(activity.id)}>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 mt-3 pt-3 border-t">
+            <Button size="sm" className="w-full sm:w-auto" onClick={() => onComplete(activity.id)}>
               <Check className="h-4 w-4 mr-1" />{isCrm ? 'Realizada' : 'Concluir'}
             </Button>
             {activity.client?.phone && (
-              <Button size="sm" variant="outline" onClick={handleWhatsApp}>
+              <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={handleWhatsApp}>
                 <MessageCircle className="h-4 w-4 mr-1" />WhatsApp
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={handleOutlook}>
+            {activity.type === 'checklist_loja' && onOpenChecklist && (
+              <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChecklist(activity)}>
+                <ClipboardCheck className="h-4 w-4 mr-1" />Checklist
+              </Button>
+            )}
+            {activity.quote_id && onViewQuote && (
+              <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => onViewQuote(activity.quote_id!)}>
+                <FileText className="h-4 w-4 mr-1" />Orçamento
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={handleOutlook}>
               <Calendar className="h-4 w-4 mr-1" />Outlook
             </Button>
           </div>

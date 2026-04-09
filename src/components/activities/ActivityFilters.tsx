@@ -61,85 +61,88 @@ export function ActivityFilters({
       : ACTIVITY_STATUS_CONFIG;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+    <div className="space-y-2">
       {/* Search */}
-      <div className="relative flex-1 min-w-[200px]">
+      <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input value={search} onChange={(e) => onSearchChange(e.target.value)} placeholder="Buscar atividades..." className="pl-9" />
       </div>
 
-      {/* Category Filter */}
-      <Select value={categoryFilter} onValueChange={(v) => { onCategoryFilterChange(v as ActivityCategory | 'all'); onTypeFilterChange('all'); onStatusFilterChange('all'); }}>
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Categoria" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          <SelectItem value="crm">CRM de Vendas</SelectItem>
-          <SelectItem value="tarefa">Tarefa Interna</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {/* Type Filter */}
-      <Select value={typeFilter} onValueChange={(v) => onTypeFilterChange(v as ActivityType | 'all')}>
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Tipo" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os tipos</SelectItem>
-          {Object.entries(typeOptions).map(([key, config]) => (
-            <SelectItem key={key} value={key}>{config.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Status Filter */}
-      <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as ActivityStatus | 'all')}>
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {Object.entries(statusOptions).map(([key, config]) => (
-            <SelectItem key={key} value={key}>{config.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Priority Filter */}
-      <Select value={priorityFilter} onValueChange={(v) => onPriorityFilterChange(v as ActivityPriority | 'all')}>
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Prioridade" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {Object.entries(ACTIVITY_PRIORITY_CONFIG).map(([key, config]) => (
-            <SelectItem key={key} value={key}>{config.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Representative Filter */}
-      {showRepFilter && onRepFilterChange && (
-        <Select value={repFilter} onValueChange={onRepFilterChange}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Representante" />
+      {/* Filter row - horizontally scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {/* Category Filter */}
+        <Select value={categoryFilter} onValueChange={(v) => { onCategoryFilterChange(v as ActivityCategory | 'all'); onTypeFilterChange('all'); onStatusFilterChange('all'); }}>
+          <SelectTrigger className="w-[130px] shrink-0 text-xs h-8">
+            <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos Representantes</SelectItem>
-            {representatives.map(rep => (
-              <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="crm">CRM</SelectItem>
+            <SelectItem value="tarefa">Tarefa</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Type Filter */}
+        <Select value={typeFilter} onValueChange={(v) => onTypeFilterChange(v as ActivityType | 'all')}>
+          <SelectTrigger className="w-[130px] shrink-0 text-xs h-8">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos tipos</SelectItem>
+            {Object.entries(typeOptions).map(([key, config]) => (
+              <SelectItem key={key} value={key}>{config.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
 
-      {/* Clear Filters */}
-      {hasActiveFilters && (
-        <Button variant="ghost" size="icon" onClick={onClearFilters}>
-          <X className="h-4 w-4" />
-        </Button>
-      )}
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as ActivityStatus | 'all')}>
+          <SelectTrigger className="w-[120px] shrink-0 text-xs h-8">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {Object.entries(statusOptions).map(([key, config]) => (
+              <SelectItem key={key} value={key}>{config.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Priority Filter */}
+        <Select value={priorityFilter} onValueChange={(v) => onPriorityFilterChange(v as ActivityPriority | 'all')}>
+          <SelectTrigger className="w-[120px] shrink-0 text-xs h-8">
+            <SelectValue placeholder="Prioridade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {Object.entries(ACTIVITY_PRIORITY_CONFIG).map(([key, config]) => (
+              <SelectItem key={key} value={key}>{config.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Representative Filter */}
+        {showRepFilter && onRepFilterChange && (
+          <Select value={repFilter} onValueChange={onRepFilterChange}>
+            <SelectTrigger className="w-[140px] shrink-0 text-xs h-8">
+              <SelectValue placeholder="Representante" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Reps</SelectItem>
+              {representatives.map(rep => (
+                <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClearFilters}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
