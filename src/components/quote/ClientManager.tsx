@@ -895,6 +895,7 @@ export function ClientManager({
                 </Table>
                 </div>
               </>
+            )}
           </div>
         </TabsContent>
 
