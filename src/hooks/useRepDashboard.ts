@@ -261,10 +261,28 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
             .select('*')
             .eq('owner_email', email);
 
-          const yoyQuery = supabase
-            .from('v_rep_mtd_yoy')
-            .select('*')
-            .eq('owner_email', email);
+          // YoY: compare same day range (1st to today) current year vs previous year
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const prevYearStart = `${today.getFullYear() - 1}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+          const prevYearEnd = `${today.getFullYear() - 1}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+          // Fetch current MTD and previous year same-day-range in parallel from v_sales_base
+          let yoyCurrQuery = supabase
+            .from('v_sales_base')
+            .select('line_revenue')
+            .gte('issue_date', monthStart)
+            .lte('issue_date', todayStr);
+          let yoyPrevQuery = supabase
+            .from('v_sales_base')
+            .select('line_revenue')
+            .gte('issue_date', prevYearStart)
+            .lte('issue_date', prevYearEnd);
+
+          if (!showAll) {
+            yoyCurrQuery = yoyCurrQuery.eq('owner_email', email);
+            yoyPrevQuery = yoyPrevQuery.eq('owner_email', email);
+          }
 
           const supplierMtdQuery = supabase
             .from('v_sales_mtd_by_supplier')
@@ -279,12 +297,13 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
             .order('revenue_mtd', { ascending: false })
             .limit(10);
 
-          const [monthRes, compareRes, yoyRes, inactiveRes, topClientsRes, supplierMtdRes, clientMtdRes, corpRes] =
-            await Promise.all([monthQuery, compareQuery, yoyQuery, inactiveQuery, topClientsQuery, supplierMtdQuery, clientMtdQuery, corpQuery]);
+          const [monthRes, compareRes, yoyCurrRes, yoyPrevRes, inactiveRes, topClientsRes, supplierMtdRes, clientMtdRes, corpRes] =
+            await Promise.all([monthQuery, compareQuery, yoyCurrQuery, yoyPrevQuery, inactiveQuery, topClientsQuery, supplierMtdQuery, clientMtdQuery, corpQuery]);
 
           if (monthRes.error) throw monthRes.error;
           if (compareRes.error) throw compareRes.error;
-          if (yoyRes.error) throw yoyRes.error;
+          if (yoyCurrRes.error) throw yoyCurrRes.error;
+          if (yoyPrevRes.error) throw yoyPrevRes.error;
           if (inactiveRes.error) throw inactiveRes.error;
           if (topClientsRes.error) throw topClientsRes.error;
           if (supplierMtdRes.error) throw supplierMtdRes.error;
@@ -297,11 +316,21 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
 
           const monthRow = Array.isArray(monthRes.data) ? monthRes.data[0] : monthRes.data;
           const compareRow = Array.isArray(compareRes.data) ? compareRes.data[0] : compareRes.data;
-          const yoyRow = Array.isArray(yoyRes.data) ? yoyRes.data[0] : yoyRes.data;
+
+          // Calculate YoY from raw data
+          const revCurr = (yoyCurrRes.data ?? []).reduce((s, r) => s + (Number(r.line_revenue) || 0), 0);
+          const revPrev = (yoyPrevRes.data ?? []).reduce((s, r) => s + (Number(r.line_revenue) || 0), 0);
+          const yoyPct = revPrev > 0 ? ((revCurr - revPrev) / revPrev) * 100 : null;
 
           setMonthData((monthRow as RepMonthDashboard) ?? null);
           setCompare90d((compareRow as Rep90dCompare) ?? null);
-          setMtdYoy((yoyRow as RepMtdYoy) ?? null);
+          setMtdYoy({
+            owner_email: email,
+            revenue_mtd_current: revCurr,
+            revenue_mtd_previous: revPrev,
+            revenue_mtd_diff: revCurr - revPrev,
+            revenue_mtd_yoy_pct: yoyPct,
+          });
           setInactiveClients(filteredInactive);
           setTopClients90d((topClientsRes.data as TopClient90d[] | null) ?? []);
           setMtdBySupplier((supplierMtdRes.data as MtdBySupplier[] | null) ?? []);
