@@ -57,14 +57,14 @@ export function OrderManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Gestão de Pedidos</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground">Gestão de Pedidos</h2>
         {isAdmin && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Base
+              <Button variant="destructive" size="sm" className="shrink-0">
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Limpar Base</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -86,40 +86,42 @@ export function OrderManager() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="list">
-            <List className="h-4 w-4 mr-2" />
-            Pedidos
-          </TabsTrigger>
-          <TabsTrigger value="new">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Pedido
-          </TabsTrigger>
-          <TabsTrigger value="import">
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Excel
-          </TabsTrigger>
-          <TabsTrigger value="csv">
-            <Upload className="h-4 w-4 mr-2" />
-            CSV
-          </TabsTrigger>
-          <TabsTrigger value="paste">
-            <ClipboardPaste className="h-4 w-4 mr-2" />
-            Colar
-          </TabsTrigger>
-          <TabsTrigger value="pdf">
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </TabsTrigger>
-          <TabsTrigger value="faturados">
-            <Receipt className="h-4 w-4 mr-2" />
-            Faturados
-          </TabsTrigger>
-          <TabsTrigger value="report-pdf">
-            <Table className="h-4 w-4 mr-2" />
-            Relatório PDF
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-2 px-2 pb-1">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+            <TabsTrigger value="list" className="text-xs sm:text-sm px-2 sm:px-3">
+              <List className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Pedidos</span>
+            </TabsTrigger>
+            <TabsTrigger value="new" className="text-xs sm:text-sm px-2 sm:px-3">
+              <Plus className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Novo</span>
+            </TabsTrigger>
+            <TabsTrigger value="import" className="text-xs sm:text-sm px-2 sm:px-3">
+              <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Excel</span>
+            </TabsTrigger>
+            <TabsTrigger value="csv" className="text-xs sm:text-sm px-2 sm:px-3">
+              <Upload className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">CSV</span>
+            </TabsTrigger>
+            <TabsTrigger value="paste" className="text-xs sm:text-sm px-2 sm:px-3">
+              <ClipboardPaste className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Colar</span>
+            </TabsTrigger>
+            <TabsTrigger value="pdf" className="text-xs sm:text-sm px-2 sm:px-3">
+              <FileText className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">PDF</span>
+            </TabsTrigger>
+            <TabsTrigger value="faturados" className="text-xs sm:text-sm px-2 sm:px-3">
+              <Receipt className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Faturados</span>
+            </TabsTrigger>
+            <TabsTrigger value="report-pdf" className="text-xs sm:text-sm px-2 sm:px-3">
+              <Table className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Rel. PDF</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="list" className="mt-4">
           <OrderList

@@ -289,43 +289,54 @@ export function SalesFunnelManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-2xl font-bold text-foreground">Funil Corporativo</h2>
-        <Button onClick={() => { setEditingOpp(null); setShowForm(true); }}><Plus className="h-4 w-4 mr-2" /> Nova Oportunidade</Button>
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground">Funil Corporativo</h2>
+        <Button size="sm" onClick={() => { setEditingOpp(null); setShowForm(true); }}>
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Nova Oportunidade</span>
+        </Button>
       </div>
 
       {/* Tabs + Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="space-y-2">
         <Tabs value={funnelType} onValueChange={v => setFunnelType(v as any)}>
           <TabsList>
-            <TabsTrigger value="lojista"><Store className="h-4 w-4 mr-2" /> Carteira Lojistas</TabsTrigger>
-            <TabsTrigger value="corporativo"><Building2 className="h-4 w-4 mr-2" /> Corporativos</TabsTrigger>
+            <TabsTrigger value="lojista" className="text-xs sm:text-sm">
+              <Store className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Carteira</span> Lojistas
+            </TabsTrigger>
+            <TabsTrigger value="corporativo" className="text-xs sm:text-sm">
+              <Building2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Corporativos</span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
-        {isAdmin && (
-          <Select value={repFilter} onValueChange={setRepFilter}>
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Representante" /></SelectTrigger>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {isAdmin && (
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-[160px] sm:w-[200px] shrink-0 h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0 h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+              <SelectItem value="all">Todo período</SelectItem>
+              <SelectItem value="month">Mês atual</SelectItem>
+              <SelectItem value="quarter">Trimestre</SelectItem>
+              <SelectItem value="year">Ano</SelectItem>
             </SelectContent>
           </Select>
-        )}
-        <Select value={periodFilter} onValueChange={setPeriodFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Período" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="month">Mês atual</SelectItem>
-            <SelectItem value="quarter">Trimestre</SelectItem>
-            <SelectItem value="year">Ano</SelectItem>
-          </SelectContent>
-        </Select>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="flex gap-4 text-sm text-muted-foreground flex-wrap">
+      <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
         <span>Pipeline: <strong className="text-foreground">{formatCurrency(totalPipeline)}</strong></span>
-        <Badge variant="outline" className="bg-green-50 text-green-800">✅ {wonOpps.length} ganho(s) — {formatCurrency(wonValue)}</Badge>
-        <Badge variant="outline" className="bg-red-50 text-red-800">❌ {lostOpps.length} perdido(s) — {formatCurrency(lostValue)}</Badge>
+        <Badge variant="outline" className="bg-green-50 text-green-800 text-xs">✅ {wonOpps.length} — {formatCurrency(wonValue)}</Badge>
+        <Badge variant="outline" className="bg-red-50 text-red-800 text-xs">❌ {lostOpps.length} — {formatCurrency(lostValue)}</Badge>
       </div>
 
       {/* Form dialog */}
@@ -367,9 +378,10 @@ export function SalesFunnelManager() {
         );
       })()}
 
-      {/* Kanban */}
+      {/* Kanban - horizontally scrollable on mobile */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(180px, 1fr))` }}>
+        <div className="overflow-x-auto -mx-2 px-2 pb-2">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(160px, 1fr))`, minWidth: `${activeStages.length * 170}px` }}>
           {activeStages.map(stage => {
             const stageOpps = stageGroups[stage.key] || [];
             const stageValue = stageOpps.reduce((s, o) => s + o.value, 0);
@@ -403,7 +415,7 @@ export function SalesFunnelManager() {
             );
           })}
         </div>
-
+        </div>
         {/* Drop zones for Ganho / Perdido */}
         <div className="grid grid-cols-2 gap-3 mt-3">
           <Droppable droppableId="ganho">
