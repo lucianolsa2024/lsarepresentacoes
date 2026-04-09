@@ -897,11 +897,8 @@ export function ClientManager({
               </>
           </div>
         </TabsContent>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredParentClients.map((client) => {
+
+
                       const branches = branchesByParent[client.id] || [];
                       const lastContact = lastContactByClient?.[client.id];
                       return (
