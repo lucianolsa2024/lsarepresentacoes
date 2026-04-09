@@ -327,15 +327,15 @@ export function ClientManager({
   }, [clients, segments]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Base de Clientes</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex justify-between items-center gap-2">
+          <h2 className="text-lg sm:text-2xl font-bold">Base de Clientes</h2>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button onClick={openNewDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Cliente
+              <Button size="sm" onClick={openNewDialog}>
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Cliente</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -668,53 +668,53 @@ export function ClientManager({
 
       <Tabs defaultValue="list">
         <TabsList>
-          <TabsTrigger value="list">
-            <List className="h-4 w-4 mr-2" />
-            Lista
+          <TabsTrigger value="list" className="text-xs sm:text-sm">
+            <List className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Lista</span>
           </TabsTrigger>
-          <TabsTrigger value="map">
-            <Map className="h-4 w-4 mr-2" />
-            Mapa
+          <TabsTrigger value="map" className="text-xs sm:text-sm">
+            <Map className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Mapa</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-4">
-          <div className="space-y-4">
-            <div className="flex gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
+            <div className="space-y-3">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por empresa, nome, CNPJ ou email..."
+                  placeholder="Buscar empresa, nome, CNPJ..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Segmento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Segmentos</SelectItem>
-                  {allSegments.map(seg => (
-                    <SelectItem key={seg} value={seg}>{seg}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isAdmin && (
-                <Select value={repFilter} onValueChange={setRepFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Representante" />
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+                  <SelectTrigger className="w-[140px] shrink-0 h-8 text-xs">
+                    <SelectValue placeholder="Segmento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos Representantes</SelectItem>
-                    {representatives.map(rep => (
-                      <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+                    <SelectItem value="all">Todos Segmentos</SelectItem>
+                    {allSegments.map(seg => (
+                      <SelectItem key={seg} value={seg}>{seg}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-            </div>
+                {isAdmin && (
+                  <Select value={repFilter} onValueChange={setRepFilter}>
+                    <SelectTrigger className="w-[150px] shrink-0 h-8 text-xs">
+                      <SelectValue placeholder="Representante" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Reps</SelectItem>
+                      {representatives.map(rep => (
+                        <SelectItem key={rep.email} value={rep.email}>{rep.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
 
             <div className="text-sm text-muted-foreground">
               {filteredParentClients.length} cliente{filteredParentClients.length !== 1 ? 's' : ''}
