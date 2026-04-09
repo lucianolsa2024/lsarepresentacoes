@@ -356,24 +356,33 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <h2 className="text-2xl font-bold">Atividades</h2>
-        <div className="flex items-center gap-2">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-bold">Atividades</h2>
+          <div className="flex items-center gap-2">
+            <CalendarSubscription />
+            <Button size="sm" onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nova Atividade</span>
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
-            <TabsList>
-              <TabsTrigger value="list">
+            <TabsList className="h-9">
+              <TabsTrigger value="list" className="px-2.5">
                 <List className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="kanban">
+              <TabsTrigger value="kanban" className="px-2.5">
                 <LayoutGrid className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="calendar">
+              <TabsTrigger value="calendar" className="px-2.5">
                 <CalendarDays className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="report">
+              <TabsTrigger value="report" className="px-2.5">
                 <BarChart3 className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="checklist_report">
+              <TabsTrigger value="checklist_report" className="px-2.5">
                 <ClipboardCheck className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
@@ -382,20 +391,16 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
             <Button
               variant={selectionMode ? 'secondary' : 'outline'}
               size="sm"
+              className="shrink-0"
               onClick={() => {
                 setSelectionMode(!selectionMode);
                 if (selectionMode) setSelectedIds(new Set());
               }}
             >
-              <CheckSquare className="h-4 w-4 mr-1" />
-              Selecionar
+              <CheckSquare className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Selecionar</span>
             </Button>
           )}
-          <CalendarSubscription />
-          <Button onClick={() => { setEditingActivity(undefined); setDefaultDate(undefined); setFormOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Atividade
-          </Button>
         </div>
       </div>
 
