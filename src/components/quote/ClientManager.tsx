@@ -897,8 +897,6 @@ export function ClientManager({
               </>
           </div>
         </TabsContent>
-                      <TableHead>Responsável(eis)</TableHead>
-                      <TableHead>Último Contato</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
