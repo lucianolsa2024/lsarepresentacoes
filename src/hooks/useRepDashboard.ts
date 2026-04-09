@@ -336,7 +336,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           setMtdBySupplier((supplierMtdRes.data as MtdBySupplier[] | null) ?? []);
           setMtdByClient((clientMtdRes.data as MtdByClient[] | null) ?? []);
         } else {
-          // Historical month: query v_sales_base directly
+          // Historical month and/or admin all-reps: query v_sales_base directly
           const goalQuery = supabase
             .from('rep_goals')
             .select('goal_value')
@@ -378,27 +378,58 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           const hNextM = hm === 12 ? 1 : hm + 1;
           const hNextY = hm === 12 ? hy + 1 : hy;
           const monthEnd = `${hNextY}-${String(hNextM).padStart(2, '0')}-01`;
-          // Days in month
           const lastDay = new Date(hy, hm, 0).getDate();
 
           setMonthData({
             owner_email: email,
             month_start: monthStart,
             month_end: monthEnd,
-            today: monthEnd, // historical: full month
+            today: monthEnd,
             goal_value: goalValue,
             sold_month: soldMonth,
             goal_achieved_pct: goalAchievedPct,
             daily_pace_so_far: lastDay > 0 ? soldMonth / lastDay : 0,
             remaining_to_goal: Math.max(goalValue - soldMonth, 0),
-            required_daily_pace_remaining: null, // historical: already past
+            required_daily_pace_remaining: null,
           });
 
           const compareRow = Array.isArray(compareRes.data) ? compareRes.data[0] : compareRes.data;
           setCompare90d((compareRow as Rep90dCompare) ?? null);
-          // Calculate YoY for historical month
-          const revCurrent = salesData.sold;
-          const revPrev = prevYearSalesData.sold;
+
+          // Current month must compare same elapsed day range in previous year
+          let revCurrent = salesData.sold;
+          let revPrev = prevYearSalesData.sold;
+
+          if (currentMonth) {
+            const today = new Date();
+            const currentPeriodEnd = `${hy}-${String(hm).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const prevYearPeriodEnd = `${hy - 1}-${String(hm).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            let yoyCurrQuery = supabase
+              .from('v_sales_base')
+              .select('line_revenue')
+              .gte('issue_date', monthStart)
+              .lte('issue_date', currentPeriodEnd);
+
+            let yoyPrevQuery = supabase
+              .from('v_sales_base')
+              .select('line_revenue')
+              .gte('issue_date', prevYearMonthStart)
+              .lte('issue_date', prevYearPeriodEnd);
+
+            if (!showAll) {
+              yoyCurrQuery = yoyCurrQuery.eq('owner_email', email);
+              yoyPrevQuery = yoyPrevQuery.eq('owner_email', email);
+            }
+
+            const [yoyCurrRes, yoyPrevRes] = await Promise.all([yoyCurrQuery, yoyPrevQuery]);
+            if (yoyCurrRes.error) throw yoyCurrRes.error;
+            if (yoyPrevRes.error) throw yoyPrevRes.error;
+
+            revCurrent = (yoyCurrRes.data ?? []).reduce((sum, row) => sum + (Number(row.line_revenue) || 0), 0);
+            revPrev = (yoyPrevRes.data ?? []).reduce((sum, row) => sum + (Number(row.line_revenue) || 0), 0);
+          }
+
           const yoyPct = revPrev > 0 ? ((revCurrent - revPrev) / revPrev) * 100 : null;
           setMtdYoy({
             owner_email: email,
