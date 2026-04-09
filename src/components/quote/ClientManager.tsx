@@ -895,8 +895,8 @@ export function ClientManager({
                 </Table>
                 </div>
               </>
-            )}
-                      <TableHead>Cond. Pagamento</TableHead>
+          </div>
+        </TabsContent>
                       <TableHead>Responsável(eis)</TableHead>
                       <TableHead>Último Contato</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
