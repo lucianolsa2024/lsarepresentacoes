@@ -734,12 +734,168 @@ export function ClientManager({
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
+              <>
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-2">
+                  {filteredParentClients.map((client) => {
+                    const branches = branchesByParent[client.id] || [];
+                    const lastContact = lastContactByClient?.[client.id];
+                    return (
+                      <Card key={client.id} className="cursor-pointer" onClick={() => onViewDetail?.(client.id)}>
+                        <CardContent className="p-3 space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Building2 className="h-4 w-4 text-primary shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{clientDisplayName(client)}</p>
+                                <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                  {client.isNewClient && <Badge variant="secondary" className="text-[10px]">Novo</Badge>}
+                                  {client.segment && <Badge variant="outline" className="text-[10px]">{client.segment}</Badge>}
+                                  {client.curve && <Badge className={`text-[10px] ${getCurveBadgeClass(client.curve)}`}>{client.curve}</Badge>}
+                                  {branches.length > 0 && <Badge variant="outline" className="text-[10px]">{branches.length} filial</Badge>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(client)}>
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(client.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{getRepNames(client) || '—'}</span>
+                            {lastContact && <span>{new Date(lastContact).toLocaleDateString('pt-BR')}</span>}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden sm:block rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome Fantasia / Razão Social</TableHead>
                       <TableHead>Segmento</TableHead>
+                      <TableHead>Cond. Pagamento</TableHead>
+                      <TableHead>Responsável(eis)</TableHead>
+                      <TableHead>Último Contato</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredParentClients.map((client) => {
+                      const branches = branchesByParent[client.id] || [];
+                      const lastContact = lastContactByClient?.[client.id];
+                      return (
+                        <>
+                          <TableRow
+                            key={client.id}
+                            className="cursor-pointer hover:bg-accent/50"
+                            onClick={() => onViewDetail?.(client.id)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+                                <div>
+                                  <span className="font-medium">{clientDisplayName(client)}</span>
+                                  {client.isNewClient && (
+                                    <Badge variant="secondary" className="ml-2 text-xs">Novo</Badge>
+                                  )}
+                                  {branches.length > 0 && (
+                                    <Badge variant="outline" className="ml-1 text-xs">{branches.length} filial{branches.length > 1 ? 'is' : ''}</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {client.segment ? (
+                                <Badge variant="outline" className="text-xs">{client.segment}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{client.defaultPaymentTerms || '—'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{getRepNames(client) || '—'}</span>
+                            </TableCell>
+                            <TableCell>
+                              {lastContact ? (
+                                <span className="text-sm">{new Date(lastContact).toLocaleDateString('pt-BR')}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                {onViewDetail && (
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewDetail(client.id)} title="Ver detalhes">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(client)} title="Editar">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openNewBranchDialog(client)} title="Adicionar filial">
+                                  <GitBranch className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(client.id)} title="Excluir">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {branches.map(branch => (
+                            <TableRow
+                              key={branch.id}
+                              className="cursor-pointer hover:bg-accent/50 bg-muted/30"
+                              onClick={() => onViewDetail?.(branch.id)}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2 pl-6">
+                                  <GitBranch className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm">{branch.name || branch.company}</span>
+                                  {branch.address.city && (
+                                    <span className="text-xs text-muted-foreground">• {branch.address.city}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell />
+                              <TableCell />
+                              <TableCell />
+                              <TableCell>
+                                {lastContactByClient?.[branch.id] ? (
+                                  <span className="text-sm">{new Date(lastContactByClient[branch.id]).toLocaleDateString('pt-BR')}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(branch)}>
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(branch.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                </div>
+              </>
+            )}
                       <TableHead>Cond. Pagamento</TableHead>
                       <TableHead>Responsável(eis)</TableHead>
                       <TableHead>Último Contato</TableHead>
