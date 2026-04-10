@@ -153,7 +153,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     // Other tables: skip fabric code but need tier
     // Regular products: need both
     const needsFabricTier = !hasTampoInSize && !isCarpet;
-    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet;
+    const isSemTec = config.fabricTier === 'SEM TEC';
+    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet && !isSemTec;
     
     if (!selectedProduct || !config.modulationId || !config.sizeId) return;
     if (needsFabricTier && !config.fabricTier) return;
