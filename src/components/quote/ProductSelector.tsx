@@ -506,7 +506,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               )}
 
               {/* Step 5: Fabric Selection (only for non-table products) */}
-              {config.fabricTier && !isTable && (
+              {config.fabricTier && !isTable && config.fabricTier !== 'SEM TEC' && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricCode')}. Tecido *</Label>
                   
