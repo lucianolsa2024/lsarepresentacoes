@@ -492,8 +492,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 4: Finish/Fabric Tier (skip for carpets and TAMPO products) */}
-              {config.sizeId && !hasTampoInSize && !isCarpet && (
+              {/* Step 4: Finish/Fabric Tier */}
+              {shouldShowFabricTierStep && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricTier')}. {isTable ? 'Acabamento' : 'Faixa de Tecido'} *</Label>
                   <Select
@@ -501,11 +501,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                     onValueChange={handleFabricTierChange}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={isTable ? "Selecione o acabamento..." : "Selecione a faixa..."} />
+                      <SelectValue placeholder={isTable ? 'Selecione o acabamento...' : 'Selecione a faixa...'} />
                     </SelectTrigger>
                     <SelectContent>
                       {isTable ? (
-                        // Table finish options
                         (availableFabricTiers as Array<{ key: FabricTier; label: string }>).map((tier) => {
                           const price = selectedSize?.prices[tier.key] || 0;
                           return (
@@ -518,7 +517,6 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                           );
                         })
                       ) : (
-                        // Fabric tier options
                         (availableFabricTiers as FabricTier[]).map((tier) => {
                           const price = selectedSize?.prices[tier] || 0;
                           const fabricCount = getFabricsByTier(tier).length;
@@ -534,12 +532,11 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 5: Fabric Selection (only for non-table products) */}
-              {config.fabricTier && !isTable && config.fabricTier !== 'SEM TEC' && (
+              {/* Step 5: Fabric Selection */}
+              {shouldShowFabricCodeStep && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricCode')}. Tecido *</Label>
-                  
-                  {/* Search input */}
+
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -549,8 +546,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       className="pl-10"
                     />
                   </div>
-                  
-                  {/* Fabric list */}
+
                   <div className="max-h-40 overflow-y-auto border rounded-md">
                     {availableFabrics.length === 0 ? (
                       <div className="p-3 text-center text-muted-foreground text-sm">
@@ -564,9 +560,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                             type="button"
                             onClick={() => handleFabricSelect(fabric.code)}
                             className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition ${
-                              config.fabricCode === fabric.code 
-                                ? 'bg-primary/10 text-primary font-medium' 
-                                : ''
+                              config.fabricCode === fabric.code ? 'bg-primary/10 text-primary font-medium' : ''
                             }`}
                           >
                             <span>{fabric.code}</span>
@@ -580,7 +574,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       </div>
                     )}
                   </div>
-                  
+
                   {config.fabricCode && (
                     <div className="text-sm text-primary font-medium">
                       Selecionado: {config.fabricCode}
@@ -589,64 +583,56 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Item Summary - show for carpets/TAMPO when size selected, tables when tier selected, others when fabric code selected */}
-              {(isCarpet && config.sizeId || hasTampoInSize || (isTable && config.fabricTier) || (!isTable && !isCarpet && config.fabricCode)) && (() => {
-                // Check if this is a CAIXA product and extract the tier
+              {/* Item Summary */}
+              {shouldShowItemSummary && (() => {
                 const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
                 const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
                 const caixaTier = caixaMatch ? caixaMatch[1].toUpperCase().replace(/\s+/g, ' ') : '';
-                
-                // Get clean dimensions without CAIXA info
-                const cleanDimensions = selectedSize?.dimensions || 
+                const cleanDimensions = selectedSize?.dimensions ||
                   [selectedSize?.length, selectedSize?.depth, selectedSize?.height]
                     .filter(Boolean)
                     .join(' × ');
-                
-                // Get table tier label if applicable
-                const tableTierLabel = isTable 
-                  ? TABLE_TIERS.find(t => t.key === config.fabricTier)?.label 
+                const tableTierLabel = isTable
+                  ? TABLE_TIERS.find(t => t.key === effectiveFabricTier)?.label
                   : null;
-                
+
                 return (
-                <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
-                  <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                    Resumo do Item
-                  </h5>
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Produto:</span>
-                      <span className="font-medium">{selectedProduct.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Modulação:</span>
-                      <span className="font-medium">{selectedModulation?.name}</span>
-                    </div>
-                    {config.base && (
+                  <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+                    <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Resumo do Item
+                    </h5>
+                    <div className="space-y-1.5 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Base:</span>
-                        <span className="font-medium">{config.base}</span>
+                        <span className="text-muted-foreground">Produto:</span>
+                        <span className="font-medium">{selectedProduct.name}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{isCarpet ? 'Medida:' : 'Tamanho:'}</span>
-                      <span className="font-medium">{isCarpet ? selectedSize?.description : cleanDimensions}</span>
-                    </div>
-                    
-                    {/* Table finish section */}
-                    {isTable && tableTierLabel && (
-                      <div className="mt-2 pt-2 border-t border-dashed">
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                          Acabamento
-                        </div>
-                        <div className="font-medium text-primary text-xs">
-                          {tableTierLabel}
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Modulação:</span>
+                        <span className="font-medium">{selectedModulation?.name}</span>
                       </div>
-                    )}
-                    
-                    {/* CAIXA + CORPO section for CAIXA products (skip for carpets) */}
-                    {!isTable && !isCarpet && isCaixaProduct ? (
-                      <>
+                      {config.base && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Base:</span>
+                          <span className="font-medium">{config.base}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{isCarpet ? 'Medida:' : 'Tamanho:'}</span>
+                        <span className="font-medium">{isCarpet ? selectedSize?.description : cleanDimensions}</span>
+                      </div>
+
+                      {isTable && (tableTierLabel || builtInFinishLabel) && (
+                        <div className="mt-2 pt-2 border-t border-dashed">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                            Acabamento
+                          </div>
+                          <div className="font-medium text-primary text-xs">
+                            {builtInFinishLabel || tableTierLabel}
+                          </div>
+                        </div>
+                      )}
+
+                      {!isTable && !isCarpet && isCaixaProduct ? (
                         <div className="mt-2 pt-2 border-t border-dashed">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                             Tecidos
@@ -657,43 +643,53 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Corpo (assento):</span>
-                            <span className="font-medium text-primary">{config.fabricTier}</span>
+                            <span className="font-medium text-primary">{effectiveFabricTier}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Código do Tecido:</span>
                             <span className="font-medium">{config.fabricCode}</span>
                           </div>
                         </div>
-                      </>
-                    ) : !isTable && !isCarpet && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Faixa de Tecido:</span>
-                          <span className="font-medium text-primary">{config.fabricTier}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Tecido:</span>
-                          <span className="font-medium">{config.fabricCode}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="pt-2 border-t mt-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Preço unitário:</span>
-                      <span className="text-xl font-bold text-primary">
-                        {formatCurrency(getCurrentPrice())}
-                      </span>
+                      ) : !isTable && !isCarpet && (
+                        <>
+                          {effectiveFabricTier === 'SEM TEC' ? (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Tecido:</span>
+                              <span className="font-medium">Sem tecido</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Faixa de Tecido:</span>
+                                <span className="font-medium text-primary">{effectiveFabricTier}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Tecido:</span>
+                                <span className="font-medium">{config.fabricCode}</span>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="pt-2 border-t mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Preço unitário:</span>
+                        <span className="text-xl font-bold text-primary">
+                          {formatCurrency(getCurrentPrice())}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })()}
 
-              {/* Simple price preview before fabric code selection (only for non-table products) */}
-              {config.fabricTier && !config.fabricCode && !isTable && (
+              {/* Simple price preview */}
+              {shouldShowPricePreview && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
-                  <span className="text-sm text-muted-foreground">Preço da faixa {config.fabricTier}:</span>
+                  <span className="text-sm text-muted-foreground">
+                    {effectiveFabricTier === 'SEM TEC' ? 'Preço do item sem tecido:' : `Preço da faixa ${effectiveFabricTier}:`}
+                  </span>
                   <span className="text-xl font-bold text-primary ml-2">
                     {formatCurrency(getCurrentPrice())}
                   </span>
@@ -702,7 +698,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
               <Button
                 onClick={handleConfirm}
-                disabled={!config.modulationId || !config.sizeId || (!hasTampoInSize && !isCarpet && !config.fabricTier) || (!isTable && !hasTampoInSize && !isCarpet && !config.fabricCode)}
+                disabled={isConfirmDisabled}
                 className="w-full"
               >
                 Confirmar Item
