@@ -182,11 +182,13 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     } else {
       price = size.prices[config.fabricTier as FabricTier] || 0;
       
-      // For tables, use the tier label as the fabric description
-      fabricDescription = config.fabricCode;
-      if (isTable) {
+      if (isSemTec) {
+        fabricDescription = 'Sem tecido';
+      } else if (isTable) {
         const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
         fabricDescription = tableTier?.label || config.fabricTier;
+      } else {
+        fabricDescription = config.fabricCode;
       }
     }
 
