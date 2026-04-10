@@ -153,7 +153,8 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     // Other tables: skip fabric code but need tier
     // Regular products: need both
     const needsFabricTier = !hasTampoInSize && !isCarpet;
-    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet;
+    const isSemTec = config.fabricTier === 'SEM TEC';
+    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet && !isSemTec;
     
     if (!selectedProduct || !config.modulationId || !config.sizeId) return;
     if (needsFabricTier && !config.fabricTier) return;
@@ -181,11 +182,13 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     } else {
       price = size.prices[config.fabricTier as FabricTier] || 0;
       
-      // For tables, use the tier label as the fabric description
-      fabricDescription = config.fabricCode;
-      if (isTable) {
+      if (isSemTec) {
+        fabricDescription = 'Sem tecido';
+      } else if (isTable) {
         const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
         fabricDescription = tableTier?.label || config.fabricTier;
+      } else {
+        fabricDescription = config.fabricCode;
       }
     }
 
@@ -505,7 +508,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               )}
 
               {/* Step 5: Fabric Selection (only for non-table products) */}
-              {config.fabricTier && !isTable && (
+              {config.fabricTier && !isTable && config.fabricTier !== 'SEM TEC' && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricCode')}. Tecido *</Label>
                   
