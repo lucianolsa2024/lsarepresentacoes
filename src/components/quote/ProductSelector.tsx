@@ -56,27 +56,26 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     
     // Check if this is a CAIXA product (description contains "CAIXA:")
     const hasCaixa = sizes.some(s => s.description.toUpperCase().includes('CAIXA:'));
-    
-    // Check if this is a table/buffet product (has TAMPO in description)
-    const hasTampo = sizes.some(s => s.description.toUpperCase().includes('TAMPO:'));
-    
-    if (hasCaixa || hasTampo) {
-      // For CAIXA products or table/buffet products with TAMPO, each row is unique - don't deduplicate
+
+    // Check if this size already carries a built-in finish/top definition
+    const hasBuiltInFinish = sizes.some(s => /\b(TAMPO|TOPO):/i.test(s.description));
+
+    if (hasCaixa || hasBuiltInFinish) {
+      // For CAIXA products or products with built-in finish info, each row is unique - don't deduplicate
       return sizes;
     }
-    
+
     // For other products, deduplicate by full description to preserve unique variants
     // (e.g., "AP MARMORE", "GIRATÓRIA", different finishes with same dimensions)
     const uniqueSizes = new Map<string, typeof sizes[0]>();
     sizes.forEach(size => {
-      // Use description as key to preserve all unique variants
       const key = size.description;
-      
+
       if (!uniqueSizes.has(key)) {
         uniqueSizes.set(key, size);
       }
     });
-    
+
     return Array.from(uniqueSizes.values());
   }, [selectedModulation, config.base]);
 
@@ -106,87 +105,98 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return selectedProduct?.category === 'Tapetes';
   }, [selectedProduct]);
 
-  // Check if the selected size already includes finish info (TAMPO:) - skip fabric/finish step
-  const hasTampoInSize = useMemo(() => {
-    return selectedSize?.description.toUpperCase().includes('TAMPO:') ?? false;
+  // Check if the selected size already includes finish info (TAMPO:/TOPO:) - skip fabric/finish step
+  const hasBuiltInFinishInSize = useMemo(() => {
+    return /\b(TAMPO|TOPO):/i.test(selectedSize?.description ?? '');
+  }, [selectedSize]);
+
+  const builtInFinishLabel = useMemo(() => {
+    const match = selectedSize?.description.match(/\b(TAMPO|TOPO):\s*([^,\n]+)/i);
+    if (!match) return '';
+    return `${match[1].toUpperCase()}: ${match[2].trim()}`;
   }, [selectedSize]);
 
   // Get available fabric/finish tiers (only those with price > 0)
   const availableFabricTiers = useMemo(() => {
     if (!selectedSize) return [];
-    
-    // If TAMPO is already in the size description, no need for separate finish selection
-    if (hasTampoInSize) return [];
-    
+
+    // If the finish/top is already in the size description, no need for separate selection
+    if (hasBuiltInFinishInSize) return [];
+
     if (isTable) {
-      // For tables, use TABLE_TIERS and filter by available prices
       return TABLE_TIERS.filter(tier => {
         const price = selectedSize.prices[tier.key] || 0;
         return price > 0;
       });
     }
-    
-    // For other products, use FABRIC_TIERS
+
     return FABRIC_TIERS.filter(tier => {
       const price = selectedSize.prices[tier] || 0;
       return price > 0;
     });
-  }, [selectedSize, isTable, hasTampoInSize]);
+  }, [selectedSize, isTable, hasBuiltInFinishInSize]);
+
+  const hasOnlySemTecOption = useMemo(() => {
+    if (!selectedSize || hasBuiltInFinishInSize || isCarpet) return false;
+
+    const tiers = isTable
+      ? (availableFabricTiers as Array<{ key: FabricTier; label: string }>).map(tier => tier.key)
+      : (availableFabricTiers as FabricTier[]);
+
+    return tiers.length === 1 && tiers[0] === 'SEM TEC';
+  }, [availableFabricTiers, hasBuiltInFinishInSize, isCarpet, isTable, selectedSize]);
+
+  const effectiveFabricTier = hasOnlySemTecOption ? 'SEM TEC' : config.fabricTier;
+
+  const getFirstAvailablePrice = (prices: Record<FabricTier, number>) => {
+    const priceEntry = [...FABRIC_TIERS].find(key => (prices[key] || 0) > 0);
+    return priceEntry ? prices[priceEntry] : 0;
+  };
 
   // Get fabrics for selected tier, filtered by search
   const availableFabrics = useMemo(() => {
-    if (!config.fabricTier) return [];
-    const tierFabrics = getFabricsByTier(config.fabricTier as FabricTier);
-    
+    if (!effectiveFabricTier || effectiveFabricTier === 'SEM TEC') return [];
+    const tierFabrics = getFabricsByTier(effectiveFabricTier as FabricTier);
+
     if (!fabricSearch.trim()) return tierFabrics;
-    
+
     const search = fabricSearch.toLowerCase().trim();
-    return tierFabrics.filter(f => 
+    return tierFabrics.filter(f =>
       f.code.toLowerCase().includes(search) ||
       (f.notes && f.notes.toLowerCase().includes(search))
     );
-  }, [config.fabricTier, fabricSearch]);
+  }, [effectiveFabricTier, fabricSearch]);
 
   const handleConfirm = () => {
-    // Carpets: no fabric at all
-    // Tables with TAMPO in size: skip both fabric tier and code
-    // Other tables: skip fabric code but need tier
-    // Regular products: need both
-    const needsFabricTier = !hasTampoInSize && !isCarpet;
-    const isSemTec = config.fabricTier === 'SEM TEC';
-    const needsFabricCode = !isTable && !hasTampoInSize && !isCarpet && !isSemTec;
-    
+    const needsFabricTier = !hasBuiltInFinishInSize && !isCarpet && !hasOnlySemTecOption;
+    const isSemTec = effectiveFabricTier === 'SEM TEC';
+    const needsFabricCode = !isTable && !hasBuiltInFinishInSize && !isCarpet && !isSemTec;
+
     if (!selectedProduct || !config.modulationId || !config.sizeId) return;
-    if (needsFabricTier && !config.fabricTier) return;
+    if (needsFabricTier && !effectiveFabricTier) return;
     if (needsFabricCode && !config.fabricCode) return;
 
     const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
     const size = modulation?.sizes.find(s => s.id === config.sizeId);
     if (!modulation || !size) return;
 
-    // For products with TAMPO in size, get the price from the first available price column
     let price: number;
     let fabricDescription: string;
-    
+
     if (isCarpet) {
-      // Carpets use price_sem_tec directly (mapped to 'SEM TEC')
       price = size.prices['SEM TEC'] || 0;
       fabricDescription = 'Tapete - sem tecido';
-    } else if (hasTampoInSize) {
-      // Find first non-zero price
-      const priceKeys: FabricTier[] = ['FX B', 'FX C', 'FX D', 'FX E', 'FX F'];
-      const priceEntry = priceKeys.find(key => (size.prices[key] || 0) > 0);
-      price = priceEntry ? size.prices[priceEntry] : 0;
-      const tampoMatch = size.description.match(/TAMPO:\s*([^,\n]+)/i);
-      fabricDescription = tampoMatch ? `TAMPO: ${tampoMatch[1].trim()}` : 'Acabamento incluído';
+    } else if (hasBuiltInFinishInSize) {
+      price = getFirstAvailablePrice(size.prices);
+      fabricDescription = builtInFinishLabel || 'Acabamento incluído';
     } else {
-      price = size.prices[config.fabricTier as FabricTier] || 0;
-      
+      price = size.prices[effectiveFabricTier as FabricTier] || 0;
+
       if (isSemTec) {
         fabricDescription = 'Sem tecido';
       } else if (isTable) {
-        const tableTier = TABLE_TIERS.find(t => t.key === config.fabricTier);
-        fabricDescription = tableTier?.label || config.fabricTier;
+        const tableTier = TABLE_TIERS.find(t => t.key === effectiveFabricTier);
+        fabricDescription = tableTier?.label || effectiveFabricTier;
       } else {
         fabricDescription = config.fabricCode;
       }
@@ -202,7 +212,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeId: config.sizeId,
       sizeDescription: size.description,
       base: size.base || config.base,
-      fabricTier: (isCarpet ? 'SEM TEC' : hasTampoInSize ? 'FX B' : config.fabricTier) as FabricTier,
+      fabricTier: (isCarpet ? 'SEM TEC' : hasBuiltInFinishInSize ? 'SEM TEC' : effectiveFabricTier) as FabricTier,
       fabricDescription,
       price,
       quantity: 1,
@@ -223,9 +233,26 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   const getCurrentPrice = () => {
     if (!selectedSize) return 0;
     if (isCarpet) return selectedSize.prices['SEM TEC'] || 0;
-    if (!config.fabricTier) return 0;
-    return selectedSize.prices[config.fabricTier as FabricTier] || 0;
+    if (hasBuiltInFinishInSize) return getFirstAvailablePrice(selectedSize.prices);
+    if (hasOnlySemTecOption) return selectedSize.prices['SEM TEC'] || 0;
+    if (!effectiveFabricTier) return 0;
+    return selectedSize.prices[effectiveFabricTier as FabricTier] || 0;
   };
+
+  const shouldShowFabricTierStep = Boolean(config.sizeId) && !hasBuiltInFinishInSize && !isCarpet && !hasOnlySemTecOption;
+  const shouldShowFabricCodeStep = Boolean(effectiveFabricTier) && !isTable && effectiveFabricTier !== 'SEM TEC';
+  const shouldShowItemSummary = Boolean(
+    (isCarpet && config.sizeId) ||
+      hasBuiltInFinishInSize ||
+      (isTable && effectiveFabricTier) ||
+      (!isTable && !isCarpet && (effectiveFabricTier === 'SEM TEC' || config.fabricCode))
+  );
+  const shouldShowPricePreview = Boolean(!shouldShowItemSummary && !isTable && effectiveFabricTier && !config.fabricCode);
+  const isConfirmDisabled =
+    !config.modulationId ||
+    !config.sizeId ||
+    (shouldShowFabricTierStep && !effectiveFabricTier) ||
+    (shouldShowFabricCodeStep && !config.fabricCode);
 
   // Filter products by search term (no factory filter - show all)
   const filteredProducts = useMemo(() => {
