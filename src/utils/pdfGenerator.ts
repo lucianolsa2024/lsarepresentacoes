@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import { addDays, format } from 'date-fns';
 import { Quote, QuoteItem } from '@/types/quote';
-import logoLsa from '@/assets/logo-lsa.png';
+import logoLsa from '@/assets/logo-lsa-new.jpg';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
 import { getQuoteFileName } from '@/utils/quoteLabel';
 
@@ -201,12 +201,10 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
 
   // ===== HEADER LAYOUT (similar to RD style) =====
   // Logo on the left - maintain aspect ratio (original logo is approximately 300x100)
-  const logoOriginalWidth = 300;
-  const logoOriginalHeight = 100;
   const logoWidth = 45;
-  const logoHeight = (logoWidth * logoOriginalHeight) / logoOriginalWidth; // ~15
+  const logoHeight = logoWidth * 0.4; // ~18 - aspect ratio of new logo
   const logoX = 15;
-  doc.addImage(logoLsa, 'PNG', logoX, y, logoWidth, logoHeight);
+  doc.addImage(logoLsa, 'JPEG', logoX, y, logoWidth, logoHeight);
 
   // Company info on the right (italic style)
   const rightX = pageWidth - 15;
