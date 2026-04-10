@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import { addDays, format } from 'date-fns';
 import { Quote, QuoteItem } from '@/types/quote';
-import logoLsa from '@/assets/logo-lsa.png';
+import logoLsa from '@/assets/logo-lsa-new.jpg';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
 import { getQuoteFileName } from '@/utils/quoteLabel';
 
