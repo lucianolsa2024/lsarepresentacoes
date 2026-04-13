@@ -258,21 +258,34 @@ export function QuoteExcelImporter({ clients, onImportQuote, onAddClient }: Quot
                 </div>
                 <div>
                   <Label>Cliente / Empresa *</Label>
-                  <ClientSelector
-                    clients={clients}
-                    selectedId={selectedClientId}
-                    onSelect={(c) => {
-                      setSelectedClientId(c?.id || null);
+                  <Select
+                    value={selectedClientId || ''}
+                    onValueChange={(val) => {
+                      if (val === '__none__') {
+                        setSelectedClientId(null);
+                        return;
+                      }
+                      setSelectedClientId(val);
+                      const c = clients.find(cl => cl.id === val);
                       if (c) setClientCompany(c.company);
                     }}
-                    onAddClient={onAddClient}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um cliente existente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">-- Novo cliente --</SelectItem>
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.company}{c.trade_name ? ` (${c.trade_name})` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {!selectedClientId && (
                     <Input
                       className="mt-2"
                       value={clientCompany}
                       onChange={(e) => setClientCompany(e.target.value)}
-                      placeholder="Ou digite o nome do cliente"
+                      placeholder="Digite o nome do cliente/empresa"
                     />
                   )}
                 </div>
