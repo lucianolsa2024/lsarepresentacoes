@@ -144,7 +144,7 @@ async function fetchMonthFromSalesBase(
     sold += rev;
 
     // By supplier
-    const sup = r.supplier ?? 'SEM FORNECEDOR';
+    const sup = normalizeSupplier(r.supplier) || 'SEM FORNECEDOR';
     const existing = supplierMap.get(sup);
     if (existing) {
       existing.revenue_mtd = (existing.revenue_mtd ?? 0) + rev;

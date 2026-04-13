@@ -42,7 +42,7 @@ export function SalesReport() {
     const map: Record<string, { revenue: number; volume: number; orders: Set<string> }> = {};
 
     rows.forEach((row) => {
-      const key = row.supplier || 'SEM FORNECEDOR';
+      const key = normalizeSupplier(row.supplier) || 'SEM FORNECEDOR';
       if (!map[key]) {
         map[key] = { revenue: 0, volume: 0, orders: new Set<string>() };
       }

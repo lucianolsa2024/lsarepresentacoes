@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderFormData } from '@/types/order';
 import { toast } from 'sonner';
+import { normalizeSupplier } from '@/utils/supplierNormalize';
 
 const dbToOrder = (row: any): Order => ({
   id: row.id,
   clientId: row.client_id,
   issueDate: row.issue_date,
   clientName: row.client_name,
-  supplier: row.supplier || '',
+  supplier: normalizeSupplier(row.supplier),
   representative: row.representative || '',
   orderNumber: row.order_number || '',
   oc: row.oc || '',
