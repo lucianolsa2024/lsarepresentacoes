@@ -276,7 +276,7 @@ export function QuoteExcelImporter({ clients, onImportQuote, onAddClient }: Quot
                     <SelectContent>
                       <SelectItem value="__none__">-- Novo cliente --</SelectItem>
                       {clients.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.company}{c.trade_name ? ` (${c.trade_name})` : ''}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>{c.company}{c.tradeName ? ` (${c.tradeName})` : ''}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
