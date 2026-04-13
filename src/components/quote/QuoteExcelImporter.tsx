@@ -8,7 +8,7 @@ import { Upload, FileSpreadsheet, Loader2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteItem } from '@/types/quote';
 import { Client } from '@/hooks/useClients';
-import { ClientSelector } from './ClientSelector';
+
 import * as XLSX from 'xlsx';
 
 interface QuoteExcelImporterProps {
