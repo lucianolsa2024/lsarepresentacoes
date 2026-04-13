@@ -727,18 +727,49 @@ const Index = () => {
                             address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
                           },
                           items: allItems,
-                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '', paymentTerms: first.order.paymentTerms || '' } as any,
+                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '' },
                           subtotal,
                           discount: 0,
                           total: subtotal,
+                          version: 1,
+                          status: 'orcamento',
                         };
 
-                        const result = await addQuote(quote, first.clientId || undefined);
-                        if (result) {
-                          toast.success(`Orçamento importado com ${allItems.length} itens — Total: ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
-                          return 1;
-                        }
-                        return 0;
+                        const result = await addQuote(quote, first.clientId || undefined, user?.email || undefined);
+                        if (!result) return 0;
+
+                        // Auto-create sales opportunity
+                        await addOpportunity({
+                          clientId: first.clientId || null,
+                          title: `Orç. #${quote.id.slice(0, 8).toUpperCase()} - ${clientName}`,
+                          description: `Orçamento importado via PDF. ${allItems.length} itens.`,
+                          funnelType: 'lojista',
+                          stage: 'proposta',
+                          value: subtotal,
+                          contactName: '',
+                          contactPhone: '',
+                          contactEmail: '',
+                          ownerEmail: user?.email || undefined,
+                        });
+
+                        // Auto-create follow-up D+5
+                        const followUpDate = new Date();
+                        followUpDate.setDate(followUpDate.getDate() + 5);
+                        const label = getQuoteLabel(quote);
+                        await addActivity({
+                          activity_category: 'crm',
+                          type: 'followup',
+                          title: `Follow-up ${label}`,
+                          description: `Lembrete automático de follow-up: ${label}. Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                          due_date: followUpDate.toISOString().split('T')[0],
+                          priority: 'media',
+                          client_id: first.clientId || undefined,
+                          quote_id: quote.id,
+                        });
+
+                        syncQuoteToRDStation(quote);
+                        toast.success(`Orçamento importado com ${allItems.length} itens — Total: ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
+                        return 1;
                       }}
                       clients={clients}
                       onAddClient={addClient}
