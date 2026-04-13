@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { normalizeSupplier } from '@/utils/supplierNormalize';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
