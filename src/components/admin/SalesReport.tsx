@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { normalizeSupplier } from '@/utils/supplierNormalize';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
   BarChart,
@@ -42,7 +43,7 @@ export function SalesReport() {
     const map: Record<string, { revenue: number; volume: number; orders: Set<string> }> = {};
 
     rows.forEach((row) => {
-      const key = row.supplier || 'SEM FORNECEDOR';
+      const key = normalizeSupplier(row.supplier) || 'SEM FORNECEDOR';
       if (!map[key]) {
         map[key] = { revenue: 0, volume: 0, orders: new Set<string>() };
       }
@@ -129,7 +130,7 @@ export function SalesReport() {
 
     rows.forEach((row) => {
       const rep = row.representative || row.owner_email || 'SEM REPRESENTANTE';
-      const supplier = row.supplier || 'SEM FORNECEDOR';
+      const supplier = normalizeSupplier(row.supplier) || 'SEM FORNECEDOR';
       suppliers.add(supplier);
 
       if (!map[rep]) map[rep] = {};

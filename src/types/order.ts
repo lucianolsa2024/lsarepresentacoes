@@ -49,7 +49,7 @@ export interface OrderFormData {
 export const INITIAL_ORDER: OrderFormData = {
   issueDate: new Date().toISOString().split('T')[0],
   clientName: '',
-  supplier: 'CENTURY',
+  supplier: 'SOHOME',
   representative: '',
   orderNumber: '',
   oc: '',
@@ -66,7 +66,7 @@ export const INITIAL_ORDER: OrderFormData = {
 
 export const ORDER_TYPES = ['ENCOMENDA', 'PRONTA ENTREGA', 'REPOSIÇÃO'] as const;
 
-export const SUPPLIERS = ['CENTURY', 'SOHOME', 'SOHOME WOOD', 'BENITA CASA', 'AVANTI', 'SÃO CARLOS', 'LOVATO'] as const;
+export const SUPPLIERS = ['SOHOME', 'SOHOME WOOD', 'BENITA CASA', 'AVANTI', 'SÃO CARLOS', 'LOVATO'] as const;
 
 /** @deprecated Use useRepresentatives() hook instead */
 export const REPRESENTATIVES = [

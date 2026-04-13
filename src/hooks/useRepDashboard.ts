@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { normalizeSupplier } from '@/utils/supplierNormalize';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -144,7 +145,7 @@ async function fetchMonthFromSalesBase(
     sold += rev;
 
     // By supplier
-    const sup = r.supplier ?? 'SEM FORNECEDOR';
+    const sup = normalizeSupplier(r.supplier) || 'SEM FORNECEDOR';
     const existing = supplierMap.get(sup);
     if (existing) {
       existing.revenue_mtd = (existing.revenue_mtd ?? 0) + rev;
