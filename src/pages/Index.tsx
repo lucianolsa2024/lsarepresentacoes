@@ -617,61 +617,71 @@ const Index = () => {
                   </TabsContent>
 
                   <TabsContent value="import-excel" className="mt-0">
-                    <OrderImporter
-                      onImport={async (importedOrders) => {
-                        if (importedOrders.length === 0) return 0;
-                        
-                        // Build all items into a SINGLE quote
-                        const allItems: QuoteItem[] = importedOrders.map(item => ({
-                          id: crypto.randomUUID(),
-                          productId: '',
-                          productName: item.order.product || 'Produto importado',
-                          factory: item.order.supplier || '',
-                          modulation: item.order.dimensions || '',
-                          modulationId: '',
-                          sizeId: '',
-                          sizeDescription: item.order.dimensions || '',
-                          base: '',
-                          fabricTier: 'SEM TEC' as const,
-                          fabricDescription: item.order.fabric || '',
-                          price: item.order.price || 0,
-                          quantity: item.order.quantity || 1,
-                          observations: `Ref: ${item.order.orderNumber || '-'} | OC: ${item.order.oc || '-'}`,
-                        }));
-
-                        const subtotal = allItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-                        const first = importedOrders[0];
-                        const clientName = first.order.clientName || 'Importação';
-
+                    <QuoteExcelImporter
+                      clients={clients}
+                      onAddClient={addClient}
+                      onImportQuote={async ({ projectName: pName, clientId, clientCompany, items: quoteItems, subtotal, representativeName: repName }) => {
                         const quote: Quote = {
                           id: crypto.randomUUID(),
-                          createdAt: first.order.issueDate ? new Date(first.order.issueDate).toISOString() : new Date().toISOString(),
+                          createdAt: new Date().toISOString(),
                           client: {
                             name: '',
-                            company: clientName,
+                            company: clientCompany,
                             document: '',
                             phone: '',
                             email: '',
                             isNewClient: false,
                             address: { street: '', number: '', complement: '', neighborhood: '', city: '', state: '', zipCode: '' },
                           },
-                          items: allItems,
-                          payment: { ...INITIAL_PAYMENT, representativeName: first.order.representative || '' },
+                          items: quoteItems,
+                          payment: { ...INITIAL_PAYMENT, representativeName: repName, projectName: pName },
                           subtotal,
                           discount: 0,
                           total: subtotal,
+                          version: 1,
+                          status: 'orcamento',
                         };
 
-                        const result = await addQuote(quote, first.clientId || undefined);
-                        if (result) {
-                          toast.success(`Orçamento importado com ${allItems.length} itens`);
-                          return 1;
-                        }
-                        return 0;
+                        const result = await addQuote(quote, clientId || undefined, user?.email || undefined);
+                        if (!result) return false;
+
+                        // Auto-create sales opportunity
+                        const matchedClient = clientId ? clients.find(c => c.id === clientId) : null;
+                        const funnelType = (matchedClient?.clientType === 'corporativo' || matchedClient?.clientType === 'escritorio_arquitetura')
+                          ? 'corporativo' : 'lojista';
+                        await addOpportunity({
+                          clientId: clientId || null,
+                          title: `Orç. #${quote.id.slice(0, 8).toUpperCase()} - ${clientCompany}`,
+                          description: `Orçamento importado via Excel. ${quoteItems.length} itens.`,
+                          funnelType,
+                          stage: 'proposta',
+                          value: subtotal,
+                          contactName: '',
+                          contactPhone: '',
+                          contactEmail: '',
+                          ownerEmail: user?.email || undefined,
+                        });
+
+                        // Auto-create follow-up D+5
+                        const followUpDate = new Date();
+                        followUpDate.setDate(followUpDate.getDate() + 5);
+                        const label = getQuoteLabel(quote);
+                        await addActivity({
+                          activity_category: 'crm',
+                          type: 'followup',
+                          title: `Follow-up ${label}`,
+                          description: `Lembrete automático de follow-up: ${label}. Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                          due_date: followUpDate.toISOString().split('T')[0],
+                          priority: 'media',
+                          client_id: clientId || undefined,
+                          quote_id: quote.id,
+                        });
+
+                        syncQuoteToRDStation(quote);
+                        toast.success(`Orçamento importado com ${quoteItems.length} itens — Total: ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
+                        setComercialTab('history');
+                        return true;
                       }}
-                      clients={clients}
-                      onAddClient={addClient}
-                      onComplete={() => setComercialTab('history')}
                     />
                   </TabsContent>
 
