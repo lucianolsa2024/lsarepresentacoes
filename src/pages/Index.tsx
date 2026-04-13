@@ -35,6 +35,7 @@ import { RouteManager } from '@/components/routes/RouteManager';
 import { ActivityManager } from '@/components/activities/ActivityManager';
 import { OrderImporter } from '@/components/orders/OrderImporter';
 import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
+import { QuoteExcelImporter } from '@/components/quote/QuoteExcelImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
