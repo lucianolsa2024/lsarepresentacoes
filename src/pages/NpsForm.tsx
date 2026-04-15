@@ -83,7 +83,7 @@ export default function NpsForm() {
       setTrainingDate((t as any).training_date || '');
 
       const { data: clients } = await supabase
-        .from('clients')
+        .from('v_clients_for_nps' as any)
         .select('id, company')
         .order('company');
       setStores((clients || []).map((c: any) => ({ id: c.id, company: c.company })));

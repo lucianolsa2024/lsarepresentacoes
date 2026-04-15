@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function validatePassword(password: string): string | null {
+  if (!password || password.length < 8) return 'Senha deve ter pelo menos 8 caracteres';
+  if (!/[A-Z]/.test(password)) return 'Senha deve conter pelo menos uma letra maiúscula';
+  if (!/[0-9]/.test(password)) return 'Senha deve conter pelo menos um número';
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -60,6 +67,10 @@ Deno.serve(async (req) => {
       if (!email || !password) {
         return new Response(JSON.stringify({ error: 'Email e senha são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
+      const pwError = validatePassword(password);
+      if (pwError) {
+        return new Response(JSON.stringify({ error: pwError }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       const { data, error } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -75,6 +86,10 @@ Deno.serve(async (req) => {
       if (!targetUserId || !newPassword) {
         return new Response(JSON.stringify({ error: 'userId e newPassword são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
+      const pwError = validatePassword(newPassword);
+      if (pwError) {
+        return new Response(JSON.stringify({ error: pwError }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       const { error } = await adminClient.auth.admin.updateUserById(targetUserId, { password: newPassword });
       if (error) throw error;
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -82,7 +97,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error(err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    console.error('Admin operation failed');
+    return new Response(JSON.stringify({ error: 'Erro interno' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
