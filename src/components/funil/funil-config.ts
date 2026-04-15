@@ -7,6 +7,7 @@
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 export type FaseId =
+  | "lead"
   | "prospeccao"
   | "qualificacao"
   | "elaboracao_proposta"
@@ -56,6 +57,7 @@ export interface Fase {
 // ── Fases do Funil ────────────────────────────────────────────────────────────
 
 export const FASES: Fase[] = [
+  { id: "lead",                 nome: "Lead",                   cor: "#64748b", ordem: 0 },
   { id: "prospeccao",          nome: "Prospecção",             cor: "#3b82f6", ordem: 1 },
   { id: "qualificacao",        nome: "Qualificação",           cor: "#a855f7", ordem: 2 },
   { id: "elaboracao_proposta", nome: "Elaboração de Proposta", cor: "#14b8a6", ordem: 3 },
@@ -68,6 +70,40 @@ export const FASES: Fase[] = [
 // ── Checklists de Transição ───────────────────────────────────────────────────
 
 export const TRANSICOES: Transicao[] = [
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 0. Lead → Prospecção
+  // ══════════════════════════════════════════════════════════════════════════
+  {
+    de:    "lead",
+    para:  "prospeccao",
+    titulo: "Iniciar prospecção do lead",
+    descricao: "Confirme as informações básicas antes de iniciar a prospecção ativa.",
+    minimo_para_avancar: 1,
+    perguntas: [
+      {
+        id:          "contato_identificado",
+        texto:       "Contato-chave da incorporadora/construtora foi identificado?",
+        tipo:        "boolean",
+        obrigatoria: true,
+        bloqueia_se: null,
+        atividade_se_nao: {
+          titulo:     "Identificar contato-chave na incorporadora/construtora",
+          prazo_dias: 3,
+          prioridade: "alta",
+        },
+        dica: "Identifique o decisor de suprimentos/interiores antes de abordar.",
+      },
+      {
+        id:          "dados_validados",
+        texto:       "Dados do empreendimento foram validados (endereço, tipologia, status)?",
+        tipo:        "boolean",
+        obrigatoria: false,
+        bloqueia_se: null,
+        dica: "Verifique se as informações importadas estão atualizadas.",
+      },
+    ],
+  },
 
   // ══════════════════════════════════════════════════════════════════════════
   // 1. Prospecção → Qualificação

@@ -54,6 +54,7 @@ export const FUNNEL_STAGES_LOJISTA = [
 ] as const;
 
 export const FUNNEL_STAGES_CORPORATIVO = [
+  { key: 'lead', label: 'Lead' },
   { key: 'prospeccao', label: 'Prospecção' },
   { key: 'qualificacao', label: 'Qualificação' },
   { key: 'elaboracao_proposta', label: 'Elaboração de Proposta' },
