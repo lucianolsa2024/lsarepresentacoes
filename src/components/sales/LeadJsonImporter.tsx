@@ -71,6 +71,7 @@ export function LeadJsonImporter({ open, onOpenChange, onImported, ownerEmail }:
 
     try {
       const records = parsed.map(lead => {
+        const scoreJson = JSON.stringify(lead.scores_detalhe);
         const notes = [
           `📊 Score: ${lead.score} | Prioridade: ${lead.prioridade} | Timing: ${lead.timing}`,
           `🏗️ Status: ${lead.status_obra_label}`,
@@ -84,6 +85,7 @@ export function LeadJsonImporter({ open, onOpenChange, onImported, ownerEmail }:
           `📍 ${lead.endereco}`,
           `🏷️ Tags: ${lead.tags.join(', ')}`,
           `\n💡 Ação: ${lead.acao_recomendada}`,
+          `\n<!--SCORES:${scoreJson}-->`,
         ].filter(Boolean).join('\n');
 
         return {
