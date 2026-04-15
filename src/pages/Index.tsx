@@ -41,6 +41,7 @@ import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
+import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -427,6 +428,11 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
+                {isAdmin && (
+                  <div className="mb-6">
+                    <DashboardExecutivo />
+                  </div>
+                )}
                 {isRep === true && (
                   <div className="mb-6 space-y-6">
                     <RepHomeDashboard />
@@ -440,7 +446,7 @@ const Index = () => {
                     orders={orders}
                     onViewActivities={() => setActiveTab('activities')}
                   />
-                ) : (
+                ) : !isAdmin ? (
                   /* Backoffice users: show only their activities widget */
                   <div className="space-y-6">
                     <ActivityWidget
@@ -454,7 +460,7 @@ const Index = () => {
                       }}
                     />
                   </div>
-                )}
+                ) : null}
               </TabsContent>
 
               {/* COMERCIAL - Sub-tabs */}
