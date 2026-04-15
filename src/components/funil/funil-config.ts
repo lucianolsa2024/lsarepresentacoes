@@ -57,6 +57,7 @@ export interface Fase {
 // ── Fases do Funil ────────────────────────────────────────────────────────────
 
 export const FASES: Fase[] = [
+  { id: "lead",                 nome: "Lead",                   cor: "#64748b", ordem: 0 },
   { id: "prospeccao",          nome: "Prospecção",             cor: "#3b82f6", ordem: 1 },
   { id: "qualificacao",        nome: "Qualificação",           cor: "#a855f7", ordem: 2 },
   { id: "elaboracao_proposta", nome: "Elaboração de Proposta", cor: "#14b8a6", ordem: 3 },
