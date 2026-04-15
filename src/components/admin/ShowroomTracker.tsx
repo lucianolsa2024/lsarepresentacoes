@@ -1,15 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
 import { ShowroomImporter } from './ShowroomImporter';
-import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
+import { Package, AlertTriangle, Eye, GraduationCap, DollarSign, Upload } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
   if (u === 'critico' || u === 'vermelho') return '🔴';
@@ -17,7 +16,7 @@ const urgenciaIcon = (u: string) => {
   return '🟢';
 };
 
-const statusBadge = (s: string) => {
+const statusCls = (s: string) => {
   const map: Record<string, string> = {
     pendente: 'bg-yellow-100 text-yellow-800',
     exposto: 'bg-green-100 text-green-800',
@@ -67,7 +66,16 @@ export function ShowroomTracker() {
 
   const handleConfirmarExposicao = () => {
     if (!modalExposicao) return;
-    confirmarExposicao.mutate({ id: modalExposicao.id, status_exposicao: expStatus, observacao: expObs });
+    confirmarExposicao.mutate({
+      id: modalExposicao.id,
+      status_exposicao: expStatus,
+      observacao: expObs,
+      // If marking as "exposto", schedule training activity
+      agendarTreinamento: expStatus === 'exposto',
+      cliente: modalExposicao.cliente,
+      produto: modalExposicao.produto,
+      representante: modalExposicao.representante,
+    });
     setModalExposicao(null);
     setExpObs('');
   };
@@ -83,151 +91,144 @@ export function ShowroomTracker() {
   if (isLoading) return <p className="text-muted-foreground p-4">Carregando...</p>;
 
   return (
-    <div className="space-y-6">
-      {/* Import button */}
-      <div className="flex justify-end">
+    <div className="space-y-3">
+      {/* Header row: KPIs + Import */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex gap-3 flex-wrap flex-1">
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+            <Package className="h-5 w-5 text-primary" />
+            <div><span className="text-lg font-bold">{kpis.pendentes}</span> <span className="text-xs text-muted-foreground">pendentes</span></div>
+          </div>
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <div><span className="text-lg font-bold">R$ {kpis.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span> <span className="text-xs text-muted-foreground">total</span></div>
+          </div>
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <div><span className="text-lg font-bold">{kpis.urgentes}</span> <span className="text-xs text-muted-foreground">urgentes</span></div>
+          </div>
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+            <GraduationCap className="h-5 w-5 text-amber-500" />
+            <div><span className="text-lg font-bold">{kpis.treinPendentes}</span> <span className="text-xs text-muted-foreground">treinamentos</span></div>
+          </div>
+        </div>
         <ShowroomImporter />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-4 flex items-center gap-3">
-          <Package className="h-8 w-8 text-primary" />
-          <div><p className="text-2xl font-bold">{kpis.pendentes}</p><p className="text-xs text-muted-foreground">Pendentes de exposição</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4 flex items-center gap-3">
-          <DollarSign className="h-8 w-8 text-primary" />
-          <div><p className="text-2xl font-bold">R$ {kpis.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p><p className="text-xs text-muted-foreground">Valor em acompanhamento</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4 flex items-center gap-3">
-          <AlertTriangle className="h-8 w-8 text-destructive" />
-          <div><p className="text-2xl font-bold">{kpis.urgentes}</p><p className="text-xs text-muted-foreground">Urgentes (+15 dias)</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="pt-4 flex items-center gap-3">
-          <GraduationCap className="h-8 w-8 text-amber-500" />
-          <div><p className="text-2xl font-bold">{kpis.treinPendentes}</p><p className="text-xs text-muted-foreground">Treinamentos pendentes</p></div>
-        </CardContent></Card>
+
+      {/* Filters inline */}
+      <div className="flex flex-wrap gap-2">
+        <Select value={filtroRep} onValueChange={setFiltroRep}>
+          <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos representantes</SelectItem>
+            {reps.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            <SelectItem value="pendente">Pendente</SelectItem>
+            <SelectItem value="exposto">Exposto</SelectItem>
+            <SelectItem value="não exposto">Não exposto</SelectItem>
+            <SelectItem value="substituído">Substituído</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filtroUrgencia} onValueChange={setFiltroUrgencia}>
+          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Urgência" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas urgências</SelectItem>
+            <SelectItem value="critico">🔴 Crítico</SelectItem>
+            <SelectItem value="alerta">🟡 Alerta</SelectItem>
+            <SelectItem value="ok">🟢 OK</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filtroSegmento} onValueChange={setFiltroSegmento}>
+          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Segmento" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos segmentos</SelectItem>
+            {segmentos.map(s => <SelectItem key={s} value={s!}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main content */}
-        <div className="flex-1 space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <Select value={filtroRep} onValueChange={setFiltroRep}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Representante" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos representantes</SelectItem>
-                {reps.map(r => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="exposto">Exposto</SelectItem>
-                <SelectItem value="não exposto">Não exposto</SelectItem>
-                <SelectItem value="substituído">Substituído</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filtroUrgencia} onValueChange={setFiltroUrgencia}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Urgência" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas urgências</SelectItem>
-                <SelectItem value="critico">🔴 Crítico</SelectItem>
-                <SelectItem value="alerta">🟡 Alerta</SelectItem>
-                <SelectItem value="ok">🟢 OK</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filtroSegmento} onValueChange={setFiltroSegmento}>
-              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Segmento" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos segmentos</SelectItem>
-                {segmentos.map(s => <SelectItem key={s} value={s!}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Table */}
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">Urg.</TableHead>
-                    <TableHead>NF</TableHead>
-                    <TableHead>Dt Fat</TableHead>
-                    <TableHead>Dias</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Cidade</TableHead>
-                    <TableHead>Representante</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="text-right">Qtde</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Exposição</TableHead>
-                    <TableHead>Treinamento</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 && (
-                    <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">Nenhum item encontrado</TableCell></TableRow>
-                  )}
-                  {filtered.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-lg">{urgenciaIcon(item.urgencia)}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.nf_numero}</TableCell>
-                      <TableCell className="text-xs">{item.dt_faturamento ? new Date(item.dt_faturamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</TableCell>
-                      <TableCell className="font-bold">{item.dias_desde_fat}d</TableCell>
-                      <TableCell className="font-medium max-w-[140px] truncate">{item.cliente}</TableCell>
-                      <TableCell className="text-xs">{item.cidade || '-'}</TableCell>
-                      <TableCell className="text-xs">{item.representante || '-'}</TableCell>
-                      <TableCell className="max-w-[120px] truncate">{item.produto}</TableCell>
-                      <TableCell className="text-right">{item.quantidade}</TableCell>
-                      <TableCell className="text-right">R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
-                      <TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(item.status_exposicao)}`}>{item.status_exposicao}</span></TableCell>
-                      <TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(item.status_treinamento)}`}>{item.status_treinamento}</span></TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {item.status_exposicao === 'pendente' && (
-                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setModalExposicao(item); setExpStatus('exposto'); }}>
-                              <Eye className="h-3 w-3 mr-1" />Exposição
-                            </Button>
-                          )}
-                          {item.status_exposicao === 'exposto' && item.status_treinamento === 'pendente' && (
-                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setModalTreino(item); setTreinoData(new Date().toISOString().split('T')[0]); }}>
-                              <GraduationCap className="h-3 w-3 mr-1" />Treinar
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          <p className="text-xs text-muted-foreground">{filtered.length} itens exibidos de {items.length} total</p>
+      {/* Main: Table + Sidebar */}
+      <div className="flex gap-4">
+        <div className="flex-1 overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="text-xs">
+                <TableHead className="w-8 px-2">Urg</TableHead>
+                <TableHead className="px-2">NF</TableHead>
+                <TableHead className="px-2">Dt Fat</TableHead>
+                <TableHead className="px-2 w-10">Dias</TableHead>
+                <TableHead className="px-2">Cliente</TableHead>
+                <TableHead className="px-2">Cidade</TableHead>
+                <TableHead className="px-2">Representante</TableHead>
+                <TableHead className="px-2">Produto</TableHead>
+                <TableHead className="px-2 text-right">Qtde</TableHead>
+                <TableHead className="px-2 text-right">Valor</TableHead>
+                <TableHead className="px-2">Exp.</TableHead>
+                <TableHead className="px-2">Trein.</TableHead>
+                <TableHead className="px-2">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-6 text-xs">Nenhum item encontrado</TableCell></TableRow>
+              )}
+              {filtered.map(item => (
+                <TableRow key={item.id} className="text-xs">
+                  <TableCell className="px-2 text-sm">{urgenciaIcon(item.urgencia)}</TableCell>
+                  <TableCell className="px-2 font-mono">{item.nf_numero}</TableCell>
+                  <TableCell className="px-2">{item.dt_faturamento ? new Date(item.dt_faturamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</TableCell>
+                  <TableCell className="px-2 font-bold">{item.dias_desde_fat}d</TableCell>
+                  <TableCell className="px-2 max-w-[100px] truncate">{item.cliente}</TableCell>
+                  <TableCell className="px-2">{item.cidade || '-'}</TableCell>
+                  <TableCell className="px-2">{item.representante || '-'}</TableCell>
+                  <TableCell className="px-2 max-w-[90px] truncate">{item.produto}</TableCell>
+                  <TableCell className="px-2 text-right">{item.quantidade}</TableCell>
+                  <TableCell className="px-2 text-right whitespace-nowrap">R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
+                  <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_exposicao)}`}>{item.status_exposicao}</span></TableCell>
+                  <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_treinamento)}`}>{item.status_treinamento}</span></TableCell>
+                  <TableCell className="px-2">
+                    <div className="flex gap-1">
+                      {item.status_exposicao === 'pendente' && (
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalExposicao(item); setExpStatus('exposto'); }}>
+                          <Eye className="h-3 w-3 mr-1" />Exp.
+                        </Button>
+                      )}
+                      {item.status_exposicao === 'exposto' && item.status_treinamento === 'pendente' && (
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalTreino(item); setTreinoData(new Date().toISOString().split('T')[0]); }}>
+                          <GraduationCap className="h-3 w-3 mr-1" />Treinar
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <p className="text-[10px] text-muted-foreground mt-1">{filtered.length} de {items.length} itens</p>
         </div>
 
-        {/* Sidebar - Resumo por representante */}
-        <div className="w-full lg:w-72 space-y-3">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Resumo por Representante</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {resumoRep.length === 0 && <p className="text-xs text-muted-foreground">Sem dados</p>}
+        {/* Sidebar compact */}
+        <div className="w-56 shrink-0 hidden lg:block">
+          <Card className="sticky top-0">
+            <CardHeader className="py-2 px-3"><CardTitle className="text-xs">Por Representante</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 space-y-2 max-h-[60vh] overflow-auto">
+              {resumoRep.length === 0 && <p className="text-[10px] text-muted-foreground">Sem dados</p>}
               {resumoRep.map((r, i) => (
-                <div key={i} className="border rounded-lg p-3 space-y-1">
-                  <p className="font-medium text-sm truncate">{r.representante}</p>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Expostos: {r.expostos}/{r.total_itens}</span>
+                <div key={i} className="border rounded p-2 space-y-1">
+                  <p className="font-medium text-[11px] truncate">{r.representante}</p>
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>{r.expostos}/{r.total_itens}</span>
                     <span className="font-semibold">{Number(r.taxa_exposicao || 0).toFixed(0)}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                    <div className="bg-primary rounded-full h-1.5" style={{ width: `${Math.min(Number(r.taxa_exposicao || 0), 100)}%` }} />
+                  <div className="w-full bg-muted rounded-full h-1">
+                    <div className="bg-primary rounded-full h-1" style={{ width: `${Math.min(Number(r.taxa_exposicao || 0), 100)}%` }} />
                   </div>
-                  {Number(r.urgentes) > 0 && (
-                    <p className="text-xs text-destructive">🔴 {r.urgentes} urgente(s)</p>
-                  )}
+                  {Number(r.urgentes) > 0 && <p className="text-[10px] text-destructive">🔴 {r.urgentes} urg.</p>}
                 </div>
               ))}
             </CardContent>
@@ -253,6 +254,11 @@ export function ShowroomTracker() {
                   </SelectContent>
                 </Select>
               </div>
+              {expStatus === 'exposto' && (
+                <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  ✅ Ao confirmar, uma atividade de treinamento será agendada automaticamente para o representante.
+                </p>
+              )}
               <div>
                 <label className="text-sm font-medium">Observação</label>
                 <Textarea value={expObs} onChange={e => setExpObs(e.target.value)} placeholder="Observações..." />
