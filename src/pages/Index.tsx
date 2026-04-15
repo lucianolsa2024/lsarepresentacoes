@@ -44,6 +44,7 @@ import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
 import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
 import { FichaCliente } from '@/components/portfolio/FichaCliente';
+import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
