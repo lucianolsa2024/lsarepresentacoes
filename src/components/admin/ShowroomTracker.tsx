@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
+import { ShowroomImporter } from './ShowroomImporter';
 import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
