@@ -56,6 +56,10 @@ export function AdminPanel() {
           <ShoppingCart className="h-4 w-4 mr-2" />
           Sell-out
         </TabsTrigger>
+        <TabsTrigger value="showroom">
+          <Eye className="h-4 w-4 mr-2" />
+          Showroom
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
