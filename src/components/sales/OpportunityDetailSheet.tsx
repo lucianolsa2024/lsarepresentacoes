@@ -34,10 +34,13 @@ function parseScoreFromNotes(notes: string): { total: number; detalhe: Record<st
 
   const total = parseInt(scoreMatch[1]);
   const prioridade = prioridadeMatch?.[1] || '';
-  const detalhe: Record<string, number> = {};
+  let detalhe: Record<string, number> = {};
 
-  // Try to find individual scores — they were stored as part of notes during import
-  // We need to look at the raw notes structure
+  const jsonMatch = notes.match(/<!--SCORES:(.*?)-->/);
+  if (jsonMatch) {
+    try { detalhe = JSON.parse(jsonMatch[1]); } catch {}
+  }
+
   return { total, detalhe, prioridade };
 }
 
