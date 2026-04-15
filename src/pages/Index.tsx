@@ -441,7 +441,7 @@ const Index = () => {
                     onBack={() => setFichaClienteId(null)}
                   />
                 )}
-                {isAdmin && !fichaClienteId && !showMapaCarteira && (
+                {isAdmin && !fichaClienteId && !showMapaCarteira && !showRoteiro && (
                   <div className="mb-6">
                     <DashboardExecutivo onNavigateToCarteira={(filters) => {
                       setMapaCarteiraFilters(filters);
@@ -449,10 +449,16 @@ const Index = () => {
                     }} />
                   </div>
                 )}
-                {isAdmin && !fichaClienteId && showMapaCarteira && (
+                {isAdmin && !fichaClienteId && showMapaCarteira && !showRoteiro && (
                   <MapaCarteira
                     initialFilters={mapaCarteiraFilters}
                     onBack={() => setShowMapaCarteira(false)}
+                    onViewClient={(clientId) => setFichaClienteId(clientId)}
+                  />
+                )}
+                {isAdmin && !fichaClienteId && showRoteiro && (
+                  <RoteiroVisitas
+                    onBack={() => setShowRoteiro(false)}
                     onViewClient={(clientId) => setFichaClienteId(clientId)}
                   />
                 )}
