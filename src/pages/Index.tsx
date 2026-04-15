@@ -431,10 +431,20 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                {isAdmin && (
+                {isAdmin && !showMapaCarteira && (
                   <div className="mb-6">
-                    <DashboardExecutivo />
+                    <DashboardExecutivo onNavigateToCarteira={(filters) => {
+                      setMapaCarteiraFilters(filters);
+                      setShowMapaCarteira(true);
+                    }} />
                   </div>
+                )}
+                {isAdmin && showMapaCarteira && (
+                  <MapaCarteira
+                    initialFilters={mapaCarteiraFilters}
+                    onBack={() => setShowMapaCarteira(false)}
+                    onViewClient={(clientId) => setClientDetailId(clientId)}
+                  />
                 )}
                 {isRep === true && (
                   <div className="mb-6 space-y-6">
