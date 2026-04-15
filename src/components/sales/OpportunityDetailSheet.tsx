@@ -229,8 +229,49 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
               </Badge>
             )}
           </div>
-          {opp.notes && <p className="text-xs text-muted-foreground mt-1">{opp.notes}</p>}
+          {opp.notes && (
+            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
+              {opp.notes.replace(/\n<!--SCORES:.*?-->/, '')}
+            </p>
+          )}
         </div>
+
+        {/* Score breakdown panel */}
+        {opp.notes && (() => {
+          const scoreData = parseScoreFromNotes(opp.notes);
+          if (!scoreData || Object.keys(scoreData.detalhe).length === 0) return null;
+          const prioColor = scoreData.prioridade === 'quente' ? 'text-red-600' : scoreData.prioridade === 'morno' ? 'text-amber-600' : 'text-blue-600';
+          return (
+            <div className="px-4 py-3 border-b space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold flex items-center gap-1.5">
+                  <BarChart3 className="h-3.5 w-3.5" /> Score do Lead
+                </h4>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`text-xs font-bold ${prioColor}`}>
+                    {scoreData.prioridade}
+                  </Badge>
+                  <span className="text-sm font-bold">{scoreData.total}/100</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {SCORING_CRITERIA.map(c => {
+                  const val = scoreData.detalhe[c.id] || 0;
+                  const pct = Math.round((val / c.max) * 100);
+                  return (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground w-24 shrink-0">{c.label}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${c.color}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[10px] font-medium w-10 text-right">{val}/{c.max}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Tabs */}
         <Tabs defaultValue="activities" className="flex-1">
