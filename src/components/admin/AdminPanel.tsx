@@ -84,6 +84,9 @@ export function AdminPanel() {
       <TabsContent value="mix-analysis" className="mt-0">
         <MixAnalysis />
       </TabsContent>
+      <TabsContent value="sell-out" className="mt-0">
+        <SellOutTracker />
+      </TabsContent>
     </Tabs>
   );
 }
