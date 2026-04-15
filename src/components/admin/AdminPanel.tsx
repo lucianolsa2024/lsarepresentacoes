@@ -7,7 +7,8 @@ import { PositivacaoReport } from './PositivacaoReport';
 import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
 import { CommissionManager } from './CommissionManager';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent } from 'lucide-react';
+import { MixAnalysis } from './MixAnalysis';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3 } from 'lucide-react';
 
 export function AdminPanel() {
   return (
@@ -45,6 +46,10 @@ export function AdminPanel() {
           <Percent className="h-4 w-4 mr-2" />
           Comissionamento
         </TabsTrigger>
+        <TabsTrigger value="mix-analysis">
+          <Grid3X3 className="h-4 w-4 mr-2" />
+          Análise de Mix
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -70,6 +75,9 @@ export function AdminPanel() {
       </TabsContent>
       <TabsContent value="comissionamento" className="mt-0">
         <CommissionManager />
+      </TabsContent>
+      <TabsContent value="mix-analysis" className="mt-0">
+        <MixAnalysis />
       </TabsContent>
     </Tabs>
   );
