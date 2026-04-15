@@ -92,6 +92,9 @@ export function AdminPanel() {
       <TabsContent value="sell-out" className="mt-0">
         <SellOutTracker />
       </TabsContent>
+      <TabsContent value="showroom" className="mt-0">
+        <ShowroomTracker />
+      </TabsContent>
     </Tabs>
   );
 }
