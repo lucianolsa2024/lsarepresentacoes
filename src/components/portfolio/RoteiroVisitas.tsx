@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,13 +16,12 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   ArrowLeft, CalendarIcon, MapPin, Clock, CheckCircle2, AlertTriangle,
-  Plus, User, Phone, Building2, Loader2, Search
+  Plus, Phone, Building2, Loader2, Search
 } from 'lucide-react';
 import { format, isToday, isThisWeek, isFuture, isPast, startOfDay, addDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
 import { toast } from 'sonner';
@@ -90,6 +89,12 @@ const resultadoLabel: Record<string, string> = {
   sem_resultado: 'Sem resultado',
 };
 
+const resultadoToActivityResult = (r: string): 'positivo' | 'neutro' | 'negativo' => {
+  if (r === 'pedido' || r === 'compromisso') return 'positivo';
+  if (r === 'relacionamento') return 'neutro';
+  return 'negativo';
+};
+
 /* ─── Component ─── */
 interface RoteiroVisitasProps {
   onBack?: () => void;
@@ -97,7 +102,6 @@ interface RoteiroVisitasProps {
 }
 
 export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
-  const { user } = useAuth();
   const { clients } = useClients();
   const { activities, addActivity, updateActivity, refetch: refetchActivities } = useActivities();
 
@@ -115,16 +119,20 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
   const [saudeData, setSaudeData] = useState<SaudeRow[]>([]);
   const [loadingSaude, setLoadingSaude] = useState(true);
 
-  // Fetch saude data on mount
-  useState(() => {
+  useEffect(() => {
     (async () => {
       try {
         const { data } = await supabase.from('vw_saude_carteira' as any).select('*');
-        setSaudeData((data as SaudeRow[] | null) || []);
+        setSaudeData((data as unknown as SaudeRow[] | null) || []);
       } catch { /* ignore */ }
       setLoadingSaude(false);
     })();
-  });
+  }, []);
+
+  // Get display name for a visit activity
+  const getVisitDisplayName = (activity: any) => {
+    return activity.client?.company || activity.title?.replace('Visita - ', '') || 'Sem cliente';
+  };
 
   // Filter visit activities
   const visits = useMemo(() => {
@@ -132,8 +140,6 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
       .filter(a => a.type === 'visita' || a.type === 'checklist_loja')
       .sort((a, b) => b.due_date.localeCompare(a.due_date));
   }, [activities]);
-
-  const today = startOfDay(new Date());
 
   const filterVisits = useCallback((period: string) => {
     return visits.filter(v => {
@@ -152,15 +158,15 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
 
   // Priority suggestions
   const priorities = useMemo(() => {
-    // Find last visit date per client from activities
     const lastVisitMap = new Map<string, string>();
     activities
       .filter(a => (a.type === 'visita' || a.type === 'checklist_loja') && (a.status === 'realizada' || a.status === 'concluida'))
       .forEach(a => {
-        if (a.client_name) {
-          const existing = lastVisitMap.get(a.client_name);
+        const name = a.client?.company || a.title?.replace('Visita - ', '');
+        if (name) {
+          const existing = lastVisitMap.get(name);
           if (!existing || a.due_date > existing) {
-            lastVisitMap.set(a.client_name, a.due_date);
+            lastVisitMap.set(name, a.due_date);
           }
         }
       });
@@ -178,7 +184,6 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
         return false;
       })
       .sort((a, b) => {
-        // A first, then B, then C; within same segment sort by dias_sem_compra desc
         const segOrder: Record<string, number> = { A: 0, B: 1, C: 2 };
         const diff = (segOrder[a.segmento] ?? 3) - (segOrder[b.segmento] ?? 3);
         if (diff !== 0) return diff;
@@ -223,23 +228,22 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
     try {
       await updateActivity(selectedVisitId, {
         status: 'concluida',
-        completed_at: new Date().toISOString(),
         completed_notes: JSON.stringify(checklist),
-        result: resultadoLabel[checklist.resultado] || checklist.resultado,
-        next_contact_date: checklist.proximaVisita || null,
+        result: resultadoToActivityResult(checklist.resultado),
+        next_contact_date: checklist.proximaVisita || undefined,
       });
 
       // Auto-create next visit if date set
       if (checklist.proximaVisita) {
         const visit = activities.find(a => a.id === selectedVisitId);
         if (visit) {
+          const clientName = visit.client?.company || visit.title?.replace('Visita - ', '') || 'Cliente';
           await addActivity({
             type: 'visita',
             activity_category: 'crm',
-            title: `Visita - ${visit.client_name || 'Cliente'}`,
+            title: `Visita - ${clientName}`,
             due_date: checklist.proximaVisita,
             client_id: visit.client_id || undefined,
-            client_name: visit.client_name || undefined,
             priority: 'media',
             description: 'Visita agendada automaticamente a partir do roteiro.',
           });
@@ -249,7 +253,7 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
       await refetchActivities();
       setModalOpen(false);
       toast.success('Visita registrada com sucesso!');
-    } catch (err) {
+    } catch {
       toast.error('Erro ao salvar visita');
     }
     setSaving(false);
@@ -265,10 +269,9 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
     await addActivity({
       type: 'visita',
       activity_category: 'crm',
-      title: `Visita - ${client?.company || 'Cliente'}`,
+      title: `Visita - ${client?.tradeName || client?.company || 'Cliente'}`,
       due_date: format(newVisitDate, 'yyyy-MM-dd'),
       client_id: newVisitClientId,
-      client_name: client?.company || '',
       priority: 'media',
     });
     setNewVisitOpen(false);
@@ -308,6 +311,7 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
     const isCompleted = visit.status === 'concluida' || visit.status === 'realizada';
     const visitDate = parseISO(visit.due_date);
     const isOverdue = isPast(startOfDay(visitDate)) && !isToday(visitDate) && !isCompleted;
+    const displayName = getVisitDisplayName(visit);
 
     return (
       <Card key={visit.id} className={cn('transition-all hover:shadow-md', isOverdue && 'border-destructive/50')}>
@@ -316,7 +320,7 @@ export function RoteiroVisitas({ onBack, onViewClient }: RoteiroVisitasProps) {
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="font-semibold text-sm truncate">{visit.client_name || 'Sem cliente'}</span>
+                <span className="font-semibold text-sm truncate">{displayName}</span>
                 {isCompleted && <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
                 {isOverdue && <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />}
               </div>
