@@ -105,6 +105,7 @@ const Index = () => {
   const [clientDetailId, setClientDetailId] = useState<string | null>(null);
   const [showMapaCarteira, setShowMapaCarteira] = useState(false);
   const [mapaCarteiraFilters, setMapaCarteiraFilters] = useState<{ statusCompra?: string; segmento?: string } | undefined>();
+  const [fichaClienteId, setFichaClienteId] = useState<string | null>(null);
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
