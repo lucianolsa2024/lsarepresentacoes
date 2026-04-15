@@ -23,7 +23,11 @@ const greeting = () => {
 const today = () =>
   new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-export function DashboardExecutivo() {
+interface DashboardExecutivoProps {
+  onNavigateToCarteira?: (filters?: { statusCompra?: string; segmento?: string }) => void;
+}
+
+export function DashboardExecutivo({ onNavigateToCarteira }: DashboardExecutivoProps) {
   const { saudeCarteira, clientesRisco, segmentacaoAbc, sellInMensal, yoyMensal, positivacaoMensal, loading } =
     useExecutiveDashboard();
 
