@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
+import { ShowroomImporter } from './ShowroomImporter';
 import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
@@ -83,7 +84,10 @@ export function ShowroomTracker() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* Import button */}
+      <div className="flex justify-end">
+        <ShowroomImporter />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-4 flex items-center gap-3">
           <Package className="h-8 w-8 text-primary" />
