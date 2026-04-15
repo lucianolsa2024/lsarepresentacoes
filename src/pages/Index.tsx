@@ -43,6 +43,7 @@ import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
 import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
+import { FichaCliente } from '@/components/portfolio/FichaCliente';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -104,6 +105,7 @@ const Index = () => {
   const [clientDetailId, setClientDetailId] = useState<string | null>(null);
   const [showMapaCarteira, setShowMapaCarteira] = useState(false);
   const [mapaCarteiraFilters, setMapaCarteiraFilters] = useState<{ statusCompra?: string; segmento?: string } | undefined>();
+  const [fichaClienteId, setFichaClienteId] = useState<string | null>(null);
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
@@ -431,7 +433,13 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                {isAdmin && !showMapaCarteira && (
+                {isAdmin && fichaClienteId && (
+                  <FichaCliente
+                    clientId={fichaClienteId}
+                    onBack={() => setFichaClienteId(null)}
+                  />
+                )}
+                {isAdmin && !fichaClienteId && !showMapaCarteira && (
                   <div className="mb-6">
                     <DashboardExecutivo onNavigateToCarteira={(filters) => {
                       setMapaCarteiraFilters(filters);
@@ -439,11 +447,11 @@ const Index = () => {
                     }} />
                   </div>
                 )}
-                {isAdmin && showMapaCarteira && (
+                {isAdmin && !fichaClienteId && showMapaCarteira && (
                   <MapaCarteira
                     initialFilters={mapaCarteiraFilters}
                     onBack={() => setShowMapaCarteira(false)}
-                    onViewClient={(clientId) => setClientDetailId(clientId)}
+                    onViewClient={(clientId) => setFichaClienteId(clientId)}
                   />
                 )}
                 {isRep === true && (
