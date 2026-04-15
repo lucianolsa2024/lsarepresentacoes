@@ -28,7 +28,7 @@ interface DashboardExecutivoProps {
   onNavigateToRoteiro?: () => void;
 }
 
-export function DashboardExecutivo({ onNavigateToCarteira }: DashboardExecutivoProps) {
+export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }: DashboardExecutivoProps) {
   const { saudeCarteira, clientesRisco, segmentacaoAbc, sellInMensal, yoyMensal, positivacaoMensal, loading } =
     useExecutiveDashboard();
 
