@@ -102,6 +102,8 @@ const Index = () => {
   const [payment, setPayment] = useState<PaymentConditions>(INITIAL_PAYMENT);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [clientDetailId, setClientDetailId] = useState<string | null>(null);
+  const [showMapaCarteira, setShowMapaCarteira] = useState(false);
+  const [mapaCarteiraFilters, setMapaCarteiraFilters] = useState<{ statusCompra?: string; segmento?: string } | undefined>();
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
