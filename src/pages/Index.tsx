@@ -42,6 +42,7 @@ import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
+import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -101,6 +102,8 @@ const Index = () => {
   const [payment, setPayment] = useState<PaymentConditions>(INITIAL_PAYMENT);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [clientDetailId, setClientDetailId] = useState<string | null>(null);
+  const [showMapaCarteira, setShowMapaCarteira] = useState(false);
+  const [mapaCarteiraFilters, setMapaCarteiraFilters] = useState<{ statusCompra?: string; segmento?: string } | undefined>();
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
@@ -428,10 +431,20 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                {isAdmin && (
+                {isAdmin && !showMapaCarteira && (
                   <div className="mb-6">
-                    <DashboardExecutivo />
+                    <DashboardExecutivo onNavigateToCarteira={(filters) => {
+                      setMapaCarteiraFilters(filters);
+                      setShowMapaCarteira(true);
+                    }} />
                   </div>
+                )}
+                {isAdmin && showMapaCarteira && (
+                  <MapaCarteira
+                    initialFilters={mapaCarteiraFilters}
+                    onBack={() => setShowMapaCarteira(false)}
+                    onViewClient={(clientId) => setClientDetailId(clientId)}
+                  />
                 )}
                 {isRep === true && (
                   <div className="mb-6 space-y-6">

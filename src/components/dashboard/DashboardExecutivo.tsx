@@ -23,7 +23,11 @@ const greeting = () => {
 const today = () =>
   new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-export function DashboardExecutivo() {
+interface DashboardExecutivoProps {
+  onNavigateToCarteira?: (filters?: { statusCompra?: string; segmento?: string }) => void;
+}
+
+export function DashboardExecutivo({ onNavigateToCarteira }: DashboardExecutivoProps) {
   const { saudeCarteira, clientesRisco, segmentacaoAbc, sellInMensal, yoyMensal, positivacaoMensal, loading } =
     useExecutiveDashboard();
 
@@ -201,7 +205,7 @@ export function DashboardExecutivo() {
         </Card>
 
         {/* Clientes em Risco */}
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateToCarteira?.({ statusCompra: 'vermelho' })}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" /> Clientes em Risco
