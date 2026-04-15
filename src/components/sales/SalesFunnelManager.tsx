@@ -106,7 +106,7 @@ function CorporateOpportunityCard({
 }
 
 export function SalesFunnelManager() {
-  const { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, moveStage } = useSalesOpportunities();
+  const { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, moveStage, refetch } = useSalesOpportunities();
   const { clients } = useClients();
   const { user } = useAuth();
   const { representatives } = useRepresentatives();
@@ -351,7 +351,7 @@ export function SalesFunnelManager() {
       <LeadJsonImporter
         open={showLeadImporter}
         onOpenChange={setShowLeadImporter}
-        onImported={() => { /* refetch handled by useSalesOpportunities */ window.location.reload(); }}
+        onImported={refetch}
         ownerEmail={user?.email || undefined}
       />
 
