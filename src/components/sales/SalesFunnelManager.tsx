@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle, Eye, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { CorporateOpportunityForm } from './CorporateOpportunityForm';
@@ -22,6 +22,7 @@ import type { AtividadeGerada } from '@/components/funil/FunilChecklist';
 import type { FaseId } from '@/components/funil/funil-config';
 import { useFunilActions } from '@/components/funil/useFunilActions';
 import { OpportunityDetailSheet } from './OpportunityDetailSheet';
+import { LeadJsonImporter } from './LeadJsonImporter';
 
 const STAGE_COLORS: Record<string, string> = {
   lead: 'bg-slate-100 border-slate-300 text-slate-800',
@@ -126,7 +127,7 @@ export function SalesFunnelManager() {
     destStage: string;
   } | null>(null);
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
-
+  const [showLeadImporter, setShowLeadImporter] = useState(false);
   // Fetch project names from quotes for all client IDs in opportunities
   useEffect(() => {
     const corpOpps = opportunities.filter(o => o.funnelType === 'corporativo' && o.clientId);
@@ -291,10 +292,16 @@ export function SalesFunnelManager() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg sm:text-2xl font-bold text-foreground">Funil Corporativo</h2>
-        <Button size="sm" onClick={() => { setEditingOpp(null); setShowForm(true); }}>
-          <Plus className="h-4 w-4 sm:mr-2" />
-          <span className="hidden sm:inline">Nova Oportunidade</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowLeadImporter(true)}>
+            <Upload className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Importar Leads</span>
+          </Button>
+          <Button size="sm" onClick={() => { setEditingOpp(null); setShowForm(true); }}>
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Nova Oportunidade</span>
+          </Button>
+        </div>
       </div>
 
       {/* Tabs + Filters */}
