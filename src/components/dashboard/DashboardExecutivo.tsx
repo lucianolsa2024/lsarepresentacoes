@@ -25,6 +25,7 @@ const today = () =>
 
 interface DashboardExecutivoProps {
   onNavigateToCarteira?: (filters?: { statusCompra?: string; segmento?: string }) => void;
+  onNavigateToRoteiro?: () => void;
 }
 
 export function DashboardExecutivo({ onNavigateToCarteira }: DashboardExecutivoProps) {
