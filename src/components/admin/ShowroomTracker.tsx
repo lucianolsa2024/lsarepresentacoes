@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
 import { ShowroomImporter } from './ShowroomImporter';
-import { Package, AlertTriangle, Eye, GraduationCap, DollarSign, Upload } from 'lucide-react';
+import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
   if (u === 'critico' || u === 'vermelho') return '🔴';
@@ -33,7 +32,6 @@ export function ShowroomTracker() {
   const [filtroRep, setFiltroRep] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('all');
   const [filtroUrgencia, setFiltroUrgencia] = useState('all');
-  const [filtroSegmento, setFiltroSegmento] = useState('all');
 
   const [modalExposicao, setModalExposicao] = useState<ShowroomItem | null>(null);
   const [expStatus, setExpStatus] = useState('exposto');
@@ -44,17 +42,15 @@ export function ShowroomTracker() {
   const [treinoObs, setTreinoObs] = useState('');
 
   const reps = useMemo(() => [...new Set(items.map(i => i.representante).filter(Boolean))].sort(), [items]);
-  const segmentos = useMemo(() => [...new Set(items.map(i => i.segmento_cliente).filter(Boolean))].sort(), [items]);
 
   const filtered = useMemo(() => {
     return items.filter(i => {
       if (filtroRep !== 'all' && i.representante !== filtroRep) return false;
       if (filtroStatus !== 'all' && i.status_exposicao !== filtroStatus) return false;
       if (filtroUrgencia !== 'all' && i.urgencia !== filtroUrgencia) return false;
-      if (filtroSegmento !== 'all' && i.segmento_cliente !== filtroSegmento) return false;
       return true;
     });
-  }, [items, filtroRep, filtroStatus, filtroUrgencia, filtroSegmento]);
+  }, [items, filtroRep, filtroStatus, filtroUrgencia]);
 
   const kpis = useMemo(() => {
     const pendentes = items.filter(i => i.status_exposicao === 'pendente');
@@ -143,97 +139,65 @@ export function ShowroomTracker() {
             <SelectItem value="ok">🟢 OK</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filtroSegmento} onValueChange={setFiltroSegmento}>
-          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Segmento" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos segmentos</SelectItem>
-            {segmentos.map(s => <SelectItem key={s} value={s!}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Main: Table + Sidebar */}
-      <div className="flex gap-4">
-        <div className="flex-1 overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="text-xs">
-                <TableHead className="w-8 px-2">Urg</TableHead>
-                <TableHead className="px-2">NF</TableHead>
-                <TableHead className="px-2">Dt Fat</TableHead>
-                <TableHead className="px-2 w-10">Dias</TableHead>
-                <TableHead className="px-2">Cliente</TableHead>
-                <TableHead className="px-2">Cidade</TableHead>
-                <TableHead className="px-2">Representante</TableHead>
-                <TableHead className="px-2">Produto</TableHead>
-                <TableHead className="px-2 text-right">Qtde</TableHead>
-                <TableHead className="px-2 text-right">Valor</TableHead>
-                <TableHead className="px-2">Exp.</TableHead>
-                <TableHead className="px-2">Trein.</TableHead>
-                <TableHead className="px-2">Ações</TableHead>
+      {/* Table full width */}
+      <div className="overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="text-xs">
+              <TableHead className="w-8 px-2">Urg</TableHead>
+              <TableHead className="px-2">NF</TableHead>
+              <TableHead className="px-2">Dt Fat</TableHead>
+              <TableHead className="px-2 w-10">Dias</TableHead>
+              <TableHead className="px-2">Cliente</TableHead>
+              <TableHead className="px-2">Cidade</TableHead>
+              <TableHead className="px-2">Representante</TableHead>
+              <TableHead className="px-2">Produto</TableHead>
+              <TableHead className="px-2 text-right">Qtde</TableHead>
+              <TableHead className="px-2 text-right">Valor</TableHead>
+              <TableHead className="px-2">Exp.</TableHead>
+              <TableHead className="px-2">Trein.</TableHead>
+              <TableHead className="px-2">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && (
+              <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-6 text-xs">Nenhum item encontrado</TableCell></TableRow>
+            )}
+            {filtered.map(item => (
+              <TableRow key={item.id} className="text-xs">
+                <TableCell className="px-2 text-sm">{urgenciaIcon(item.urgencia)}</TableCell>
+                <TableCell className="px-2 font-mono">{item.nf_numero}</TableCell>
+                <TableCell className="px-2">{item.dt_faturamento ? new Date(item.dt_faturamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</TableCell>
+                <TableCell className="px-2 font-bold">{item.dias_desde_fat}d</TableCell>
+                <TableCell className="px-2 max-w-[100px] truncate">{item.cliente}</TableCell>
+                <TableCell className="px-2">{item.cidade || '-'}</TableCell>
+                <TableCell className="px-2">{item.representante || '-'}</TableCell>
+                <TableCell className="px-2 max-w-[90px] truncate">{item.produto}</TableCell>
+                <TableCell className="px-2 text-right">{item.quantidade}</TableCell>
+                <TableCell className="px-2 text-right whitespace-nowrap">R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
+                <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_exposicao)}`}>{item.status_exposicao}</span></TableCell>
+                <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_treinamento)}`}>{item.status_treinamento}</span></TableCell>
+                <TableCell className="px-2">
+                  <div className="flex gap-1">
+                    {item.status_exposicao === 'pendente' && (
+                      <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalExposicao(item); setExpStatus('exposto'); }}>
+                        <Eye className="h-3 w-3 mr-1" />Exp.
+                      </Button>
+                    )}
+                    {item.status_exposicao === 'exposto' && item.status_treinamento === 'pendente' && (
+                      <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalTreino(item); setTreinoData(new Date().toISOString().split('T')[0]); }}>
+                        <GraduationCap className="h-3 w-3 mr-1" />Treinar
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-6 text-xs">Nenhum item encontrado</TableCell></TableRow>
-              )}
-              {filtered.map(item => (
-                <TableRow key={item.id} className="text-xs">
-                  <TableCell className="px-2 text-sm">{urgenciaIcon(item.urgencia)}</TableCell>
-                  <TableCell className="px-2 font-mono">{item.nf_numero}</TableCell>
-                  <TableCell className="px-2">{item.dt_faturamento ? new Date(item.dt_faturamento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</TableCell>
-                  <TableCell className="px-2 font-bold">{item.dias_desde_fat}d</TableCell>
-                  <TableCell className="px-2 max-w-[100px] truncate">{item.cliente}</TableCell>
-                  <TableCell className="px-2">{item.cidade || '-'}</TableCell>
-                  <TableCell className="px-2">{item.representante || '-'}</TableCell>
-                  <TableCell className="px-2 max-w-[90px] truncate">{item.produto}</TableCell>
-                  <TableCell className="px-2 text-right">{item.quantidade}</TableCell>
-                  <TableCell className="px-2 text-right whitespace-nowrap">R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
-                  <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_exposicao)}`}>{item.status_exposicao}</span></TableCell>
-                  <TableCell className="px-2"><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusCls(item.status_treinamento)}`}>{item.status_treinamento}</span></TableCell>
-                  <TableCell className="px-2">
-                    <div className="flex gap-1">
-                      {item.status_exposicao === 'pendente' && (
-                        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalExposicao(item); setExpStatus('exposto'); }}>
-                          <Eye className="h-3 w-3 mr-1" />Exp.
-                        </Button>
-                      )}
-                      {item.status_exposicao === 'exposto' && item.status_treinamento === 'pendente' && (
-                        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { setModalTreino(item); setTreinoData(new Date().toISOString().split('T')[0]); }}>
-                          <GraduationCap className="h-3 w-3 mr-1" />Treinar
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <p className="text-[10px] text-muted-foreground mt-1">{filtered.length} de {items.length} itens</p>
-        </div>
-
-        {/* Sidebar compact */}
-        <div className="w-56 shrink-0 hidden lg:block">
-          <Card className="sticky top-0">
-            <CardHeader className="py-2 px-3"><CardTitle className="text-xs">Por Representante</CardTitle></CardHeader>
-            <CardContent className="px-3 pb-3 space-y-2 max-h-[60vh] overflow-auto">
-              {resumoRep.length === 0 && <p className="text-[10px] text-muted-foreground">Sem dados</p>}
-              {resumoRep.map((r, i) => (
-                <div key={i} className="border rounded p-2 space-y-1">
-                  <p className="font-medium text-[11px] truncate">{r.representante}</p>
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>{r.expostos}/{r.total_itens}</span>
-                    <span className="font-semibold">{Number(r.taxa_exposicao || 0).toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1">
-                    <div className="bg-primary rounded-full h-1" style={{ width: `${Math.min(Number(r.taxa_exposicao || 0), 100)}%` }} />
-                  </div>
-                  {Number(r.urgentes) > 0 && <p className="text-[10px] text-destructive">🔴 {r.urgentes} urg.</p>}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+            ))}
+          </TableBody>
+        </Table>
+        <p className="text-[10px] text-muted-foreground mt-1">{filtered.length} de {items.length} itens</p>
       </div>
 
       {/* Modal Exposição */}

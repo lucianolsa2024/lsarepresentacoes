@@ -15,7 +15,7 @@ import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Perc
 export function AdminPanel() {
   return (
     <Tabs defaultValue="sales-report">
-      <TabsList className="mb-4 flex-wrap">
+      <TabsList className="mb-4 w-full justify-start overflow-x-auto flex-nowrap">
          <TabsTrigger value="sales-report">
           <BarChart3 className="h-4 w-4 mr-2" />
           Relatório de Vendas
