@@ -2713,12 +2713,13 @@ export type Database = {
       vw_clientes_risco: {
         Row: {
           client_name: string | null
-          dias_sem_compra: number | null
+          dias_sem_sellout: number | null
           mix_historico: number | null
           nivel_risco: string | null
           representative: string | null
-          ultima_compra: string | null
-          volume_historico: number | null
+          sellin_historico: number | null
+          sellout_historico: number | null
+          ultimo_sellout: string | null
         }
         Relationships: []
       }
@@ -2733,41 +2734,46 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_giro_pdv: {
+        Row: {
+          classificacao_giro: string | null
+          client_name: string | null
+          giro_pct: number | null
+          pecas_expostas: number | null
+          pecas_vendidas: number | null
+          product: string | null
+          representative: string | null
+          sellin: number | null
+          sellout: number | null
+          supplier: string | null
+        }
+        Relationships: []
+      }
       vw_mix_cliente: {
         Row: {
           client_name: string | null
           indice_mix_pct: number | null
-          produtos_casabrazil: number | null
           produtos_distintos: number | null
-          produtos_sohome: number | null
+          produtos_expostos: number | null
+          produtos_vendidos: number | null
           representative: string | null
-          volume_total: number | null
+          sellin_total: number | null
+          sellout_total: number | null
         }
         Relationships: []
       }
       vw_mix_heatmap: {
         Row: {
           client_name: string | null
+          order_type: string | null
           pecas: number | null
           pedidos: number | null
-          primeira_compra: string | null
+          primeira_vez: string | null
           product: string | null
           representative: string | null
           supplier: string | null
-          ultima_compra: string | null
+          ultima_vez: string | null
           volume: number | null
-        }
-        Relationships: []
-      }
-      vw_mix_tipo_pedido: {
-        Row: {
-          client_name: string | null
-          pct_showroom: number | null
-          representative: string | null
-          total: number | null
-          vol_encomenda: number | null
-          vol_estoque: number | null
-          vol_showroom: number | null
         }
         Relationships: []
       }
@@ -2784,35 +2790,37 @@ export type Database = {
       }
       vw_positivacao_mensal: {
         Row: {
-          clientes_positivados: number | null
+          clientes_casabrazil: number | null
+          clientes_com_sellout: number | null
+          clientes_sohome: number | null
           mes: string | null
-          positivados_casabrazil: number | null
-          positivados_sohome: number | null
         }
         Relationships: []
       }
       vw_ranking_produtos: {
         Row: {
           clientes_compradores: number | null
+          clientes_expondo: number | null
           pecas_vendidas: number | null
+          pedidos_encomenda: number | null
           product: string | null
-          qtd_pedidos: number | null
-          receita_total: number | null
+          sellin_total: number | null
+          sellout_total: number | null
           supplier: string | null
-          ticket_medio_por_cliente: number | null
+          taxa_conversao_pct: number | null
         }
         Relationships: []
       }
       vw_ranking_representantes: {
         Row: {
-          clientes: number | null
-          pedidos: number | null
-          produtos_vendidos: number | null
+          clientes_com_sellout: number | null
+          pedidos_sellin: number | null
+          pedidos_sellout: number | null
           representative: string | null
-          ticket_medio_por_cliente: number | null
-          ticket_medio_por_pedido: number | null
-          volume_encomenda: number | null
-          volume_showroom: number | null
+          sellin_total: number | null
+          sellout_total: number | null
+          ticket_medio_cliente: number | null
+          total_clientes: number | null
           volume_total: number | null
         }
         Relationships: []
@@ -2820,15 +2828,17 @@ export type Database = {
       vw_saude_carteira: {
         Row: {
           client_name: string | null
-          compra_30d: number | null
-          compra_90d: number | null
-          dias_sem_compra: number | null
+          dias_sem_sellout: number | null
           mix_produtos: number | null
+          produtos_vendidos: number | null
           representative: string | null
-          status_compra: string | null
-          total_pedidos: number | null
-          ultima_compra: string | null
-          volume_total: number | null
+          sellin_total: number | null
+          sellout_30d: number | null
+          sellout_90d: number | null
+          sellout_total: number | null
+          status_sellout: string | null
+          taxa_giro: number | null
+          ultimo_sellout: string | null
         }
         Relationships: []
       }
@@ -2836,9 +2846,11 @@ export type Database = {
         Row: {
           client_name: string | null
           pct_acumulada: number | null
-          pct_do_total: number | null
+          pct_do_sellout: number | null
           representative: string | null
           segmento: string | null
+          sellin_total: number | null
+          sellout_total: number | null
           volume_total: number | null
         }
         Relationships: []
@@ -2848,8 +2860,8 @@ export type Database = {
           clientes: number | null
           mes: string | null
           pedidos: number | null
+          sell_in_total: number | null
           supplier: string | null
-          total: number | null
         }
         Relationships: []
       }
@@ -2860,6 +2872,26 @@ export type Database = {
           qtd_pedidos: number | null
           representative: string | null
           sell_in_mtd: number | null
+        }
+        Relationships: []
+      }
+      vw_sell_out_mensal: {
+        Row: {
+          clientes: number | null
+          mes: string | null
+          pedidos: number | null
+          sell_out_total: number | null
+          supplier: string | null
+        }
+        Relationships: []
+      }
+      vw_sell_out_mtd: {
+        Row: {
+          clientes_ativos: number | null
+          pecas_mtd: number | null
+          qtd_pedidos: number | null
+          representative: string | null
+          sell_out_mtd: number | null
         }
         Relationships: []
       }
@@ -2879,7 +2911,9 @@ export type Database = {
           ano: number | null
           mes_nome: string | null
           mes_num: number | null
-          total: number | null
+          sellin_total: number | null
+          sellout_total: number | null
+          volume_total: number | null
         }
         Relationships: []
       }

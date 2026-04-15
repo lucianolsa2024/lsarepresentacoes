@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Search, Eye, MapPin, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, Eye, MapPin, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useMapaCarteira, CarteiraClient } from '@/hooks/useMapaCarteira';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,13 +46,11 @@ interface MapaCarteiraProps {
 }
 
 export function MapaCarteira({ onViewClient, onBack, initialFilters }: MapaCarteiraProps) {
-  const { clients, representatives, loading, refetch } = useMapaCarteira();
+  const { clients, clientesRisco, representatives, loading, refetch } = useMapaCarteira();
   const { user } = useAuth();
 
-  // Filters
   const [segmento, setSegmento] = useState(initialFilters?.segmento || 'todos');
-  const [statusCompra, setStatusCompra] = useState(initialFilters?.statusCompra || 'todos');
-  const [statusVisita, setStatusVisita] = useState('todos');
+  const [statusSellout, setStatusSellout] = useState(initialFilters?.statusCompra || 'todos');
   const [rep, setRep] = useState('todos');
   const [search, setSearch] = useState('');
 
@@ -66,26 +63,21 @@ export function MapaCarteira({ onViewClient, onBack, initialFilters }: MapaCarte
   const filtered = useMemo(() => {
     return clients.filter((c) => {
       if (segmento !== 'todos' && c.segmento !== segmento) return false;
-      if (statusCompra !== 'todos' && c.status_compra !== statusCompra) return false;
-      if (statusVisita !== 'todos') {
-        if (statusVisita === 'ok' && c.status_visita !== 'ok') return false;
-        if (statusVisita === 'atrasada' && c.status_visita !== 'atrasada') return false;
-      }
+      if (statusSellout !== 'todos' && c.status_sellout !== statusSellout) return false;
       if (rep !== 'todos' && c.representative !== rep) return false;
       if (search && !c.client_name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [clients, segmento, statusCompra, statusVisita, rep, search]);
+  }, [clients, segmento, statusSellout, rep, search]);
 
-  // Footer summary
   const summary = useMemo(() => {
     const total = filtered.length;
-    const positivados = filtered.filter((c) => c.compra_30d > 0).length;
-    const visitaOk = filtered.filter((c) => c.status_visita === 'ok').length;
+    const verdes = filtered.filter((c) => c.status_sellout === 'verde').length;
+    const sellout90dTotal = filtered.reduce((acc, c) => acc + c.sellout_90d, 0);
     return {
       total,
-      positivadosPct: total > 0 ? (positivados / total) * 100 : 0,
-      visitaOkPct: total > 0 ? (visitaOk / total) * 100 : 0,
+      verdePct: total > 0 ? (verdes / total) * 100 : 0,
+      sellout90dTotal,
     };
   }, [filtered]);
 
@@ -146,7 +138,7 @@ export function MapaCarteira({ onViewClient, onBack, initialFilters }: MapaCarte
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Select value={segmento} onValueChange={setSegmento}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Segmento" />
@@ -159,26 +151,15 @@ export function MapaCarteira({ onViewClient, onBack, initialFilters }: MapaCarte
               </SelectContent>
             </Select>
 
-            <Select value={statusCompra} onValueChange={setStatusCompra}>
+            <Select value={statusSellout} onValueChange={setStatusSellout}>
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Status Compra" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos Status</SelectItem>
                 <SelectItem value="verde">🟢 Verde</SelectItem>
                 <SelectItem value="amarelo">🟡 Amarelo</SelectItem>
                 <SelectItem value="vermelho">🔴 Vermelho</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusVisita} onValueChange={setStatusVisita}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Status Visita" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas Visitas</SelectItem>
-                <SelectItem value="ok">Ok</SelectItem>
-                <SelectItem value="atrasada">Atrasada</SelectItem>
               </SelectContent>
             </Select>
 
@@ -207,113 +188,138 @@ export function MapaCarteira({ onViewClient, onBack, initialFilters }: MapaCarte
         </CardContent>
       </Card>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto" style={{ overscrollBehaviorX: 'contain' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left py-3 px-4 font-medium">Cliente</th>
-                  <th className="text-center py-3 px-2 font-medium">Seg.</th>
-                  <th className="text-center py-3 px-3 font-medium">Última Compra</th>
-                  <th className="text-center py-3 px-2 font-medium">Status</th>
-                  <th className="text-center py-3 px-3 font-medium">Última Visita</th>
-                  <th className="text-center py-3 px-2 font-medium">Visita</th>
-                  <th className="text-center py-3 px-3 font-medium">Mix</th>
-                  <th className="text-right py-3 px-4 font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhum cliente encontrado com os filtros aplicados
-                    </td>
+      {/* Main content: Table + Alerts panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Table */}
+        <Card className="lg:col-span-3">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto" style={{ overscrollBehaviorX: 'contain' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left py-3 px-4 font-medium">Cliente</th>
+                    <th className="text-center py-3 px-2 font-medium">Seg.</th>
+                    <th className="text-left py-3 px-3 font-medium">Representante</th>
+                    <th className="text-center py-3 px-3 font-medium">Último Sell-out</th>
+                    <th className="text-center py-3 px-2 font-medium">Status</th>
+                    <th className="text-right py-3 px-3 font-medium">Sell-out 90d</th>
+                    <th className="text-right py-3 px-3 font-medium">Giro</th>
+                    <th className="text-center py-3 px-2 font-medium">Mix</th>
+                    <th className="text-right py-3 px-4 font-medium">Ações</th>
                   </tr>
-                ) : (
-                  filtered.map((c, i) => (
-                    <tr key={i} className="border-b last:border-0 hover:bg-accent/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium truncate max-w-[200px]">{c.client_name}</p>
-                          <p className="text-xs text-muted-foreground">{c.representative}</p>
-                        </div>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                        Nenhum cliente encontrado com os filtros aplicados
                       </td>
-                      <td className="text-center py-3 px-2">{segBadge(c.segmento)}</td>
-                      <td className="text-center py-3 px-3">
-                        <div>
-                          <p className="text-sm">{fmtDate(c.ultima_compra)}</p>
-                          <p className="text-xs text-muted-foreground">{c.dias_sem_compra}d atrás</p>
-                        </div>
-                      </td>
-                      <td className="text-center py-3 px-2 text-lg">{statusDot(c.status_compra)}</td>
-                      <td className="text-center py-3 px-3">
-                        {c.ultima_visita ? (
+                    </tr>
+                  ) : (
+                    filtered.map((c, i) => (
+                      <tr key={i} className="border-b last:border-0 hover:bg-accent/50 transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-medium truncate max-w-[180px]">{c.client_name}</p>
+                        </td>
+                        <td className="text-center py-3 px-2">{segBadge(c.segmento)}</td>
+                        <td className="py-3 px-3 text-muted-foreground truncate max-w-[120px]">{c.representative}</td>
+                        <td className="text-center py-3 px-3">
                           <div>
-                            <p className="text-sm">{fmtDate(c.ultima_visita)}</p>
-                            <p className="text-xs text-muted-foreground">{c.dias_sem_visita}d atrás</p>
+                            <p className="text-sm">{fmtDate(c.ultimo_sellout)}</p>
+                            <p className="text-xs text-muted-foreground">{c.dias_sem_sellout}d atrás</p>
                           </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="text-center py-3 px-2">
-                        {c.status_visita === 'ok' ? (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Ok</Badge>
-                        ) : c.status_visita === 'atrasada' ? (
-                          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Atrasada</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2 min-w-[80px]">
-                          <Progress value={Math.min(c.indice_mix_pct, 100)} className="h-2 flex-1" />
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{c.indice_mix_pct.toFixed(0)}%</span>
-                        </div>
-                      </td>
-                      <td className="text-right py-3 px-4">
-                        <div className="flex items-center justify-end gap-1">
-                          {c.client_id && onViewClient && (
+                        </td>
+                        <td className="text-center py-3 px-2 text-lg">{statusDot(c.status_sellout)}</td>
+                        <td className="text-right py-3 px-3 font-medium">{fmtBRL(c.sellout_90d)}</td>
+                        <td className="text-right py-3 px-3">{c.taxa_giro.toFixed(1)}%</td>
+                        <td className="text-center py-3 px-2">{c.mix_produtos}</td>
+                        <td className="text-right py-3 px-4">
+                          <div className="flex items-center justify-end gap-1">
+                            {c.client_id && onViewClient && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => onViewClient(c.client_id!)}
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" /> Ficha
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 text-xs"
-                              onClick={() => onViewClient(c.client_id!)}
+                              onClick={() => {
+                                setVisitClient(c);
+                                setVisitModalOpen(true);
+                              }}
                             >
-                              <Eye className="h-3.5 w-3.5 mr-1" /> Ficha
+                              <MapPin className="h-3.5 w-3.5 mr-1" /> Visita
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setVisitClient(c);
-                              setVisitModalOpen(true);
-                            }}
-                          >
-                            <MapPin className="h-3.5 w-3.5 mr-1" /> Visita
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Alerts panel */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Clientes em Risco
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-2 max-h-[600px] overflow-y-auto">
+            {clientesRisco.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum alerta no momento</p>
+            ) : (
+              clientesRisco.map((r, i) => (
+                <div
+                  key={i}
+                  className={`p-3 rounded-lg border text-sm space-y-1 ${
+                    r.nivel_risco === 'critico'
+                      ? 'border-destructive/40 bg-destructive/5'
+                      : 'border-yellow-300/40 bg-yellow-50/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium truncate max-w-[140px]">{r.client_name}</p>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        r.nivel_risco === 'critico'
+                          ? 'bg-destructive/10 text-destructive border-destructive/30'
+                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                      }`}
+                    >
+                      {r.nivel_risco === 'critico' ? 'Crítico' : 'Alerta'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{r.representative}</p>
+                  <div className="flex justify-between text-xs">
+                    <span>{r.dias_sem_sellout}d sem sell-out</span>
+                    <span className="font-medium">{fmtBRL(r.sellout_historico)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Footer Summary */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground px-1">
-        <span><strong className="text-foreground">{summary.total}</strong> clientes filtrados</span>
+        <span><strong className="text-foreground">{summary.total}</strong> clientes exibidos</span>
         <span>•</span>
-        <span><strong className="text-foreground">{summary.positivadosPct.toFixed(1)}%</strong> positivados (30d)</span>
+        <span><strong className="text-foreground">{summary.verdePct.toFixed(1)}%</strong> com status verde</span>
         <span>•</span>
-        <span><strong className="text-foreground">{summary.visitaOkPct.toFixed(1)}%</strong> com visita ok</span>
+        <span>Sell-out 90d: <strong className="text-foreground">{fmtBRL(summary.sellout90dTotal)}</strong></span>
       </div>
 
       {/* Visit Modal */}
