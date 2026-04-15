@@ -143,13 +143,6 @@ export function ShowroomTracker() {
             <SelectItem value="ok">🟢 OK</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filtroSegmento} onValueChange={setFiltroSegmento}>
-          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Segmento" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos segmentos</SelectItem>
-            {segmentos.map(s => <SelectItem key={s} value={s!}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Main: Table + Sidebar */}
