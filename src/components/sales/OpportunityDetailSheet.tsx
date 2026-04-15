@@ -10,12 +10,36 @@ import { Client } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
 import { ActivityForm } from '@/components/activities/ActivityForm';
 import { CreateActivityInput } from '@/types/activity';
-import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2, Plus } from 'lucide-react';
+import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2, Plus, BarChart3 } from 'lucide-react';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Quote, QuoteItem, ClientData, PaymentConditions } from '@/types/quote';
 import { toast } from 'sonner';
 import { format as fmtDate, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Progress } from '@/components/ui/progress';
+
+const SCORING_CRITERIA = [
+  { id: 'padrao', label: 'Padrão', max: 25, color: 'bg-violet-500' },
+  { id: 'unidades', label: 'Unidades', max: 15, color: 'bg-blue-500' },
+  { id: 'ticket', label: 'Ticket', max: 20, color: 'bg-emerald-500' },
+  { id: 'status', label: 'Status Obra', max: 20, color: 'bg-amber-500' },
+  { id: 'arquitetura', label: 'Arquitetura', max: 10, color: 'bg-pink-500' },
+  { id: 'incorporadora', label: 'Incorporadora', max: 10, color: 'bg-cyan-500' },
+] as const;
+
+function parseScoreFromNotes(notes: string): { total: number; detalhe: Record<string, number>; prioridade: string } | null {
+  const scoreMatch = notes.match(/Score:\s*(\d+)/);
+  const prioridadeMatch = notes.match(/Prioridade:\s*(\w+)/);
+  if (!scoreMatch) return null;
+
+  const total = parseInt(scoreMatch[1]);
+  const prioridade = prioridadeMatch?.[1] || '';
+  const detalhe: Record<string, number> = {};
+
+  // Try to find individual scores — they were stored as part of notes during import
+  // We need to look at the raw notes structure
+  return { total, detalhe, prioridade };
+}
 
 interface Props {
   opportunity: SalesOpportunity | null;
