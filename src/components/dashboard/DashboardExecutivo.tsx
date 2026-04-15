@@ -6,7 +6,7 @@ import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Users, Target, BarCha
 import { Button } from '@/components/ui/button';
 import { useExecutiveDashboard } from '@/hooks/useExecutiveDashboard';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart,
 } from 'recharts';
 
 const fmtBRL = (v: number) =>
@@ -30,66 +30,65 @@ interface DashboardExecutivoProps {
 }
 
 export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }: DashboardExecutivoProps) {
-  const { saudeCarteira, clientesRisco, segmentacaoAbc, sellInMensal, yoyMensal, positivacaoMensal, loading } =
+  const { saudeCarteira, clientesRisco, segmentacaoAbc, sellOutMensal, sellOutMtd, sellInMtd, yoyMensal, positivacaoMensal, loading } =
     useExecutiveDashboard();
 
-  // KPI: Sell-in MTD (current month total across all suppliers)
-  const currentMonth = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }, []);
+  // KPI: Sell-out MTD (sum across all reps)
+  const sellOutMtdTotal = useMemo(() => {
+    return sellOutMtd.reduce((sum, r) => sum + (Number(r.sell_out_mtd) || 0), 0);
+  }, [sellOutMtd]);
 
-  const sellInMtd = useMemo(() => {
-    return sellInMensal
-      .filter((r) => r.mes === currentMonth)
-      .reduce((sum, r) => sum + (Number(r.total) || 0), 0);
-  }, [sellInMensal, currentMonth]);
+  // KPI: Sell-in MTD
+  const sellInMtdTotal = useMemo(() => {
+    return sellInMtd.reduce((sum, r) => sum + (Number(r.sell_in_mtd) || 0), 0);
+  }, [sellInMtd]);
 
-  // YoY: current month this year vs same month last year
+  // YoY: current month this year vs same month last year (based on sell-out)
   const yoyData = useMemo(() => {
     const now = new Date();
     const curMonth = now.getMonth() + 1;
     const curYear = now.getFullYear();
     const thisYear = yoyMensal.find((r) => r.ano === curYear && r.mes_num === curMonth);
     const lastYear = yoyMensal.find((r) => r.ano === curYear - 1 && r.mes_num === curMonth);
-    const curr = thisYear?.total ?? sellInMtd;
-    const prev = lastYear?.total ?? 0;
+    const curr = thisYear?.sellout_total ?? sellOutMtdTotal;
+    const prev = lastYear?.sellout_total ?? 0;
     const pct = prev > 0 ? ((curr - prev) / prev) * 100 : null;
     return { curr, prev, pct };
-  }, [yoyMensal, sellInMtd]);
+  }, [yoyMensal, sellOutMtdTotal]);
 
-  // Saúde da carteira
+  // Saúde da carteira (using status_sellout)
   const saudeResumo = useMemo(() => {
-    const verde = saudeCarteira.filter((c) => c.status_compra === 'verde').length;
-    const amarelo = saudeCarteira.filter((c) => c.status_compra === 'amarelo').length;
-    const vermelho = saudeCarteira.filter((c) => c.status_compra === 'vermelho').length;
+    const verde = saudeCarteira.filter((c) => c.status_sellout === 'verde').length;
+    const amarelo = saudeCarteira.filter((c) => c.status_sellout === 'amarelo').length;
+    const vermelho = saudeCarteira.filter((c) => c.status_sellout === 'vermelho').length;
     return { verde, amarelo, vermelho, total: saudeCarteira.length };
   }, [saudeCarteira]);
 
-  // Positivação 30d (latest month)
-  const positivacao30d = useMemo(() => {
+  // Positivação (latest month from vw_positivacao_mensal)
+  const positivacao = useMemo(() => {
     if (positivacaoMensal.length === 0) return { pct: 0, positivados: 0, total: saudeResumo.total };
     const latest = positivacaoMensal[positivacaoMensal.length - 1];
     const total = saudeResumo.total || 1;
+    const positivados = Number(latest.clientes_com_sellout) || 0;
     return {
-      pct: (latest.clientes_positivados / total) * 100,
-      positivados: latest.clientes_positivados,
+      pct: (positivados / total) * 100,
+      positivados,
       total,
     };
   }, [positivacaoMensal, saudeResumo]);
 
-  // Chart data: últimos 12 meses
+  // Chart data: sell-out últimos 12 meses
   const chartData = useMemo(() => {
     const monthMap = new Map<string, { mes: string; total: number }>();
     const mesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-    // Aggregate sell_in by month (all suppliers)
-    for (const row of sellInMensal) {
+    for (const row of sellOutMensal) {
       const existing = monthMap.get(row.mes);
+      const val = Number(row.sell_out_total) || 0;
       if (existing) {
-        existing.total += Number(row.total) || 0;
+        existing.total += val;
       } else {
-        monthMap.set(row.mes, { mes: row.mes, total: Number(row.total) || 0 });
+        monthMap.set(row.mes, { mes: row.mes, total: val });
       }
     }
 
@@ -100,9 +99,9 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
         const [, m] = r.mes.split('-');
         return { label: mesNomes[parseInt(m, 10) - 1], total: r.total };
       });
-  }, [sellInMensal]);
+  }, [sellOutMensal]);
 
-  // Positivação by segment (ABC)
+  // Positivação by segment (ABC) — based on saúde + segmentação
   const positivacaoPorSegmento = useMemo(() => {
     const segMap: Record<string, { total: number; positivados30: number; positivados60: number; positivados90: number }> = {
       A: { total: 0, positivados30: 0, positivados60: 0, positivados90: 0 },
@@ -110,7 +109,6 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
       C: { total: 0, positivados30: 0, positivados60: 0, positivados90: 0 },
     };
 
-    // Map client names to their ABC segment
     const clientSegMap = new Map<string, string>();
     for (const c of segmentacaoAbc) {
       clientSegMap.set(c.client_name, c.segmento);
@@ -120,12 +118,10 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
       const seg = clientSegMap.get(c.client_name) || 'C';
       if (!segMap[seg]) continue;
       segMap[seg].total++;
-      if (c.compra_30d > 0) segMap[seg].positivados30++;
-      if (c.compra_90d > 0) {
-        segMap[seg].positivados90++;
-        // Approximate 60d: if compra_30d > 0 or dias_sem_compra < 60
-        if (c.compra_30d > 0 || c.dias_sem_compra < 60) segMap[seg].positivados60++;
-      }
+      const dias = c.dias_sem_sellout ?? 999;
+      if (dias <= 30) segMap[seg].positivados30++;
+      if (dias <= 60) segMap[seg].positivados60++;
+      if (dias <= 90) segMap[seg].positivados90++;
     }
 
     return Object.entries(segMap).map(([seg, data]) => ({
@@ -137,7 +133,7 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
     }));
   }, [saudeCarteira, segmentacaoAbc]);
 
-  // Alertas: clientes vermelho e atenção, ordered by segment (A first)
+  // Alertas: clientes em risco, ordered by segment (A first)
   const alertas = useMemo(() => {
     const clientSegMap = new Map<string, string>();
     for (const c of segmentacaoAbc) {
@@ -161,7 +157,7 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
     );
   }
 
-  const positivacaoColor = positivacao30d.pct >= 70 ? 'text-green-600' : positivacao30d.pct >= 50 ? 'text-yellow-600' : 'text-red-600';
+  const positivacaoColor = positivacao.pct >= 70 ? 'text-green-600' : positivacao.pct >= 50 ? 'text-yellow-600' : 'text-red-600';
 
   return (
     <div className="space-y-6">
@@ -183,15 +179,15 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Sell-in MTD */}
+        {/* Sell-out MTD */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" /> Sell-in MTD
+              <BarChart3 className="h-4 w-4" /> Sell-out MTD
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{fmtBRL(sellInMtd)}</p>
+            <p className="text-2xl font-bold">{fmtBRL(sellOutMtdTotal)}</p>
             {yoyData.pct !== null && (
               <div className={`flex items-center gap-1 text-sm mt-1 ${yoyData.pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {yoyData.pct >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
@@ -201,17 +197,17 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
           </CardContent>
         </Card>
 
-        {/* Positivação 30d */}
+        {/* Positivação */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Target className="h-4 w-4" /> Positivação 30 dias
+              <Target className="h-4 w-4" /> Positivação (Sell-out)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${positivacaoColor}`}>{fmtPct(positivacao30d.pct)}</p>
+            <p className={`text-2xl font-bold ${positivacaoColor}`}>{fmtPct(positivacao.pct)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {positivacao30d.positivados} de {positivacao30d.total} clientes
+              {positivacao.positivados} de {positivacao.total} clientes
             </p>
           </CardContent>
         </Card>
@@ -224,10 +220,11 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-600">{saudeResumo.vermelho + saudeResumo.amarelo}</p>
+            <p className="text-2xl font-bold text-red-600">{clientesRisco.length}</p>
             <div className="flex items-center gap-3 text-xs mt-1">
-              <span className="text-red-500">{saudeResumo.vermelho} críticos</span>
-              <span className="text-yellow-500">{saudeResumo.amarelo} atenção</span>
+              <span className="text-red-500">{clientesRisco.filter(c => c.nivel_risco === 'critico').length} críticos</span>
+              <span className="text-yellow-500">{clientesRisco.filter(c => c.nivel_risco === 'risco').length} risco</span>
+              <span className="text-orange-500">{clientesRisco.filter(c => c.nivel_risco === 'atencao').length} atenção</span>
             </div>
           </CardContent>
         </Card>
@@ -257,10 +254,10 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
         </Card>
       </div>
 
-      {/* Sell-in Mensal Chart */}
+      {/* Sell-out Mensal Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Sell-in Mensal (últimos 12 meses)</CardTitle>
+          <CardTitle className="text-base">Sell-out Mensal (últimos 12 meses)</CardTitle>
         </CardHeader>
         <CardContent>
           {chartData.length > 0 ? (
@@ -270,10 +267,10 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number) => [fmtBRL(value), 'Sell-in']}
+                  formatter={(value: number) => [fmtBRL(value), 'Sell-out']}
                   labelStyle={{ fontWeight: 600 }}
                 />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Sell-in" />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Sell-out" />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -305,16 +302,18 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
                           className={
                             a.nivel_risco === 'critico'
                               ? 'bg-red-50 text-red-700 border-red-200'
+                              : a.nivel_risco === 'risco'
+                              ? 'bg-orange-50 text-orange-700 border-orange-200'
                               : 'bg-yellow-50 text-yellow-700 border-yellow-200'
                           }
                         >
-                          {a.nivel_risco === 'critico' ? 'Crítico' : 'Atenção'}
+                          {a.nivel_risco === 'critico' ? 'Crítico' : a.nivel_risco === 'risco' ? 'Risco' : 'Atenção'}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">{a.segmento}</Badge>
                       </div>
                       <p className="font-medium text-sm mt-1 truncate">{a.client_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {a.dias_sem_compra} dias sem compra · {fmtBRL(a.volume_historico)}
+                        {a.dias_sem_sellout} dias sem sell-out · {fmtBRL(a.sellout_historico)}
                       </p>
                     </div>
                   </div>
@@ -372,17 +371,17 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
             {/* Positivação mensal trend */}
             {positivacaoMensal.length > 0 && (
               <div className="mt-4 pt-4 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Evolução mensal de clientes positivados</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Evolução mensal de clientes com sell-out</p>
                 <ResponsiveContainer width="100%" height={150}>
                   <ComposedChart data={positivacaoMensal.slice(-6).map((r) => {
                     const [, m] = r.mes.split('-');
                     const mesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                    return { label: mesNomes[parseInt(m, 10) - 1], total: r.clientes_positivados };
+                    return { label: mesNomes[parseInt(m, 10) - 1], total: Number(r.clientes_com_sellout) || 0 };
                   })}>
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name="Positivados" />
+                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name="Com sell-out" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
