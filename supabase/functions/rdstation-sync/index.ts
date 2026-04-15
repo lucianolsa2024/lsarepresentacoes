@@ -60,8 +60,8 @@ async function rdFetch(endpoint: string, options: RequestInit, token: string) {
   const data = await response.json();
   
   if (!response.ok) {
-    console.error(`RD Station API error [${response.status}]:`, JSON.stringify(data));
-    throw new Error(`RD Station API failed [${response.status}]: ${JSON.stringify(data)}`);
+    console.error(`RD Station API error [${response.status}]`);
+    throw new Error(`RD Station API failed [${response.status}]`);
   }
 
   return data;
@@ -77,7 +77,7 @@ async function searchOrganization(companyName: string, token: string): Promise<s
     }
     return null;
   } catch (error) {
-    console.error('Error searching organization:', error);
+    console.error('Error searching organization');
     return null;
   }
 }
@@ -101,7 +101,7 @@ async function createOrganization(client: ClientData, token: string): Promise<st
     }
   };
 
-  console.log('Creating organization:', JSON.stringify(orgData));
+  console.log('Creating organization');
   const data = await rdFetch('/organizations', {
     method: 'POST',
     body: JSON.stringify(orgData),
@@ -121,11 +121,11 @@ function extractValidEmail(input: string): string | null {
   
   if (match) {
     const email = match[0].toLowerCase();
-    console.log(`Extracted valid email: ${email} from input: ${input}`);
+    console.log('Extracted valid email from input');
     return email;
   }
   
-  console.log(`No valid email found in: ${input}`);
+  console.log('No valid email found in input');
   return null;
 }
 
@@ -142,7 +142,7 @@ async function searchContact(email: string, token: string): Promise<string | nul
     }
     return null;
   } catch (error) {
-    console.error('Error searching contact:', error);
+    console.error('Error searching contact');
     return null;
   }
 }
@@ -160,7 +160,7 @@ async function createContact(client: ClientData, organizationId: string, token: 
     }
   };
 
-  console.log('Creating contact:', JSON.stringify(contactData));
+  console.log('Creating contact');
   const data = await rdFetch('/contacts', {
     method: 'POST',
     body: JSON.stringify(contactData),
@@ -192,7 +192,7 @@ async function createDeal(
     }
   };
 
-  console.log('Creating deal:', JSON.stringify(dealData));
+  console.log('Creating deal');
   const data = await rdFetch('/deals', {
     method: 'POST',
     body: JSON.stringify(dealData),
@@ -235,7 +235,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Authenticated user: ${claimsData.claims.sub}`);
+    console.log('Authenticated user for RD Station sync');
 
     const RD_STATION_TOKEN = Deno.env.get('RD_STATION_TOKEN');
     if (!RD_STATION_TOKEN) {
@@ -254,8 +254,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Starting RD Station sync for: ${client.company}`);
-    console.log(`Is new client: ${client.isNewClient}`);
+    console.log('Starting RD Station sync');
 
     // Step 1: Always search first, then create only if not found
     let organizationId: string;
@@ -287,9 +286,7 @@ serve(async (req) => {
     // Step 3: Create deal
     const dealId = await createDeal(quote, organizationId, contactId, client, RD_STATION_TOKEN);
 
-
-    console.log(`RD Station sync completed successfully`);
-    console.log(`Organization: ${organizationId}, Contact: ${contactId}, Deal: ${dealId}`);
+    console.log('RD Station sync completed successfully');
 
     return new Response(
       JSON.stringify({
@@ -303,11 +300,11 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    console.error('RD Station sync error:', error);
+    console.error('RD Station sync error');
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro ao sincronizar com RD Station' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
