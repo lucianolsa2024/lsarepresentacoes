@@ -8,7 +8,8 @@ import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
 import { CommissionManager } from './CommissionManager';
 import { MixAnalysis } from './MixAnalysis';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3 } from 'lucide-react';
+import { SellOutTracker } from './SellOutTracker';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart } from 'lucide-react';
 
 export function AdminPanel() {
   return (
@@ -50,6 +51,10 @@ export function AdminPanel() {
           <Grid3X3 className="h-4 w-4 mr-2" />
           Análise de Mix
         </TabsTrigger>
+        <TabsTrigger value="sell-out">
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Sell-out
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -78,6 +83,9 @@ export function AdminPanel() {
       </TabsContent>
       <TabsContent value="mix-analysis" className="mt-0">
         <MixAnalysis />
+      </TabsContent>
+      <TabsContent value="sell-out" className="mt-0">
+        <SellOutTracker />
       </TabsContent>
     </Tabs>
   );
