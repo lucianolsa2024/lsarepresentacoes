@@ -24,6 +24,7 @@ import { useFunilActions } from '@/components/funil/useFunilActions';
 import { OpportunityDetailSheet } from './OpportunityDetailSheet';
 
 const STAGE_COLORS: Record<string, string> = {
+  lead: 'bg-slate-100 border-slate-300 text-slate-800',
   prospeccao: 'bg-blue-100 border-blue-300 text-blue-800',
   qualificacao: 'bg-purple-100 border-purple-300 text-purple-800',
   elaboracao_proposta: 'bg-cyan-100 border-cyan-300 text-cyan-800',
