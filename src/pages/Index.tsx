@@ -433,7 +433,13 @@ const Index = () => {
 
             <div className="p-2 sm:p-4 md:p-6">
               <TabsContent value="dashboard" className="mt-0">
-                {isAdmin && !showMapaCarteira && (
+                {isAdmin && fichaClienteId && (
+                  <FichaCliente
+                    clientId={fichaClienteId}
+                    onBack={() => setFichaClienteId(null)}
+                  />
+                )}
+                {isAdmin && !fichaClienteId && !showMapaCarteira && (
                   <div className="mb-6">
                     <DashboardExecutivo onNavigateToCarteira={(filters) => {
                       setMapaCarteiraFilters(filters);
@@ -441,11 +447,11 @@ const Index = () => {
                     }} />
                   </div>
                 )}
-                {isAdmin && showMapaCarteira && (
+                {isAdmin && !fichaClienteId && showMapaCarteira && (
                   <MapaCarteira
                     initialFilters={mapaCarteiraFilters}
                     onBack={() => setShowMapaCarteira(false)}
-                    onViewClient={(clientId) => setClientDetailId(clientId)}
+                    onViewClient={(clientId) => setFichaClienteId(clientId)}
                   />
                 )}
                 {isRep === true && (
