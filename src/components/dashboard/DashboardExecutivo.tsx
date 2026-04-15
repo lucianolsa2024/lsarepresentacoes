@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Users, Target, BarChart3, ShieldAlert } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Users, Target, BarChart3, ShieldAlert, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useExecutiveDashboard } from '@/hooks/useExecutiveDashboard';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, Legend,
@@ -165,9 +166,19 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">{greeting()}, Luciano</h1>
-        <p className="text-sm text-muted-foreground capitalize">{today()}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{greeting()}, Luciano</h1>
+          <p className="text-sm text-muted-foreground capitalize">{today()}</p>
+        </div>
+        <div className="flex gap-2">
+          {onNavigateToRoteiro && (
+            <Button variant="outline" onClick={onNavigateToRoteiro}>
+              <MapPin className="h-4 w-4 mr-2" />
+              Roteiro de Visitas
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}
