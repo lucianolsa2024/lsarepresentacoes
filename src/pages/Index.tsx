@@ -41,6 +41,7 @@ import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
 import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
+import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
