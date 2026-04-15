@@ -323,6 +323,58 @@ export type Database = {
         }
         Relationships: []
       }
+      alertas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          data_geracao: string | null
+          descricao: string | null
+          id: string
+          resolvido: boolean | null
+          tipo: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_geracao?: string | null
+          descricao?: string | null
+          id?: string
+          resolvido?: boolean | null
+          tipo?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_geracao?: string | null
+          descricao?: string | null
+          id?: string
+          resolvido?: boolean | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_giro_cliente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "alertas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_wallet_share"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       calendar_tokens: {
         Row: {
           created_at: string
@@ -445,6 +497,59 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      clientes: {
+        Row: {
+          ativo: boolean | null
+          cidade: string | null
+          cnpj: string | null
+          created_at: string | null
+          estado: string | null
+          id: string
+          nome_fantasia: string | null
+          padrao: string | null
+          potencial_estimado: number | null
+          razao_social: string
+          representante_id: string | null
+          segmento: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          padrao?: string | null
+          potencial_estimado?: number | null
+          razao_social: string
+          representante_id?: string | null
+          segmento?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          padrao?: string | null
+          potencial_estimado?: number | null
+          razao_social?: string
+          representante_id?: string | null
+          segmento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -744,6 +849,54 @@ export type Database = {
             columns: ["sales_opportunity_id"]
             isOneToOne: false
             referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metas: {
+        Row: {
+          ano: number | null
+          created_at: string | null
+          id: string
+          mes: number | null
+          representada_id: string | null
+          representante_id: string | null
+          tipo: string | null
+          valor_meta: number | null
+        }
+        Insert: {
+          ano?: number | null
+          created_at?: string | null
+          id?: string
+          mes?: number | null
+          representada_id?: string | null
+          representante_id?: string | null
+          tipo?: string | null
+          valor_meta?: number | null
+        }
+        Update: {
+          ano?: number | null
+          created_at?: string | null
+          id?: string
+          mes?: number | null
+          representada_id?: string | null
+          representante_id?: string | null
+          tipo?: string | null
+          valor_meta?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_representada_id_fkey"
+            columns: ["representada_id"]
+            isOneToOne: false
+            referencedRelation: "representadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
             referencedColumns: ["id"]
           },
         ]
@@ -1232,6 +1385,50 @@ export type Database = {
         }
         Relationships: []
       }
+      produtos: {
+        Row: {
+          ativo: boolean | null
+          categoria: string | null
+          codigo: string
+          created_at: string | null
+          id: string
+          linha: string | null
+          nome: string
+          preco_tabela: number | null
+          representada_id: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
+          codigo: string
+          created_at?: string | null
+          id?: string
+          linha?: string | null
+          nome: string
+          preco_tabela?: number | null
+          representada_id?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string | null
+          codigo?: string
+          created_at?: string | null
+          id?: string
+          linha?: string | null
+          nome?: string
+          preco_tabela?: number | null
+          representada_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_representada_id_fkey"
+            columns: ["representada_id"]
+            isOneToOne: false
+            referencedRelation: "representadas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           client_data: Json
@@ -1320,6 +1517,54 @@ export type Database = {
           goal_value?: number
           month_start?: string
           owner_email?: string
+        }
+        Relationships: []
+      }
+      representadas: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          percentual_carteira: number | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          percentual_carteira?: number | null
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          percentual_carteira?: number | null
+        }
+        Relationships: []
+      }
+      representantes: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          tipo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          tipo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          tipo?: string | null
         }
         Relationships: []
       }
@@ -1495,6 +1740,156 @@ export type Database = {
           },
         ]
       }
+      sell_in: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          data_pedido: string
+          id: string
+          produto_id: string | null
+          quantidade: number
+          representada_id: string | null
+          representante_id: string | null
+          status: string | null
+          tipo: string | null
+          valor_total: number | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_pedido: string
+          id?: string
+          produto_id?: string | null
+          quantidade?: number
+          representada_id?: string | null
+          representante_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_pedido?: string
+          id?: string
+          produto_id?: string | null
+          quantidade?: number
+          representada_id?: string | null
+          representante_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sell_in_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sell_in_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_giro_cliente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "sell_in_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_wallet_share"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "sell_in_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sell_in_representada_id_fkey"
+            columns: ["representada_id"]
+            isOneToOne: false
+            referencedRelation: "representadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sell_in_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sell_out: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          data_venda: string
+          id: string
+          origem: string | null
+          produto_id: string | null
+          quantidade: number
+          valor_venda: number | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_venda: string
+          id?: string
+          origem?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          valor_venda?: number | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_venda?: string
+          id?: string
+          origem?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          valor_venda?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sell_out_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sell_out_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_giro_cliente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "sell_out_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_wallet_share"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "sell_out_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_order_photos: {
         Row: {
           created_at: string
@@ -1625,6 +2020,68 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      showroom: {
+        Row: {
+          cliente_id: string | null
+          condicao: string | null
+          created_at: string | null
+          data_entrada: string
+          data_saida: string | null
+          id: string
+          motivo_saida: string | null
+          produto_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          condicao?: string | null
+          created_at?: string | null
+          data_entrada: string
+          data_saida?: string | null
+          id?: string
+          motivo_saida?: string | null
+          produto_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          condicao?: string | null
+          created_at?: string | null
+          data_entrada?: string
+          data_saida?: string | null
+          id?: string
+          motivo_saida?: string | null
+          produto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showroom_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "showroom_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_giro_cliente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "showroom_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_wallet_share"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "showroom_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -1765,6 +2222,98 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      visitas: {
+        Row: {
+          acao_showroom: string | null
+          cliente_id: string | null
+          created_at: string | null
+          data_visita: string
+          duracao_minutos: number | null
+          id: string
+          mix_apresentado: string | null
+          observacoes: string | null
+          oportunidade_mix: string | null
+          previsao_compra: number | null
+          produtos_sem_giro_identificados: boolean | null
+          projetos_em_andamento: string | null
+          proxima_visita_prevista: string | null
+          representante_id: string | null
+          resultado: string | null
+          showroom_revisado: boolean | null
+          tipo: string | null
+          valor_pedido: number | null
+        }
+        Insert: {
+          acao_showroom?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          data_visita: string
+          duracao_minutos?: number | null
+          id?: string
+          mix_apresentado?: string | null
+          observacoes?: string | null
+          oportunidade_mix?: string | null
+          previsao_compra?: number | null
+          produtos_sem_giro_identificados?: boolean | null
+          projetos_em_andamento?: string | null
+          proxima_visita_prevista?: string | null
+          representante_id?: string | null
+          resultado?: string | null
+          showroom_revisado?: boolean | null
+          tipo?: string | null
+          valor_pedido?: number | null
+        }
+        Update: {
+          acao_showroom?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          data_visita?: string
+          duracao_minutos?: number | null
+          id?: string
+          mix_apresentado?: string | null
+          observacoes?: string | null
+          oportunidade_mix?: string | null
+          previsao_compra?: number | null
+          produtos_sem_giro_identificados?: boolean | null
+          projetos_em_andamento?: string | null
+          proxima_visita_prevista?: string | null
+          representante_id?: string | null
+          resultado?: string | null
+          showroom_revisado?: boolean | null
+          tipo?: string | null
+          valor_pedido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_giro_cliente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_wallet_share"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "visitas_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2158,6 +2707,179 @@ export type Database = {
       v_suppliers_list: {
         Row: {
           supplier_name: string | null
+        }
+        Relationships: []
+      }
+      vw_clientes_risco: {
+        Row: {
+          client_name: string | null
+          dias_sem_compra: number | null
+          mix_historico: number | null
+          nivel_risco: string | null
+          representative: string | null
+          ultima_compra: string | null
+          volume_historico: number | null
+        }
+        Relationships: []
+      }
+      vw_giro_cliente: {
+        Row: {
+          cliente_id: string | null
+          nome_fantasia: string | null
+          segmento: string | null
+          sell_in_12m: number | null
+          sell_out_12m: number | null
+          taxa_giro_pct: number | null
+        }
+        Relationships: []
+      }
+      vw_mix_cliente: {
+        Row: {
+          client_name: string | null
+          indice_mix_pct: number | null
+          produtos_casabrazil: number | null
+          produtos_distintos: number | null
+          produtos_sohome: number | null
+          representative: string | null
+          volume_total: number | null
+        }
+        Relationships: []
+      }
+      vw_mix_heatmap: {
+        Row: {
+          client_name: string | null
+          pecas: number | null
+          pedidos: number | null
+          primeira_compra: string | null
+          product: string | null
+          representative: string | null
+          supplier: string | null
+          ultima_compra: string | null
+          volume: number | null
+        }
+        Relationships: []
+      }
+      vw_mix_tipo_pedido: {
+        Row: {
+          client_name: string | null
+          pct_showroom: number | null
+          representative: string | null
+          total: number | null
+          vol_encomenda: number | null
+          vol_estoque: number | null
+          vol_showroom: number | null
+        }
+        Relationships: []
+      }
+      vw_positivacao: {
+        Row: {
+          positivados_30d: number | null
+          positivados_60d: number | null
+          positivados_90d: number | null
+          segmento: string | null
+          taxa_positivacao_30d: number | null
+          total_clientes: number | null
+        }
+        Relationships: []
+      }
+      vw_positivacao_mensal: {
+        Row: {
+          clientes_positivados: number | null
+          mes: string | null
+          positivados_casabrazil: number | null
+          positivados_sohome: number | null
+        }
+        Relationships: []
+      }
+      vw_ranking_produtos: {
+        Row: {
+          clientes_compradores: number | null
+          pecas_vendidas: number | null
+          product: string | null
+          qtd_pedidos: number | null
+          receita_total: number | null
+          supplier: string | null
+          ticket_medio_por_cliente: number | null
+        }
+        Relationships: []
+      }
+      vw_ranking_representantes: {
+        Row: {
+          clientes: number | null
+          pedidos: number | null
+          produtos_vendidos: number | null
+          representative: string | null
+          ticket_medio_por_cliente: number | null
+          ticket_medio_por_pedido: number | null
+          volume_encomenda: number | null
+          volume_showroom: number | null
+          volume_total: number | null
+        }
+        Relationships: []
+      }
+      vw_saude_carteira: {
+        Row: {
+          client_name: string | null
+          compra_30d: number | null
+          compra_90d: number | null
+          dias_sem_compra: number | null
+          mix_produtos: number | null
+          representative: string | null
+          status_compra: string | null
+          total_pedidos: number | null
+          ultima_compra: string | null
+          volume_total: number | null
+        }
+        Relationships: []
+      }
+      vw_segmentacao_abc: {
+        Row: {
+          client_name: string | null
+          pct_acumulada: number | null
+          pct_do_total: number | null
+          representative: string | null
+          segmento: string | null
+          volume_total: number | null
+        }
+        Relationships: []
+      }
+      vw_sell_in_mensal: {
+        Row: {
+          clientes: number | null
+          mes: string | null
+          pedidos: number | null
+          supplier: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      vw_sell_in_mtd: {
+        Row: {
+          clientes_ativos: number | null
+          pecas_mtd: number | null
+          qtd_pedidos: number | null
+          representative: string | null
+          sell_in_mtd: number | null
+        }
+        Relationships: []
+      }
+      vw_wallet_share: {
+        Row: {
+          cliente_id: string | null
+          nome_fantasia: string | null
+          potencial_estimado: number | null
+          segmento: string | null
+          sell_in_12m: number | null
+          wallet_share_pct: number | null
+        }
+        Relationships: []
+      }
+      vw_yoy_mensal: {
+        Row: {
+          ano: number | null
+          mes_nome: string | null
+          mes_num: number | null
+          total: number | null
         }
         Relationships: []
       }
