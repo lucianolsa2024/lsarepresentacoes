@@ -32,7 +32,6 @@ export function ShowroomTracker() {
   const [filtroRep, setFiltroRep] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('all');
   const [filtroUrgencia, setFiltroUrgencia] = useState('all');
-  const [filtroSegmento, setFiltroSegmento] = useState('all');
 
   const [modalExposicao, setModalExposicao] = useState<ShowroomItem | null>(null);
   const [expStatus, setExpStatus] = useState('exposto');
