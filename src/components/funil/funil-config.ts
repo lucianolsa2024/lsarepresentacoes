@@ -72,6 +72,40 @@ export const FASES: Fase[] = [
 export const TRANSICOES: Transicao[] = [
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 0. Lead → Prospecção
+  // ══════════════════════════════════════════════════════════════════════════
+  {
+    de:    "lead",
+    para:  "prospeccao",
+    titulo: "Iniciar prospecção do lead",
+    descricao: "Confirme as informações básicas antes de iniciar a prospecção ativa.",
+    minimo_para_avancar: 1,
+    perguntas: [
+      {
+        id:          "contato_identificado",
+        texto:       "Contato-chave da incorporadora/construtora foi identificado?",
+        tipo:        "boolean",
+        obrigatoria: true,
+        bloqueia_se: null,
+        atividade_se_nao: {
+          titulo:     "Identificar contato-chave na incorporadora/construtora",
+          prazo_dias: 3,
+          prioridade: "alta",
+        },
+        dica: "Identifique o decisor de suprimentos/interiores antes de abordar.",
+      },
+      {
+        id:          "dados_validados",
+        texto:       "Dados do empreendimento foram validados (endereço, tipologia, status)?",
+        tipo:        "boolean",
+        obrigatoria: false,
+        bloqueia_se: null,
+        dica: "Verifique se as informações importadas estão atualizadas.",
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
   // 1. Prospecção → Qualificação
   // ══════════════════════════════════════════════════════════════════════════
   {
