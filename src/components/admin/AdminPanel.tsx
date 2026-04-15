@@ -8,7 +8,8 @@ import { ClientCurveReport } from './ClientCurveReport';
 import { ShareLojaReport } from './ShareLojaReport';
 import { CommissionManager } from './CommissionManager';
 import { MixAnalysis } from './MixAnalysis';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3 } from 'lucide-react';
+import { SellOutTracker } from './SellOutTracker';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart } from 'lucide-react';
 
 export function AdminPanel() {
   return (
