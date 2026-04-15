@@ -51,6 +51,10 @@ export function AdminPanel() {
           <Grid3X3 className="h-4 w-4 mr-2" />
           Análise de Mix
         </TabsTrigger>
+        <TabsTrigger value="sell-out">
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Sell-out
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
