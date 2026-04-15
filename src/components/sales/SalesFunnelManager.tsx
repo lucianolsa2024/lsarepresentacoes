@@ -347,6 +347,14 @@ export function SalesFunnelManager() {
         <Badge variant="outline" className="bg-red-50 text-red-800 text-xs">❌ {lostOpps.length} — {formatCurrency(lostValue)}</Badge>
       </div>
 
+      {/* Lead JSON Importer */}
+      <LeadJsonImporter
+        open={showLeadImporter}
+        onOpenChange={setShowLeadImporter}
+        onImported={() => { /* refetch handled by useSalesOpportunities */ window.location.reload(); }}
+        ownerEmail={user?.email || undefined}
+      />
+
       {/* Form dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-xl">
