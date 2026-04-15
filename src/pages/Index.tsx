@@ -44,6 +44,7 @@ import { MyOkrGoals } from '@/components/dashboard/MyOkrGoals';
 import { DashboardExecutivo } from '@/components/dashboard/DashboardExecutivo';
 import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
 import { FichaCliente } from '@/components/portfolio/FichaCliente';
+import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -106,6 +107,7 @@ const Index = () => {
   const [showMapaCarteira, setShowMapaCarteira] = useState(false);
   const [mapaCarteiraFilters, setMapaCarteiraFilters] = useState<{ statusCompra?: string; segmento?: string } | undefined>();
   const [fichaClienteId, setFichaClienteId] = useState<string | null>(null);
+  const [showRoteiro, setShowRoteiro] = useState(false);
 
   const handleAddItem = (item: QuoteItem) => {
     setItems([...items, item]);
@@ -439,18 +441,27 @@ const Index = () => {
                     onBack={() => setFichaClienteId(null)}
                   />
                 )}
-                {isAdmin && !fichaClienteId && !showMapaCarteira && (
+                {isAdmin && !fichaClienteId && !showMapaCarteira && !showRoteiro && (
                   <div className="mb-6">
-                    <DashboardExecutivo onNavigateToCarteira={(filters) => {
-                      setMapaCarteiraFilters(filters);
-                      setShowMapaCarteira(true);
-                    }} />
+                    <DashboardExecutivo
+                      onNavigateToCarteira={(filters) => {
+                        setMapaCarteiraFilters(filters);
+                        setShowMapaCarteira(true);
+                      }}
+                      onNavigateToRoteiro={() => setShowRoteiro(true)}
+                    />
                   </div>
                 )}
-                {isAdmin && !fichaClienteId && showMapaCarteira && (
+                {isAdmin && !fichaClienteId && showMapaCarteira && !showRoteiro && (
                   <MapaCarteira
                     initialFilters={mapaCarteiraFilters}
                     onBack={() => setShowMapaCarteira(false)}
+                    onViewClient={(clientId) => setFichaClienteId(clientId)}
+                  />
+                )}
+                {isAdmin && !fichaClienteId && showRoteiro && (
+                  <RoteiroVisitas
+                    onBack={() => setShowRoteiro(false)}
                     onViewClient={(clientId) => setFichaClienteId(clientId)}
                   />
                 )}
