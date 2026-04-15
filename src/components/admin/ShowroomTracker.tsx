@@ -42,17 +42,15 @@ export function ShowroomTracker() {
   const [treinoObs, setTreinoObs] = useState('');
 
   const reps = useMemo(() => [...new Set(items.map(i => i.representante).filter(Boolean))].sort(), [items]);
-  const segmentos = useMemo(() => [...new Set(items.map(i => i.segmento_cliente).filter(Boolean))].sort(), [items]);
 
   const filtered = useMemo(() => {
     return items.filter(i => {
       if (filtroRep !== 'all' && i.representante !== filtroRep) return false;
       if (filtroStatus !== 'all' && i.status_exposicao !== filtroStatus) return false;
       if (filtroUrgencia !== 'all' && i.urgencia !== filtroUrgencia) return false;
-      if (filtroSegmento !== 'all' && i.segmento_cliente !== filtroSegmento) return false;
       return true;
     });
-  }, [items, filtroRep, filtroStatus, filtroUrgencia, filtroSegmento]);
+  }, [items, filtroRep, filtroStatus, filtroUrgencia]);
 
   const kpis = useMemo(() => {
     const pendentes = items.filter(i => i.status_exposicao === 'pendente');
