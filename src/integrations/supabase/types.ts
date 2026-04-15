@@ -126,6 +126,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -376,6 +383,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_influencers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_representatives: {
@@ -403,6 +417,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_representatives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
@@ -543,6 +564,13 @@ export type Database = {
             columns: ["parent_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_parent_client_id_fkey"
+            columns: ["parent_client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
@@ -855,6 +883,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "nps_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "nps_responses_training_id_fkey"
             columns: ["training_id"]
             isOneToOne: false
@@ -1022,6 +1057,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
@@ -1248,6 +1290,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quotes_parent_quote_id_fkey"
             columns: ["parent_quote_id"]
             isOneToOne: false
@@ -1335,6 +1384,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_visits_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
           {
@@ -1428,6 +1484,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
@@ -1557,6 +1620,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       store_trainings: {
@@ -1599,6 +1669,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_trainings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
@@ -1728,6 +1805,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       v_client_mtd_yoy: {
@@ -1785,7 +1869,29 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      v_clients_for_nps: {
+        Row: {
+          company: string | null
+          id: string | null
+        }
+        Insert: {
+          company?: string | null
+          id?: string | null
+        }
+        Update: {
+          company?: string | null
+          id?: string | null
+        }
+        Relationships: []
       }
       v_clients_summary: {
         Row: {
@@ -1936,6 +2042,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
             referencedColumns: ["id"]
           },
         ]
