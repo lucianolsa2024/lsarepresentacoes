@@ -6,24 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ShoppingCart, RefreshCcw, Star, Users, AlertTriangle } from 'lucide-react';
 import { useSellOutTracker, SellOutFilters } from '@/hooks/useSellOutTracker';
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
 export function SellOutTracker() {
-  const [filters, setFilters] = useState<SellOutFilters>({
-    clienteId: '',
-    produtoId: '',
-    linha: '',
-    periodo: 12,
-  });
+  const [filters, setFilters] = useState<SellOutFilters>({ supplier: '', representative: '' });
 
   const {
-    loading, clientes, produtos, linhas,
-    totalSellOut, totalSellIn, taxaGiro,
-    topProdutoGiro, topClienteSellOut,
-    giroPorProduto, showroomRisco, rankingClientes,
+    loading, suppliers, representatives,
+    totalSellOut, taxaGiroMedia, topProdutoGiro, topClienteSellOut,
+    rankingProdutos, showroomSemGiro, rankingClientes,
   } = useSellOutTracker(filters);
 
-  const update = (key: keyof SellOutFilters, val: string | number) =>
+  const update = (key: keyof SellOutFilters, val: string) =>
     setFilters(prev => ({ ...prev, [key]: val }));
 
   if (loading) {
@@ -37,43 +31,20 @@ export function SellOutTracker() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Select value={filters.clienteId || '_all'} onValueChange={v => update('clienteId', v === '_all' ? '' : v)}>
-          <SelectTrigger><SelectValue placeholder="Cliente" /></SelectTrigger>
+      <div className="grid grid-cols-2 gap-3">
+        <Select value={filters.supplier || '_all'} onValueChange={v => update('supplier', v === '_all' ? '' : v)}>
+          <SelectTrigger><SelectValue placeholder="Fornecedor" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">Todos os clientes</SelectItem>
-            {clientes.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social}</SelectItem>
-            ))}
+            <SelectItem value="_all">Todos os fornecedores</SelectItem>
+            {suppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
 
-        <Select value={filters.produtoId || '_all'} onValueChange={v => update('produtoId', v === '_all' ? '' : v)}>
-          <SelectTrigger><SelectValue placeholder="Produto" /></SelectTrigger>
+        <Select value={filters.representative || '_all'} onValueChange={v => update('representative', v === '_all' ? '' : v)}>
+          <SelectTrigger><SelectValue placeholder="Representante" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">Todos os produtos</SelectItem>
-            {produtos.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.linha || '_all'} onValueChange={v => update('linha', v === '_all' ? '' : v)}>
-          <SelectTrigger><SelectValue placeholder="Linha" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">Todas as linhas</SelectItem>
-            {linhas.map(l => (
-              <SelectItem key={l} value={l}>{l}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={String(filters.periodo)} onValueChange={v => update('periodo', Number(v))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="3">Últimos 3 meses</SelectItem>
-            <SelectItem value="6">Últimos 6 meses</SelectItem>
-            <SelectItem value="12">Últimos 12 meses</SelectItem>
+            <SelectItem value="_all">Todos os representantes</SelectItem>
+            {representatives.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -91,10 +62,10 @@ export function SellOutTracker() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-              <RefreshCcw className="h-4 w-4" /> Taxa de Giro
+              <RefreshCcw className="h-4 w-4" /> Taxa de Giro Média
             </CardTitle>
           </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{taxaGiro.toFixed(1)}%</p></CardContent>
+          <CardContent><p className="text-2xl font-bold">{taxaGiroMedia.toFixed(1)}%</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -114,36 +85,41 @@ export function SellOutTracker() {
         </Card>
       </div>
 
-      {/* Giro por produto */}
+      {/* Giro por Produto (vw_ranking_produtos) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Giro por Produto</CardTitle>
         </CardHeader>
         <CardContent>
-          {giroPorProduto.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum dado de sell-out/showroom encontrado.</p>
+          {rankingProdutos.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum dado disponível.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Produto</TableHead>
-                  <TableHead className="text-center">Clientes c/ exposição</TableHead>
+                  <TableHead className="text-center">Clientes vendendo</TableHead>
                   <TableHead className="text-right">Sell-out total</TableHead>
-                  <TableHead className="text-center">Dias médios</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">Peças vendidas</TableHead>
+                  <TableHead className="text-center">Clientes c/ showroom</TableHead>
+                  <TableHead className="text-center">Taxa conversão %</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {giroPorProduto.slice(0, 30).map(row => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.nome}</TableCell>
-                    <TableCell className="text-center">{row.exposicao}</TableCell>
-                    <TableCell className="text-right">{fmt(row.totalSo)}</TableCell>
-                    <TableCell className="text-center">{row.diasMedio || '-'}</TableCell>
+                {rankingProdutos.slice(0, 30).map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{row.product}</TableCell>
+                    <TableCell className="text-center">{row.clientes_compradores}</TableCell>
+                    <TableCell className="text-right">{fmt(Number(row.sellout_total) || 0)}</TableCell>
+                    <TableCell className="text-center">{row.pecas_vendidas}</TableCell>
+                    <TableCell className="text-center">{row.clientes_expondo}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={row.status === 'alto' ? 'default' : row.status === 'medio' ? 'secondary' : 'destructive'}>
-                        {row.status === 'alto' ? 'Alto' : row.status === 'medio' ? 'Médio' : row.status === 'baixo' ? 'Baixo' : 'Sem venda'}
-                      </Badge>
+                      <span className={
+                        Number(row.taxa_conversao_pct) >= 70 ? 'text-green-600 font-medium' :
+                        Number(row.taxa_conversao_pct) >= 40 ? 'text-yellow-600' : 'text-red-600'
+                      }>
+                        {Number(row.taxa_conversao_pct).toFixed(1)}%
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -153,7 +129,7 @@ export function SellOutTracker() {
         </CardContent>
       </Card>
 
-      {/* Showroom em risco */}
+      {/* Produtos em Risco no Showroom (classificacao_giro = 'showroom_sem_giro') */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -161,31 +137,29 @@ export function SellOutTracker() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {showroomRisco.length === 0 ? (
+          {showroomSemGiro.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto em risco identificado.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produto</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="text-center">Dias em exposição</TableHead>
-                  <TableHead className="text-center">Nível</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-right">Sell-in (exposto)</TableHead>
+                  <TableHead className="text-right">Sell-out</TableHead>
                   <TableHead>Ação sugerida</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {showroomRisco.map(row => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.produto}</TableCell>
-                    <TableCell>{row.cliente}</TableCell>
-                    <TableCell className="text-center">{row.dias}d</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={row.nivel === 'critico' ? 'destructive' : 'secondary'}>
-                        {row.nivel === 'critico' ? '🔴 Crítico' : '🟡 Alerta'}
-                      </Badge>
+                {showroomSemGiro.slice(0, 30).map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{row.client_name}</TableCell>
+                    <TableCell>{row.product}</TableCell>
+                    <TableCell className="text-right">{fmt(Number(row.sellin) || 0)}</TableCell>
+                    <TableCell className="text-right text-red-600">R$ 0</TableCell>
+                    <TableCell>
+                      <Badge variant="destructive" className="text-xs">Substituir ou treinar</Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{row.acao}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -194,7 +168,7 @@ export function SellOutTracker() {
         </CardContent>
       </Card>
 
-      {/* Ranking clientes */}
+      {/* Ranking de Clientes por Sell-out (vw_saude_carteira) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Ranking de Clientes por Sell-out</CardTitle>
@@ -207,21 +181,23 @@ export function SellOutTracker() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Sell-out</TableHead>
-                  <TableHead className="text-right">Sell-in</TableHead>
-                  <TableHead className="text-center">Taxa de Giro</TableHead>
-                  <TableHead className="text-center">Tendência</TableHead>
+                  <TableHead>Representante</TableHead>
+                  <TableHead className="text-right">Sell-out total</TableHead>
+                  <TableHead className="text-right">Sell-out 90d</TableHead>
+                  <TableHead className="text-center">Taxa de giro</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rankingClientes.slice(0, 30).map(row => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.nome}</TableCell>
-                    <TableCell className="text-right">{fmt(row.sellOut12m)}</TableCell>
-                    <TableCell className="text-right">{fmt(row.sellIn12m)}</TableCell>
-                    <TableCell className="text-center">{row.taxaGiro.toFixed(1)}%</TableCell>
+                {rankingClientes.slice(0, 30).map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{row.client_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{row.representative}</TableCell>
+                    <TableCell className="text-right">{fmt(Number(row.sellout_total) || 0)}</TableCell>
+                    <TableCell className="text-right">{fmt(Number(row.sellout_90d) || 0)}</TableCell>
+                    <TableCell className="text-center">{Number(row.taxa_giro).toFixed(1)}%</TableCell>
                     <TableCell className="text-center text-lg">
-                      {row.taxaGiro >= 80 ? '↑' : row.taxaGiro >= 40 ? '→' : '↓'}
+                      {row.status_sellout === 'verde' ? '🟢' : row.status_sellout === 'amarelo' ? '🟡' : '🔴'}
                     </TableCell>
                   </TableRow>
                 ))}
