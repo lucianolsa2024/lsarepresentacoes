@@ -2086,6 +2086,75 @@ export type Database = {
           },
         ]
       }
+      showroom_tracking: {
+        Row: {
+          atualizado_em: string | null
+          checklist_id: string | null
+          cidade: string | null
+          cliente: string
+          data_confirmacao: string | null
+          data_treinamento: string | null
+          dt_faturamento: string
+          id: string
+          importado_em: string | null
+          nf_numero: string
+          obs_treinamento: string | null
+          observacao: string | null
+          order_type: string | null
+          produto: string
+          quantidade: number | null
+          representante: string | null
+          segmento_cliente: string | null
+          status_exposicao: string | null
+          status_treinamento: string | null
+          valor: number | null
+        }
+        Insert: {
+          atualizado_em?: string | null
+          checklist_id?: string | null
+          cidade?: string | null
+          cliente: string
+          data_confirmacao?: string | null
+          data_treinamento?: string | null
+          dt_faturamento: string
+          id?: string
+          importado_em?: string | null
+          nf_numero: string
+          obs_treinamento?: string | null
+          observacao?: string | null
+          order_type?: string | null
+          produto: string
+          quantidade?: number | null
+          representante?: string | null
+          segmento_cliente?: string | null
+          status_exposicao?: string | null
+          status_treinamento?: string | null
+          valor?: number | null
+        }
+        Update: {
+          atualizado_em?: string | null
+          checklist_id?: string | null
+          cidade?: string | null
+          cliente?: string
+          data_confirmacao?: string | null
+          data_treinamento?: string | null
+          dt_faturamento?: string
+          id?: string
+          importado_em?: string | null
+          nf_numero?: string
+          obs_treinamento?: string | null
+          observacao?: string | null
+          order_type?: string | null
+          produto?: string
+          quantidade?: number | null
+          representante?: string | null
+          segmento_cliente?: string | null
+          status_exposicao?: string | null
+          status_treinamento?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       store_trainings: {
         Row: {
           client_id: string
@@ -2892,6 +2961,81 @@ export type Database = {
           qtd_pedidos: number | null
           representative: string | null
           sell_out_mtd: number | null
+        }
+        Relationships: []
+      }
+      vw_showroom_acompanhamento: {
+        Row: {
+          cidade: string | null
+          cliente: string | null
+          data_confirmacao: string | null
+          dias_desde_fat: number | null
+          dt_faturamento: string | null
+          id: string | null
+          nf_numero: string | null
+          observacao: string | null
+          produto: string | null
+          quantidade: number | null
+          representante: string | null
+          segmento_cliente: string | null
+          status_exposicao: string | null
+          status_treinamento: string | null
+          treinamento_pendente: boolean | null
+          urgencia: string | null
+          valor: number | null
+        }
+        Insert: {
+          cidade?: string | null
+          cliente?: string | null
+          data_confirmacao?: string | null
+          dias_desde_fat?: never
+          dt_faturamento?: string | null
+          id?: string | null
+          nf_numero?: string | null
+          observacao?: string | null
+          produto?: string | null
+          quantidade?: number | null
+          representante?: string | null
+          segmento_cliente?: string | null
+          status_exposicao?: string | null
+          status_treinamento?: string | null
+          treinamento_pendente?: never
+          urgencia?: never
+          valor?: number | null
+        }
+        Update: {
+          cidade?: string | null
+          cliente?: string | null
+          data_confirmacao?: string | null
+          dias_desde_fat?: never
+          dt_faturamento?: string | null
+          id?: string | null
+          nf_numero?: string | null
+          observacao?: string | null
+          produto?: string | null
+          quantidade?: number | null
+          representante?: string | null
+          segmento_cliente?: string | null
+          status_exposicao?: string | null
+          status_treinamento?: string | null
+          treinamento_pendente?: never
+          urgencia?: never
+          valor?: number | null
+        }
+        Relationships: []
+      }
+      vw_showroom_resumo_rep: {
+        Row: {
+          expostos: number | null
+          nao_expostos: number | null
+          pendentes: number | null
+          representante: string | null
+          taxa_exposicao_pct: number | null
+          total_clientes: number | null
+          total_itens: number | null
+          treinamentos_pendentes: number | null
+          urgentes: number | null
+          valor_total: number | null
         }
         Relationships: []
       }

@@ -9,7 +9,8 @@ import { ShareLojaReport } from './ShareLojaReport';
 import { CommissionManager } from './CommissionManager';
 import { MixAnalysis } from './MixAnalysis';
 import { SellOutTracker } from './SellOutTracker';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart } from 'lucide-react';
+import { ShowroomTracker } from './ShowroomTracker';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart, Eye } from 'lucide-react';
 
 export function AdminPanel() {
   return (
@@ -55,6 +56,10 @@ export function AdminPanel() {
           <ShoppingCart className="h-4 w-4 mr-2" />
           Sell-out
         </TabsTrigger>
+        <TabsTrigger value="showroom">
+          <Eye className="h-4 w-4 mr-2" />
+          Showroom
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -86,6 +91,9 @@ export function AdminPanel() {
       </TabsContent>
       <TabsContent value="sell-out" className="mt-0">
         <SellOutTracker />
+      </TabsContent>
+      <TabsContent value="showroom" className="mt-0">
+        <ShowroomTracker />
       </TabsContent>
     </Tabs>
   );
