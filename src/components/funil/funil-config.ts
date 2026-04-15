@@ -7,6 +7,7 @@
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 export type FaseId =
+  | "lead"
   | "prospeccao"
   | "qualificacao"
   | "elaboracao_proposta"
