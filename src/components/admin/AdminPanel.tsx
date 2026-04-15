@@ -46,6 +46,10 @@ export function AdminPanel() {
           <Percent className="h-4 w-4 mr-2" />
           Comissionamento
         </TabsTrigger>
+        <TabsTrigger value="mix-analysis">
+          <Grid3X3 className="h-4 w-4 mr-2" />
+          Análise de Mix
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -71,6 +75,9 @@ export function AdminPanel() {
       </TabsContent>
       <TabsContent value="comissionamento" className="mt-0">
         <CommissionManager />
+      </TabsContent>
+      <TabsContent value="mix-analysis" className="mt-0">
+        <MixAnalysis />
       </TabsContent>
     </Tabs>
   );
