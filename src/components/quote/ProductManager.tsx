@@ -24,7 +24,6 @@ import { Plus, Trash2, Edit2, X, Package, Search, Factory, Camera } from 'lucide
 import { toast } from 'sonner';
 import { ExcelImporter } from './ExcelImporter';
 import { BulkImporter } from './BulkImporter';
-import { BenitaImporter } from './BenitaImporter';
 import { ProductImageUpload } from './ProductImageUpload';
 import { ProductImage } from '@/components/ProductImage';
 
@@ -340,7 +339,6 @@ export function ProductManager({
           <div className="flex gap-2 flex-wrap">
             <BulkImporter onImportComplete={onRefresh || (() => {})} />
             <ExcelImporter onImportComplete={onRefresh || (() => {})} />
-            <BenitaImporter onImportComplete={onRefresh || (() => {})} />
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={openNewDialog}>
