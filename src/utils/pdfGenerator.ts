@@ -142,19 +142,22 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url || url === '/placeholder.svg') {
     return null;
   }
-  
+
+  // Route cross-origin URLs through our proxy to bypass CORS
+  const effectiveUrl = toFetchableUrl(url);
+
   // For external URLs (like Supabase Storage), try fetch first as it handles CORS better
-  if (isExternalUrl(url)) {
-    const fetchResult = await fetchImageAsBase64(url);
+  if (isExternalUrl(effectiveUrl)) {
+    const fetchResult = await fetchImageAsBase64(effectiveUrl);
     if (fetchResult) {
       return fetchResult;
     }
     // Fallback to element method
-    console.log('Fetch failed, trying element method for:', url.substring(0, 50));
+    console.log('Fetch failed, trying element method for:', effectiveUrl.substring(0, 50));
   }
-  
+
   // For local URLs or as fallback, use element method
-  return loadImageViaElement(url);
+  return loadImageViaElement(effectiveUrl);
 }
 
 // Cache for loaded images (per session, cleared on each PDF generation for fresh data)
