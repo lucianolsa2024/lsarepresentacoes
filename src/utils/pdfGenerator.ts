@@ -5,6 +5,8 @@ import logoLsa from '@/assets/logo-lsa-new.jpg';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
 import { getQuoteFileName } from '@/utils/quoteLabel';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+
 // Helper to check if URL is external
 function isExternalUrl(url: string): boolean {
   if (!url || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
@@ -16,6 +18,18 @@ function isExternalUrl(url: string): boolean {
     return false;
   }
 }
+
+// Route external (cross-origin) image URLs through our edge proxy so the
+// browser can read pixels without CORS-tainting the canvas. Supabase Storage
+// URLs already serve permissive CORS, so we leave those untouched.
+function toFetchableUrl(url: string): string {
+  if (!isExternalUrl(url)) return url;
+  if (!SUPABASE_URL) return url;
+  // Supabase Storage public URLs are CORS-friendly already
+  if (url.includes('/storage/v1/object/public/')) return url;
+  return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 
 // Maximum image size for PDF optimization (reduces file size significantly)
 const MAX_IMAGE_SIZE = 100;
