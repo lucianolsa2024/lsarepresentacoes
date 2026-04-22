@@ -818,6 +818,150 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_categories: {
+        Row: {
+          active: boolean
+          category_type: string
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_type?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_type?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_companies: {
+        Row: {
+          active: boolean
+          created_at: string
+          document: string | null
+          entity_type: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          document?: string | null
+          entity_type?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          document?: string | null
+          entity_type?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_entries: {
+        Row: {
+          amount: number
+          category_id: string | null
+          company_id: string | null
+          cost_center: string | null
+          counterparty: string | null
+          created_at: string
+          description: string
+          document: string | null
+          due_date: string
+          entry_type: string
+          id: string
+          installment_index: number
+          installment_total: number
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          recurrence_id: string | null
+          recurrence_rule: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          company_id?: string | null
+          cost_center?: string | null
+          counterparty?: string | null
+          created_at?: string
+          description: string
+          document?: string | null
+          due_date: string
+          entry_type: string
+          id?: string
+          installment_index?: number
+          installment_total?: number
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence_id?: string | null
+          recurrence_rule?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          company_id?: string | null
+          cost_center?: string | null
+          counterparty?: string | null
+          created_at?: string
+          description?: string
+          document?: string | null
+          due_date?: string
+          entry_type?: string
+          id?: string
+          installment_index?: number
+          installment_total?: number
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence_id?: string | null
+          recurrence_rule?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "finance_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_fases: {
         Row: {
           alterado_por: string | null
@@ -3070,6 +3214,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_finance_lsa_user: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
