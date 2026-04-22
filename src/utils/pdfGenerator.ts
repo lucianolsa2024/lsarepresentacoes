@@ -410,7 +410,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
       `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
     ].filter(Boolean).join(' | ');
 
-    const splitDetails = doc.splitTextToSize(details, 86);
+    const splitDetails = doc.splitTextToSize(details, 72);
     const textHeight = (splitDetails.length + 1) * 4.5 + 4;
     const rowH = Math.max(textHeight, ROW_MIN_H);
 
@@ -449,16 +449,24 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(splitDetails, COL.desc, y + 8);
     doc.setTextColor(0);
 
-    // Qtd / Preços (todos centralizados na coluna)
+    // Qtd / Preços (centralizados, com auto-shrink se valor exceder largura)
     const displayPrice = getDisplayPrice(item);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    const drawCentered = (text: string, cx: number, ty: number, maxW: number, baseSize: number, bold = false) => {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      let size = baseSize;
+      doc.setFontSize(size);
+      while (doc.getTextWidth(text) > maxW - 1 && size > 6) {
+        size -= 0.5;
+        doc.setFontSize(size);
+      }
+      doc.text(text, cx, ty, { align: 'center' });
+    };
     doc.setTextColor(60);
-    doc.text(item.quantity.toString(), COL.qtyC, y + 4, { align: 'center' });
-    doc.text(formatCurrency(displayPrice), COL.unitC, y + 4, { align: 'center' });
-    doc.setFont('helvetica', 'bold');
+    drawCentered(item.quantity.toString(), COL.qtyC, y + 4, 14, 9);
+    drawCentered(formatCurrency(displayPrice), COL.unitC, y + 4, 28, 9);
     doc.setTextColor(20);
-    doc.text(formatCurrency(displayPrice * item.quantity), COL.totalC, y + 4, { align: 'center' });
+    drawCentered(formatCurrency(displayPrice * item.quantity), COL.totalC, y + 4, 35, 9, true);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
 
     y += rowH;
@@ -467,7 +475,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     if (item.observations?.trim()) {
       doc.setFontSize(7.5);
       doc.setTextColor(120);
-      const splitObs = doc.splitTextToSize(`Obs: ${item.observations}`, 110);
+      const splitObs = doc.splitTextToSize(`Obs: ${item.observations}`, 95);
       doc.text(splitObs, COL.desc, y);
       y += splitObs.length * 3.5 + 1;
       doc.setTextColor(0);
