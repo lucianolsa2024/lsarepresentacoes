@@ -413,6 +413,15 @@ const Index = () => {
                 <TrendingUp className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Funis</span>
               </TabsTrigger>
+              {isAdmin && (
+              <TabsTrigger
+                value="automations"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <Zap className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Automações</span>
+              </TabsTrigger>
+              )}
               <TabsTrigger
                 value="service-orders"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
