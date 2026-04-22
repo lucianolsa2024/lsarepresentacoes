@@ -22,7 +22,7 @@ import { EntriesManager } from './EntriesManager';
 import { DocumentUpload } from './DocumentUpload';
 import { BankReconciliation } from './BankReconciliation';
 import { DreReport } from './DreReport';
-import { CashflowReport } from './CashflowReport';
+import { CashflowProjection } from './CashflowProjection';
 import { FinanceSettings } from './FinanceSettings';
 
 type Section =
@@ -162,7 +162,7 @@ export function FinanceiroLSA() {
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
           {section === 'conciliacao' && <BankReconciliation />}
           {section === 'dre' && <DreReport />}
-          {section === 'fluxo' && <CashflowReport />}
+          {section === 'fluxo' && <CashflowProjection />}
           {section === 'upload' && <DocumentUpload />}
           {section === 'config' && <FinanceSettings />}
         </section>
