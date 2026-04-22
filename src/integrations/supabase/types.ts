@@ -375,6 +375,95 @@ export type Database = {
           },
         ]
       }
+      automation_logs: {
+        Row: {
+          actions_result: Json | null
+          automation_id: string | null
+          duration_ms: number | null
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          status: string | null
+          trigger_payload: Json | null
+        }
+        Insert: {
+          actions_result?: Json | null
+          automation_id?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string | null
+          trigger_payload?: Json | null
+        }
+        Update: {
+          actions_result?: Json | null
+          automation_id?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string | null
+          trigger_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          actions: Json | null
+          conditions: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          error_count: number | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          name: string
+          run_count: number | null
+          trigger: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          actions?: Json | null
+          conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          error_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name: string
+          run_count?: number | null
+          trigger?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          actions?: Json | null
+          conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          error_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name?: string
+          run_count?: number | null
+          trigger?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       calendar_tokens: {
         Row: {
           created_at: string
