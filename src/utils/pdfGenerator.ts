@@ -7,9 +7,14 @@ import { getQuoteFileName } from '@/utils/quoteLabel';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 
-// Returns the unit price to display in the PDF (uses item.price as the source of truth)
+// Returns the unit price to display in the PDF, applying the per-item
+// discount/surcharge (itemDiscountValue: positive = desconto, negative = acréscimo).
 function getDisplayPrice(item: QuoteItem): number {
-  return Number((item as any).price ?? (item as any).unitPrice ?? 0);
+  const base = Number((item as any).price ?? (item as any).unitPrice ?? 0);
+  const v = Number(item.itemDiscountValue || 0);
+  if (!v) return base;
+  const mult = v > 0 ? 1 - v / 100 : 1 + Math.abs(v) / 100;
+  return Math.round(base * mult * 100) / 100;
 }
 
 // Helper to check if URL is external
@@ -347,8 +352,8 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-// Table header
-  const COL = { item: 15, img: 25, desc: 54, qty: 148, unit: 158, total: 178 };
+// Table header — total alinhado à direita dentro da margem (pageWidth-15 = 195)
+  const COL = { item: 15, img: 22, desc: 48, qty: 138, unit: 152, total: 195 };
   const IMG_SIZE = 22;
   const ROW_MIN_H = IMG_SIZE + 6;
 
@@ -362,7 +367,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('Descrição', COL.desc, y);
   doc.text('Qtd',  COL.qty,  y);
   doc.text('Unit.', COL.unit, y);
-  doc.text('Total', COL.total, y);
+  doc.text('Total', COL.total, y, { align: 'right' });
   doc.setTextColor(0);
   y += 7;
 
@@ -377,11 +382,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
       item.factory ? `Fábrica: ${item.factory}` : '',
       `Mod: ${item.modulation}`,
       item.sizeDescription ? `Tam: ${item.sizeDescription}` : '',
-      item.base ? `BASE/PE: ${item.base} | Base: ${item.base}` : '',
+      item.base ? `Base: ${item.base}` : '',
       `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
     ].filter(Boolean).join(' | ');
 
-    const splitDetails = doc.splitTextToSize(details, 88);
+    const splitDetails = doc.splitTextToSize(details, 86);
     const textHeight = (splitDetails.length + 1) * 4.5 + 4;
     const rowH = Math.max(textHeight, ROW_MIN_H);
 
@@ -429,7 +434,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(formatCurrency(displayPrice), COL.unit, y + 4);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
-    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4);
+    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4, { align: 'right' });
     doc.setFont('helvetica', 'normal');
 
     y += rowH;
