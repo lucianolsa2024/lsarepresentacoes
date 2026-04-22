@@ -1,0 +1,17 @@
+/**
+ * Controle de acesso para áreas exclusivas.
+ * Centraliza o(s) e-mail(s) autorizados para evitar checagens espalhadas.
+ */
+
+export const FINANCEIRO_LSA_ALLOWED_EMAIL = 'lucianoabreu@lsarepresentacoes.com.br';
+
+const normalize = (value?: string | null) => (value ?? '').trim().toLowerCase();
+
+/**
+ * Retorna true apenas para o usuário admin autorizado a acessar a Área LSA (Financeiro).
+ * Requer ser admin E ter o e-mail autorizado — defesa em profundidade.
+ */
+export function canAccessFinanceiroLSA(email?: string | null, isAdmin?: boolean | null): boolean {
+  if (!isAdmin) return false;
+  return normalize(email) === FINANCEIRO_LSA_ALLOWED_EMAIL;
+}
