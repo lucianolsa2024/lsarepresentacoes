@@ -269,9 +269,22 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                 <p className="text-[9px] text-muted-foreground">⌘+J para abrir · Powered by Claude</p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[8px]">
-              {messages.filter((m) => m.role === "user").length} msgs
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[8px]">
+                {messages.filter((m) => m.role === "user").length} msgs
+              </Badge>
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setMessages([])}
+                  title="Limpar conversa"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Mensagens */}
