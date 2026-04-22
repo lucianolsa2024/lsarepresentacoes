@@ -109,47 +109,84 @@ export function useFinanceEntries() {
 
   const createEntry = useCallback(
     async (input: EntryFormInput) => {
-      const installments = Math.max(1, input.installment_total ?? 1);
-      const recurrenceCount = input.recurrence_rule ? Math.max(1, input.recurrence_count ?? 12) : 0;
+      // Caminho 1: lista explícita de parcelas (vinda de NF/XML/PDF processada por IA)
+      const explicit = (input.installments_list ?? []).filter(
+        (p) => p && p.due_date && Number.isFinite(p.amount) && p.amount > 0,
+      );
 
-      // Decide o número total de linhas e a função de incremento de data
-      let total = 1;
-      let stepFn: (iso: string, i: number) => string = (iso) => iso;
+      let rows: Array<Record<string, unknown>>;
+      let total: number;
+      let recurrenceId: string | null;
+      let isRecurrence = false;
 
-      if (recurrenceCount > 0) {
-        total = recurrenceCount;
-        stepFn = (iso, i) =>
-          input.recurrence_rule === 'anual' ? addYearsISO(iso, i) : addMonthsISO(iso, i);
-      } else if (installments > 1) {
-        total = installments;
-        stepFn = (iso, i) => addMonthsISO(iso, i);
+      if (explicit.length > 0) {
+        total = explicit.length;
+        recurrenceId = total > 1 ? crypto.randomUUID() : null;
+        rows = explicit.map((p, i) => ({
+          entry_type: input.entry_type,
+          description:
+            total > 1 ? `${input.description} (${i + 1}/${total})` : input.description,
+          amount: +p.amount.toFixed(2),
+          due_date: p.due_date,
+          status: 'pendente' as EntryStatus,
+          category_id: input.category_id ?? null,
+          company_id: input.company_id ?? null,
+          counterparty: input.counterparty ?? null,
+          payment_method: input.payment_method ?? null,
+          notes: input.notes ?? null,
+          cost_center: input.cost_center ?? null,
+          document: input.document ?? null,
+          installment_index: i + 1,
+          installment_total: total,
+          recurrence_id: recurrenceId,
+          recurrence_rule: null,
+        }));
+      } else {
+        // Caminho 2: parcelamento simples (valor / N) ou recorrência
+        const installments = Math.max(1, input.installment_total ?? 1);
+        const recurrenceCount = input.recurrence_rule
+          ? Math.max(1, input.recurrence_count ?? 12)
+          : 0;
+        isRecurrence = recurrenceCount > 0;
+
+        total = 1;
+        let stepFn: (iso: string, i: number) => string = (iso) => iso;
+
+        if (recurrenceCount > 0) {
+          total = recurrenceCount;
+          stepFn = (iso, i) =>
+            input.recurrence_rule === 'anual' ? addYearsISO(iso, i) : addMonthsISO(iso, i);
+        } else if (installments > 1) {
+          total = installments;
+          stepFn = (iso, i) => addMonthsISO(iso, i);
+        }
+
+        recurrenceId = total > 1 ? crypto.randomUUID() : null;
+        const installmentAmount =
+          recurrenceCount > 0 ? input.amount : +(input.amount / installments).toFixed(2);
+
+        rows = Array.from({ length: total }, (_, i) => ({
+          entry_type: input.entry_type,
+          description:
+            total > 1 && recurrenceCount === 0
+              ? `${input.description} (${i + 1}/${total})`
+              : input.description,
+          amount: installmentAmount,
+          due_date: stepFn(input.due_date, i),
+          status: 'pendente' as EntryStatus,
+          category_id: input.category_id ?? null,
+          company_id: input.company_id ?? null,
+          counterparty: input.counterparty ?? null,
+          payment_method: input.payment_method ?? null,
+          notes: input.notes ?? null,
+          cost_center: input.cost_center ?? null,
+          document: input.document ?? null,
+          installment_index: i + 1,
+          installment_total: total,
+          recurrence_id: recurrenceId,
+          recurrence_rule: isRecurrence ? input.recurrence_rule : null,
+        }));
       }
-
-      const recurrenceId = total > 1 ? crypto.randomUUID() : null;
-      const installmentAmount =
-        recurrenceCount > 0 ? input.amount : +(input.amount / installments).toFixed(2);
-
-      const rows = Array.from({ length: total }, (_, i) => ({
-        entry_type: input.entry_type,
-        description:
-          total > 1 && recurrenceCount === 0
-            ? `${input.description} (${i + 1}/${total})`
-            : input.description,
-        amount: installmentAmount,
-        due_date: stepFn(input.due_date, i),
-        status: 'pendente' as EntryStatus,
-        category_id: input.category_id ?? null,
-        company_id: input.company_id ?? null,
-        counterparty: input.counterparty ?? null,
-        payment_method: input.payment_method ?? null,
-        notes: input.notes ?? null,
-        cost_center: input.cost_center ?? null,
-        document: input.document ?? null,
-        installment_index: i + 1,
-        installment_total: total,
-        recurrence_id: recurrenceId,
-        recurrence_rule: recurrenceCount > 0 ? input.recurrence_rule : null,
-      }));
 
       const { error } = await supabase.from('finance_entries').insert(rows);
       if (error) {
