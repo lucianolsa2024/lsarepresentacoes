@@ -250,9 +250,9 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     new Date(dateString).toLocaleDateString('pt-BR');
 
   // ===== HEADER LAYOUT (similar to RD style) =====
-  // Logo on the left - maintain aspect ratio (original logo is approximately 300x100)
-  const logoWidth = 45;
-  const logoHeight = logoWidth * 0.4; // ~18 - aspect ratio of new logo
+  // Logo on the left - true aspect ratio of source image (1000x546 ≈ 0.546)
+  const logoWidth = 38;
+  const logoHeight = logoWidth * 0.546; // ~20.7
   const logoX = 15;
   doc.addImage(logoLsa, 'JPEG', logoX, y, logoWidth, logoHeight);
 
@@ -352,8 +352,8 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-// Table header — total alinhado à direita dentro da margem (pageWidth-15 = 195)
-  const COL = { item: 15, img: 22, desc: 48, qty: 138, unit: 152, total: 195 };
+// Table header — Total centralizado dentro do bloco final
+  const COL = { item: 15, img: 22, desc: 48, qty: 138, unit: 152, total: 185 };
   const IMG_SIZE = 22;
   const ROW_MIN_H = IMG_SIZE + 6;
 
@@ -363,11 +363,13 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setTextColor(255, 255, 255);
   doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
   doc.text('Item', COL.item + 1, y);
-  doc.text('Img',  COL.img + 1,  y);
+  doc.text('Imagem', COL.img + 1, y);
   doc.text('Descrição', COL.desc, y);
-  doc.text('Qtd',  COL.qty,  y);
-  doc.text('Unit.', COL.unit, y);
-  doc.text('Total', COL.total, y, { align: 'right' });
+  doc.text('Quantidade', COL.qty, y);
+  doc.text('Preço Unitário', COL.unit, y);
+  doc.text('Total', COL.total, y, { align: 'center' });
+  doc.setTextColor(0);
+  y += 7;
   doc.setTextColor(0);
   y += 7;
 
@@ -434,7 +436,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(formatCurrency(displayPrice), COL.unit, y + 4);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
-    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4, { align: 'right' });
+    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4, { align: 'center' });
     doc.setFont('helvetica', 'normal');
 
     y += rowH;
