@@ -137,19 +137,40 @@ Deno.serve(async (req) => {
     }
 
     const buf = new Uint8Array(await fileBlob.arrayBuffer());
-    let base64 = '';
-    const CHUNK = 0x8000;
-    for (let i = 0; i < buf.length; i += CHUNK) {
-      base64 += String.fromCharCode(...buf.subarray(i, i + CHUNK));
-    }
-    base64 = btoa(base64);
-    const dataUrl = `data:${mime_type};base64,${base64}`;
+    const isXml =
+      mime_type === 'text/xml' ||
+      mime_type === 'application/xml' ||
+      storage_path.toLowerCase().endsWith('.xml');
 
-    // Monta payload multimodal — Gemini suporta PDF e imagens via image_url
-    const userContent: Array<Record<string, unknown>> = [
-      { type: 'text', text: 'Extraia os dados deste documento financeiro.' },
-      { type: 'image_url', image_url: { url: dataUrl } },
-    ];
+    let userContent: Array<Record<string, unknown>>;
+
+    if (isXml) {
+      // Envia XML como texto puro — geralmente NFe/duplicatas vêm bem estruturadas
+      const xmlText = new TextDecoder('utf-8').decode(buf).slice(0, 200000); // até ~200KB
+      userContent = [
+        {
+          type: 'text',
+          text:
+            'Extraia os dados financeiros deste XML de Nota Fiscal Eletrônica (NFe). ' +
+            'Atenção especial às duplicatas/parcelas em <dup><nDup><dVenc><vDup>. ' +
+            'Cada <dup> é uma parcela: number=nDup, due_date=dVenc, amount=vDup. ' +
+            'O total deve bater com <ICMSTot><vNF> ou <vLiq>.\n\n' +
+            xmlText,
+        },
+      ];
+    } else {
+      let base64 = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        base64 += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+      }
+      base64 = btoa(base64);
+      const dataUrl = `data:${mime_type};base64,${base64}`;
+      userContent = [
+        { type: 'text', text: 'Extraia os dados deste documento financeiro.' },
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ];
+    }
 
     const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
