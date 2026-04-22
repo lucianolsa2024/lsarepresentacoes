@@ -818,6 +818,39 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          payload: Json | null
+          record_id: string | null
+          table_name: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       finance_bank_accounts: {
         Row: {
           account_number: string | null
@@ -984,6 +1017,33 @@ export type Database = {
           created_at?: string
           document?: string | null
           entity_type?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_cost_centers: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -1180,6 +1240,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      finance_user_preferences: {
+        Row: {
+          created_at: string
+          currency: string
+          date_format: string
+          dre_email_frequency: string
+          dre_email_recipients: string[]
+          due_alert_days: number
+          due_alerts_enabled: boolean
+          id: string
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          date_format?: string
+          dre_email_frequency?: string
+          dre_email_recipients?: string[]
+          due_alert_days?: number
+          due_alerts_enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          date_format?: string
+          dre_email_frequency?: string
+          dre_email_recipients?: string[]
+          due_alert_days?: number
+          due_alerts_enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: []
       }
       historico_fases: {
         Row: {
