@@ -352,18 +352,19 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-// Table header — 2 linhas, colunas com mais respiro e separadores verticais
-  // Centros das colunas numéricas (qty/unit/total) para alinhamento centralizado
+// Table header — 2 linhas, larguras dimensionadas para valores longos
+  // Layout (margem 15→195 = 180mm úteis):
+  //  Item  Imagem  Descrição        | Qtd  | Unit.  | Total
+  //  15→20  20→44   44→118 (74mm)   118→132 132→160  160→195
   const COL = {
-    item: 15,           // x início "Item"
-    img: 22,            // x início imagem (col 20-46)
-    desc: 48,           // x início descrição (col 46-130)
-    qtyC: 138,          // CENTRO da coluna Quantidade (130-146)
-    unitC: 162,         // CENTRO da coluna Preço Unitário (146-178)
-    totalC: 186,        // CENTRO da coluna Preço Total (178-195)
+    item: 15,           // x início "#"
+    img: 20,            // x início imagem
+    desc: 44,           // x início descrição (74mm)
+    qtyC: 125,          // CENTRO Qtd  (118-132 = 14mm)
+    unitC: 146,         // CENTRO Unit. (132-160 = 28mm)
+    totalC: 177.5,      // CENTRO Total (160-195 = 35mm)
   };
-  // Separadores verticais (limites entre colunas)
-  const COL_DIVIDERS = [20, 46, 130, 146, 178];
+  const COL_DIVIDERS = [20, 44, 118, 132, 160];
   const IMG_SIZE = 22;
   const ROW_MIN_H = IMG_SIZE + 6;
   const HEADER_H = 12;
@@ -374,10 +375,10 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setTextColor(255, 255, 255);
   doc.rect(15, y - 5, pageWidth - 30, HEADER_H, 'F');
 
-  // Linha 1 dos cabeçalhos
-  doc.text('Item', COL.item + 1, y);
-  doc.text('Imagem', COL.img + 1, y);
-  doc.text('Descrição', COL.desc, y);
+  // Linha 1 dos cabeçalhos (sem título "Item" — só o número aparece nas linhas)
+  doc.text('#', COL.item + 1, y + 2);
+  doc.text('Imagem', COL.img + 1, y + 2);
+  doc.text('Descrição', COL.desc, y + 2);
   doc.text('Quanti-', COL.qtyC, y, { align: 'center' });
   doc.text('Preço', COL.unitC, y, { align: 'center' });
   doc.text('Preço', COL.totalC, y, { align: 'center' });
