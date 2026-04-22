@@ -32,9 +32,21 @@ const TAB_CONTEXTS: Record<string, string> = {
 
 interface AICopilotProps {
   activeTab: string;
+  clients?: any[];
+  activities?: any[];
+  quotes?: any[];
+  opportunities?: any[];
+  orders?: any[];
 }
 
-export function AICopilot({ activeTab }: AICopilotProps) {
+export function AICopilot({ 
+  activeTab, 
+  clients = [], 
+  activities = [], 
+  quotes = [], 
+  opportunities = [],
+  orders = [],
+}: AICopilotProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -43,6 +55,96 @@ export function AICopilot({ activeTab }: AICopilotProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const getContext = useCallback(() => {
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const sixtyDaysAgo = new Date(today);
+  sixtyDaysAgo.setDate(today.getDate() - 60);
+
+  // Atividades pendentes
+  const pendingActivities = activities
+    .filter(a => a.status !== 'concluida' && a.status !== 'cancelada' && a.status !== 'realizada')
+    .slice(0, 15)
+    .map(a => `- ${a.title} | tipo: ${a.type} | vencimento: ${a.due_date} | cliente: ${a.client_name || '—'} | prioridade: ${a.priority || '—'}`);
+
+  // Oportunidades abertas
+  const openOpps = opportunities
+    .filter(o => o.stage !== 'ganho' && o.stage !== 'perdido')
+    .slice(0, 15)
+    .map(o => `- ${o.title} | fase: ${o.stage} | valor: R$ ${(o.value || 0).toLocaleString('pt-BR')} | funil: ${o.funnel_type || '—'}`);
+
+  // Clientes inativos +60 dias
+  const inactiveClients = clients
+    .filter(c => {
+      if (!c.last_purchase_date) return false;
+      return new Date(c.last_purchase_date) < sixtyDaysAgo;
+    })
+    .slice(0, 10)
+    .map(c => `- ${c.company} | última compra: ${c.last_purchase_date} | curva: ${c.curve || '—'}`);
+
+  // Orçamentos recentes
+  const recentQuotes = quotes
+    .slice(0, 10)
+    .map(q => `- ${q.client?.company || '—'} | total: R$ ${(q.total || 0).toLocaleString('pt-BR')} | status: ${q.status} | data: ${new Date(q.createdAt).toLocaleDateString('pt-BR')}`);
+
+  // Pedidos recentes
+  const recentOrders = orders
+    .slice(0, 10)
+    .map(o => `- ${o.client_name} | produto: ${o.product || '—'} | status: ${o.status} | valor: R$ ${(o.price || 0).toLocaleString('pt-BR')}`);
+
+  // Métricas gerais
+  const totalClients = clients.length;
+  const activeClients = clients.filter(c => c.status === 'active' || !c.status).length;
+  const openOppsCount = openOpps.length;
+  const openOppsValue = opportunities
+    .filter(o => o.stage !== 'ganho' && o.stage !== 'perdido')
+    .reduce((sum, o) => sum + (o.value || 0), 0);
+  const pendingActivitiesCount = pendingActivities.length;
+  const overdueActivities = activities
+    .filter(a => {
+      if (a.status === 'concluida' || a.status === 'cancelada' || a.status === 'realizada') return false;
+      return new Date(a.due_date) < today;
+    }).length;
+
+  const tabContext = {
+    dashboard: 'Dashboard principal com métricas e KPIs',
+    comercial: 'Área comercial — orçamentos e clientes',
+    activities: 'Gestão de atividades e follow-ups',
+    funnels: 'Funil de vendas com pipeline Kanban',
+    'service-orders': 'Ordens de serviço',
+    operations: 'Operação — pedidos e logística',
+    products: 'Catálogo de produtos',
+    automations: 'Automações comerciais',
+    financeiro: 'Financeiro — comissões e resultados',
+  }[activeTab] || activeTab;
+
+  return `
+Aba atual: ${tabContext}
+Data de hoje: ${today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+
+=== MÉTRICAS GERAIS ===
+- Total de clientes: ${totalClients}
+- Clientes ativos: ${activeClients}
+- Oportunidades abertas: ${openOppsCount} (valor total: R$ ${openOppsValue.toLocaleString('pt-BR')})
+- Atividades pendentes: ${pendingActivitiesCount} (${overdueActivities} vencidas)
+- Clientes inativos +60 dias: ${inactiveClients.length}
+
+=== ATIVIDADES PENDENTES ===
+${pendingActivities.length > 0 ? pendingActivities.join('\n') : 'Nenhuma atividade pendente'}
+
+=== OPORTUNIDADES ABERTAS NO FUNIL ===
+${openOpps.length > 0 ? openOpps.join('\n') : 'Nenhuma oportunidade aberta'}
+
+=== CLIENTES INATIVOS +60 DIAS ===
+${inactiveClients.length > 0 ? inactiveClients.join('\n') : 'Nenhum cliente inativo'}
+
+=== ORÇAMENTOS RECENTES ===
+${recentQuotes.length > 0 ? recentQuotes.join('\n') : 'Nenhum orçamento recente'}
+
+=== PEDIDOS RECENTES ===
+${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
+  `.trim();
+}, [activeTab, clients, activities, quotes, opportunities, orders]);const getContext = useCallback(() => {
     return TAB_CONTEXTS[activeTab] || `Usuário está na aba ${activeTab}`;
   }, [activeTab]);
 
