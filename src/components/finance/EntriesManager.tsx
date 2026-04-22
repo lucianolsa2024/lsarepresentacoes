@@ -276,6 +276,14 @@ export function EntriesManager({ entryType }: Props) {
         onSubmit={createEntry}
       />
 
+      <EntryDetailDialog
+        open={!!detailEntry}
+        onOpenChange={(o) => !o && setDetailEntry(null)}
+        entry={detailEntry}
+        companies={companies}
+        categories={categories}
+      />
+
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
