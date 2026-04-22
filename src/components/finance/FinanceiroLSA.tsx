@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Upload,
   Landmark,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -22,6 +23,7 @@ import { DocumentUpload } from './DocumentUpload';
 import { BankReconciliation } from './BankReconciliation';
 import { DreReport } from './DreReport';
 import { CashflowReport } from './CashflowReport';
+import { FinanceSettings } from './FinanceSettings';
 
 type Section =
   | 'dashboard'
@@ -30,7 +32,8 @@ type Section =
   | 'conciliacao'
   | 'dre'
   | 'fluxo'
-  | 'upload';
+  | 'upload'
+  | 'config';
 
 const NAV: Array<{ id: Section; label: string; icon: typeof LayoutDashboard; description: string }> = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Visão consolidada do financeiro.' },
@@ -40,6 +43,7 @@ const NAV: Array<{ id: Section; label: string; icon: typeof LayoutDashboard; des
   { id: 'dre', label: 'DRE', icon: FileBarChart, description: 'Demonstrativo de Resultado do Exercício.' },
   { id: 'fluxo', label: 'Fluxo de Caixa', icon: TrendingUp, description: 'Projeção e realizado de caixa por período.' },
   { id: 'upload', label: 'Upload de Documentos', icon: Upload, description: 'Notas fiscais, boletos e extratos.' },
+  { id: 'config', label: 'Configurações', icon: Settings, description: 'Empresas, categorias, integrações e auditoria.' },
 ];
 
 export function FinanceiroLSA() {
@@ -160,6 +164,7 @@ export function FinanceiroLSA() {
           {section === 'dre' && <DreReport />}
           {section === 'fluxo' && <CashflowReport />}
           {section === 'upload' && <DocumentUpload />}
+          {section === 'config' && <FinanceSettings />}
         </section>
       </div>
     </div>
