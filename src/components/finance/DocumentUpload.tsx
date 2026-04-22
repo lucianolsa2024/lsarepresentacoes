@@ -355,13 +355,13 @@ export function DocumentUpload() {
             <div>
               <p className="font-semibold text-foreground">Arraste arquivos aqui ou clique para selecionar</p>
               <p className="text-xs text-muted-foreground">
-                PDFs e imagens (JPG, PNG) · até 20MB · IA extrai dados automaticamente
+                PDFs, XML (NFe) e imagens (JPG, PNG) · até 20MB · IA extrai dados e parcelas automaticamente
               </p>
             </div>
             <input
               ref={inputRef}
               type="file"
-              accept="application/pdf,image/*"
+              accept="application/pdf,image/*,text/xml,application/xml,.xml"
               multiple
               className="hidden"
               onChange={(e) => {
