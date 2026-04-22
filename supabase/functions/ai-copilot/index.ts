@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
 
     const { messages, context } = body as { messages: InMessage[]; context?: string };
 
+    // context é uma string longa já formatada pelo frontend (AICopilot.tsx)
+    // contendo métricas, atividades, clientes, etc. Incluída diretamente no prompt.
     const systemPrompt =
       `Você é o AI Copilot da LSA Representações, assistente especializado em gestão comercial de móveis de alto padrão B2B. ` +
       `Contexto atual: ${context ?? "não informado"}. Seja direto e prático em português brasileiro.`;

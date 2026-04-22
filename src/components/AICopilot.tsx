@@ -144,9 +144,7 @@ ${recentQuotes.length > 0 ? recentQuotes.join('\n') : 'Nenhum orçamento recente
 === PEDIDOS RECENTES ===
 ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
   `.trim();
-}, [activeTab, clients, activities, quotes, opportunities, orders]);const getContext = useCallback(() => {
-    return TAB_CONTEXTS[activeTab] || `Usuário está na aba ${activeTab}`;
-  }, [activeTab]);
+}, [activeTab, clients, activities, quotes, opportunities, orders]);
 
   // ⌘+J para abrir
   useEffect(() => {
