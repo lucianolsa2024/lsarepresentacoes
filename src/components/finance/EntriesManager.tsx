@@ -51,6 +51,7 @@ export function EntriesManager({ entryType }: Props) {
 
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<FinanceEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<FinanceEntry | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
 
