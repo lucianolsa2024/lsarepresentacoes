@@ -210,9 +210,14 @@ export function DocumentUpload() {
           const ext = file.name.split('.').pop() || 'bin';
           const storagePath = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
 
+          // Garante mime_type para XML (browser nem sempre define)
+          const effectiveMime =
+            file.type ||
+            (file.name.toLowerCase().endsWith('.xml') ? 'application/xml' : 'application/octet-stream');
+
           const { error: upErr } = await supabase.storage
             .from('finance-documents')
-            .upload(storagePath, file, { contentType: file.type, upsert: false });
+            .upload(storagePath, file, { contentType: effectiveMime, upsert: false });
           if (upErr) throw upErr;
 
           setUploadProgress((p) => ({ ...p, [tmpKey]: 70 }));
@@ -222,7 +227,7 @@ export function DocumentUpload() {
             .insert({
               file_name: file.name,
               storage_path: storagePath,
-              mime_type: file.type,
+              mime_type: effectiveMime,
               file_size: file.size,
               file_hash: hash,
               status: 'processing',
@@ -241,7 +246,7 @@ export function DocumentUpload() {
 
           await loadDocs();
           // dispara IA em background
-          triggerExtract(inserted.id, storagePath, file.type);
+          triggerExtract(inserted.id, storagePath, effectiveMime);
           toast.success(`${file.name} enviado — IA processando…`);
         } catch (err) {
           console.error(err);
