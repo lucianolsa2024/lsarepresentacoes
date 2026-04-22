@@ -861,6 +861,12 @@ const Index = () => {
                 <SalesFunnelManager />
               </TabsContent>
 
+              {isAdmin && (
+                <TabsContent value="automations" className="mt-0">
+                  <AutomationManager />
+                </TabsContent>
+              )}
+
               <TabsContent value="service-orders" className="mt-0">
                 <ServiceOrderManager />
               </TabsContent>
