@@ -1,31 +1,48 @@
-import { ShieldCheck, TrendingUp, Landmark, Target, Lock } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Lock,
+  LayoutDashboard,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  GitCompareArrows,
+  FileBarChart,
+  TrendingUp,
+  Upload,
+  Landmark,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { canAccessFinanceiroLSA, FINANCEIRO_LSA_ALLOWED_EMAIL } from '@/lib/access';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { FinanceDashboard } from './FinanceDashboard';
+import { FinancePlaceholder } from './FinancePlaceholder';
 
-const highlights = [
-  {
-    title: 'Governança prioritária',
-    description: 'Espaço reservado para indicadores, aprovações críticas e decisões estratégicas da operação.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Monitoramento executivo',
-    description: 'Centralize projeções, desvios e alertas que não devem ficar visíveis para outros perfis.',
-    icon: TrendingUp,
-  },
-  {
-    title: 'Controles dedicados',
-    description: 'Prepare aqui os componentes e relatórios exclusivos do financeiro da LSA.',
-    icon: Landmark,
-  },
-] as const;
+type Section =
+  | 'dashboard'
+  | 'pagar'
+  | 'receber'
+  | 'conciliacao'
+  | 'dre'
+  | 'fluxo'
+  | 'upload';
+
+const NAV: Array<{ id: Section; label: string; icon: typeof LayoutDashboard; description: string }> = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Visão consolidada do financeiro.' },
+  { id: 'pagar', label: 'Contas a Pagar', icon: ArrowDownCircle, description: 'Gestão de despesas, vencimentos e baixas.' },
+  { id: 'receber', label: 'Contas a Receber', icon: ArrowUpCircle, description: 'Acompanhamento de recebíveis e cobranças.' },
+  { id: 'conciliacao', label: 'Conciliação', icon: GitCompareArrows, description: 'Conciliação bancária e cartões.' },
+  { id: 'dre', label: 'DRE', icon: FileBarChart, description: 'Demonstrativo de Resultado do Exercício.' },
+  { id: 'fluxo', label: 'Fluxo de Caixa', icon: TrendingUp, description: 'Projeção e realizado de caixa por período.' },
+  { id: 'upload', label: 'Upload de Documentos', icon: Upload, description: 'Notas fiscais, boletos e extratos.' },
+];
 
 export function FinanceiroLSA() {
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
   const hasAccess = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const [section, setSection] = useState<Section>('dashboard');
 
   if (!hasAccess) {
     return (
@@ -46,78 +63,137 @@ export function FinanceiroLSA() {
     );
   }
 
+  const current = NAV.find((n) => n.id === section)!;
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Workspace privado</p>
-              <h1 className="text-3xl font-bold text-foreground">Área LSA — Financeiro</h1>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Ambiente reservado para o administrador principal concentrar materiais
-                estratégicos e relatórios financeiros confidenciais.
-              </p>
+        <CardContent className="p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Landmark className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Workspace privado</p>
+                <h1 className="text-xl font-bold text-foreground">Área LSA — Financeiro</h1>
+              </div>
             </div>
-            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-foreground">
-              Usuário autorizado: <span className="font-semibold">{FINANCEIRO_LSA_ALLOWED_EMAIL}</span>
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-foreground">
+              Autorizado: <span className="font-semibold">{FINANCEIRO_LSA_ALLOWED_EMAIL}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {highlights.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Card key={item.title}>
-              <CardContent className="p-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-foreground">{item.title}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Layout: sidebar (desktop) + content */}
+      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+        {/* Sidebar — desktop */}
+        <aside className="hidden lg:block">
+          <Card>
+            <CardContent className="p-2">
+              <nav className="space-y-1">
+                {NAV.map((item) => {
+                  const Icon = item.icon;
+                  const active = item.id === section;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setSection(item.id)}
+                      className={cn(
+                        'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </CardContent>
+          </Card>
+        </aside>
+
+        {/* Mobile horizontal nav */}
+        <div className="lg:hidden -mx-1 overflow-x-auto" style={{ overscrollBehaviorX: 'contain' }}>
+          <div className="flex gap-2 px-1 pb-2">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              const active = item.id === section;
+              return (
+                <Button
+                  key={item.id}
+                  size="sm"
+                  variant={active ? 'default' : 'outline'}
+                  onClick={() => setSection(item.id)}
+                  className="shrink-0 gap-1.5"
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Content */}
+        <section className="min-w-0 space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <current.icon className="h-4 w-4" />
+            <span className="font-medium text-foreground">{current.label}</span>
+            <span>·</span>
+            <span>{current.description}</span>
+          </div>
+
+          {section === 'dashboard' && <FinanceDashboard onNavigate={(s) => setSection(s as Section)} />}
+          {section === 'pagar' && (
+            <FinancePlaceholder
+              icon={ArrowDownCircle}
+              title="Contas a Pagar"
+              description="Cadastro, vencimentos, baixas e categorização de despesas com conciliação bancária."
+            />
+          )}
+          {section === 'receber' && (
+            <FinancePlaceholder
+              icon={ArrowUpCircle}
+              title="Contas a Receber"
+              description="Gestão de recebíveis, parcelas, cobranças e integração com NFs emitidas."
+            />
+          )}
+          {section === 'conciliacao' && (
+            <FinancePlaceholder
+              icon={GitCompareArrows}
+              title="Conciliação Bancária"
+              description="Importe extratos OFX/CSV e concilie automaticamente com os lançamentos do sistema."
+            />
+          )}
+          {section === 'dre' && (
+            <FinancePlaceholder
+              icon={FileBarChart}
+              title="DRE — Demonstrativo de Resultado"
+              description="Receitas, custos, despesas e resultado líquido por período com comparativos mensais."
+            />
+          )}
+          {section === 'fluxo' && (
+            <FinancePlaceholder
+              icon={TrendingUp}
+              title="Fluxo de Caixa"
+              description="Projeção e realizado de entradas e saídas, com cenários e alertas de saldo."
+            />
+          )}
+          {section === 'upload' && (
+            <FinancePlaceholder
+              icon={Upload}
+              title="Upload de Documentos"
+              description="Centralize notas fiscais, boletos e extratos bancários para auditoria e arquivamento."
+            />
+          )}
+        </section>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-              <Target className="h-5 w-5" />
-            </div>
-            <div>
-              <CardTitle>Próximos módulos</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Estrutura inicial pronta para receber os componentes do financeiro.
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 text-sm text-muted-foreground">
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <p className="font-medium text-foreground">Contas a Pagar / Receber</p>
-              <p className="mt-1">Cadastro, vencimentos e baixas com conciliação bancária.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <p className="font-medium text-foreground">DRE & Fluxo de Caixa</p>
-              <p className="mt-1">Demonstrativo de resultado e projeção de caixa por período.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <p className="font-medium text-foreground">Dashboard Executivo (IA)</p>
-              <p className="mt-1">Indicadores estratégicos e alertas inteligentes.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <p className="font-medium text-foreground">Upload de Documentos</p>
-              <p className="mt-1">Notas, boletos e extratos centralizados.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
