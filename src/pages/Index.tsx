@@ -347,6 +347,15 @@ const Index = () => {
 
   const subtotal = calculateSubtotal();
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
+  const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const tabsCountClass = (() => {
+    const base = isRep === false ? 6 : 7;
+    const total = base + (isAdmin ? 1 : 0) + (showFinanceiroTab ? 1 : 0);
+    const map: Record<number, string> = {
+      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9',
+    };
+    return map[total] || 'grid-cols-7';
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 pb-20 md:pb-0">
