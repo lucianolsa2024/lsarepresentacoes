@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const ALLOWED_EMAIL = 'lucianoabreu@lsarepresentacoes.com.br';
 
-const SYSTEM_PROMPT = `Você é um assistente especializado em extração de dados de documentos financeiros brasileiros (notas fiscais, boletos bancários, recibos, faturas).
+const SYSTEM_PROMPT = `Você é um assistente especializado em extração de dados de documentos financeiros brasileiros (notas fiscais, boletos bancários, recibos, faturas, DANFE, NFe).
 
 Analise o documento enviado e extraia os campos. Sempre responda chamando a função extract_finance_data.
 
@@ -19,7 +19,8 @@ Regras:
 - entry_type: "a_pagar" se for despesa/conta a pagar (NF de fornecedor, boleto, fatura) ou "a_receber" se for recebível (NF emitida pela LSA)
 - suggested_category: sugira UMA categoria entre: Aluguel, Fornecedores, Marketing, Vendas, Salários, Impostos, Energia, Água, Internet/Telefone, Manutenção, Combustível, Frete, Comissões, Material de Escritório, Serviços de Terceiros, Outros
 - confidence: "alta" (todos os campos legíveis), "media" (alguns campos incertos), "baixa" (documento ruim/parcial)
-- Se algum campo não estiver visível, retorne null`;
+- Se algum campo não estiver visível, retorne null
+- IMPORTANTE — PARCELAS: Se o documento mencionar múltiplos vencimentos/parcelas/duplicatas, preencha o array "installments" com TODAS as parcelas, cada uma com number (1,2,3...), due_date (YYYY-MM-DD) e amount. A soma das parcelas deve bater com o "amount" total. Se houver apenas 1 vencimento, retorne installments como [] ou null.`;
 
 const TOOL = {
   type: 'function',
@@ -37,13 +38,26 @@ const TOOL = {
         document_number: { type: ['string', 'null'], description: 'Número da NF, boleto ou documento' },
         amount: { type: ['number', 'null'], description: 'Valor total do documento em reais' },
         issue_date: { type: ['string', 'null'], description: 'Data de emissão (YYYY-MM-DD)' },
-        due_date: { type: ['string', 'null'], description: 'Data de vencimento (YYYY-MM-DD)' },
+        due_date: { type: ['string', 'null'], description: 'Vencimento da 1ª parcela (ou única)' },
         description: { type: ['string', 'null'], description: 'Descrição resumida do documento' },
         entry_type: { type: 'string', enum: ['a_pagar', 'a_receber'] },
         suggested_category: { type: ['string', 'null'] },
         boleto_line: { type: ['string', 'null'], description: 'Linha digitável do boleto se houver' },
         confidence: { type: 'string', enum: ['alta', 'media', 'baixa'] },
         notes: { type: ['string', 'null'], description: 'Observações relevantes' },
+        installments: {
+          type: ['array', 'null'],
+          description: 'Lista de parcelas/duplicatas com vencimento e valor.',
+          items: {
+            type: 'object',
+            properties: {
+              number: { type: 'number' },
+              due_date: { type: 'string', description: 'YYYY-MM-DD' },
+              amount: { type: 'number' },
+            },
+            required: ['number', 'due_date', 'amount'],
+          },
+        },
       },
       required: ['document_type', 'entry_type', 'confidence'],
       additionalProperties: false,
