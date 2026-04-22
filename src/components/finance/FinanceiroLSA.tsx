@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FinanceDashboard } from './FinanceDashboard';
 import { FinancePlaceholder } from './FinancePlaceholder';
+import { EntriesManager } from './EntriesManager';
 
 type Section =
   | 'dashboard'
@@ -150,20 +151,8 @@ export function FinanceiroLSA() {
           </div>
 
           {section === 'dashboard' && <FinanceDashboard onNavigate={(s) => setSection(s as Section)} />}
-          {section === 'pagar' && (
-            <FinancePlaceholder
-              icon={ArrowDownCircle}
-              title="Contas a Pagar"
-              description="Cadastro, vencimentos, baixas e categorização de despesas com conciliação bancária."
-            />
-          )}
-          {section === 'receber' && (
-            <FinancePlaceholder
-              icon={ArrowUpCircle}
-              title="Contas a Receber"
-              description="Gestão de recebíveis, parcelas, cobranças e integração com NFs emitidas."
-            />
-          )}
+          {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
+          {section === 'receber' && <EntriesManager entryType="a_receber" />}
           {section === 'conciliacao' && (
             <FinancePlaceholder
               icon={GitCompareArrows}
