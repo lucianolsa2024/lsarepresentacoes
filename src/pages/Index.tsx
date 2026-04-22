@@ -51,6 +51,7 @@ import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
 import { canAccessFinanceiroLSA } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { AICopilot } from '@/components/AICopilot';
 import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
@@ -959,6 +960,7 @@ const Index = () => {
         isRep={isRep}
         isAdmin={isAdmin}
       />
+      <AICopilot activeTab={activeTab} />
     </div>
   );
 };
