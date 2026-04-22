@@ -161,7 +161,8 @@ async function loadImageViaElement(url: string): Promise<string | null> {
   });
 }
 
-// Main image loading function - tries fetch first for external URLs, then element
+// Main image loading function — always tries fetch first (handles WebP/AVIF
+// via blob decoding), then falls back to <img> element for local URLs.
 async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url || url === '/placeholder.svg') {
     return null;
@@ -170,17 +171,15 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   // Route cross-origin URLs through our proxy to bypass CORS
   const effectiveUrl = toFetchableUrl(url);
 
-  // For external URLs (like Supabase Storage), try fetch first as it handles CORS better
-  if (isExternalUrl(effectiveUrl)) {
-    const fetchResult = await fetchImageAsBase64(effectiveUrl);
-    if (fetchResult) {
-      return fetchResult;
-    }
-    // Fallback to element method
-    console.log('Fetch failed, trying element method for:', effectiveUrl.substring(0, 50));
+  // Always try fetch first — works for both external (proxied) and same-origin
+  // URLs, and properly handles WebP/AVIF formats by decoding via blob.
+  const fetchResult = await fetchImageAsBase64(effectiveUrl);
+  if (fetchResult) {
+    return fetchResult;
   }
 
-  // For local URLs or as fallback, use element method
+  // Fallback to <img> element method (mainly for local /images/products/* JPEGs)
+  console.log('[PDF] Fetch failed, trying <img> element for:', effectiveUrl.substring(0, 80));
   return loadImageViaElement(effectiveUrl);
 }
 
