@@ -45,6 +45,11 @@ export interface FinanceEntry {
   updated_at: string;
 }
 
+export interface InstallmentInput {
+  due_date: string; // ISO yyyy-mm-dd
+  amount: number;
+}
+
 export interface EntryFormInput {
   entry_type: EntryType;
   description: string;
@@ -61,6 +66,8 @@ export interface EntryFormInput {
   installment_total?: number;     // 1 = sem parcelamento
   recurrence_rule?: RecurrenceRule; // null = sem recorrência (cria N parcelas mensais consecutivas)
   recurrence_count?: number;        // qtd de ocorrências quando recurrence_rule != null
+  // lista pronta de parcelas (vinda de NF/XML) — quando preenchida, ignora installment_total/recurrence
+  installments_list?: InstallmentInput[];
 }
 
 const addMonthsISO = (iso: string, months: number) => {
