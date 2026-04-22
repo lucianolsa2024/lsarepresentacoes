@@ -755,6 +755,127 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />
             </div>
+
+            {/* Parcelas detectadas */}
+            <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">
+                  Parcelas {installments.length > 0 ? `(${installments.length})` : ''}
+                </Label>
+                <div className="flex gap-1">
+                  {installments.length === 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() =>
+                        setInstallments([
+                          { number: 1, due_date: form.due_date, amount: form.amount },
+                        ])
+                      }
+                    >
+                      + Adicionar parcelas
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() =>
+                          setInstallments((prev) => [
+                            ...prev,
+                            {
+                              number: prev.length + 1,
+                              due_date: prev[prev.length - 1]?.due_date ?? form.due_date,
+                              amount: 0,
+                            },
+                          ])
+                        }
+                      >
+                        + Parcela
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-destructive"
+                        onClick={() => setInstallments([])}
+                      >
+                        Limpar
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {installments.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Será criado 1 lançamento único com os dados acima.
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {installments.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-6">{i + 1}.</span>
+                        <Input
+                          type="date"
+                          className="h-8 text-xs"
+                          value={p.due_date}
+                          onChange={(e) =>
+                            setInstallments((prev) =>
+                              prev.map((row, idx) =>
+                                idx === i ? { ...row, due_date: e.target.value } : row,
+                              ),
+                            )
+                          }
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs w-32"
+                          value={p.amount}
+                          onChange={(e) =>
+                            setInstallments((prev) =>
+                              prev.map((row, idx) =>
+                                idx === i
+                                  ? { ...row, amount: parseFloat(e.target.value) || 0 }
+                                  : row,
+                              ),
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() =>
+                            setInstallments((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const sum = installments.reduce((a, p) => a + (p.amount || 0), 0);
+                    const diff = Math.abs(sum - form.amount);
+                    const ok = diff < 0.02;
+                    return (
+                      <p className={cn('text-xs', ok ? 'text-emerald-600' : 'text-amber-600')}>
+                        Soma das parcelas: {fmtBRL(sum)}{' '}
+                        {!ok && `· difere do total (${fmtBRL(form.amount)})`}
+                      </p>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -773,6 +894,13 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
                   category_id: form.category_id || null,
                   company_id: form.company_id || null,
                   notes: form.notes || null,
+                  installments_list:
+                    installments.length > 0
+                      ? installments.map((p) => ({
+                          due_date: p.due_date,
+                          amount: p.amount,
+                        }))
+                      : undefined,
                 },
                 doc.id,
               )
@@ -780,7 +908,9 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
             disabled={!form.description || !form.amount || !form.due_date}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
-            Confirmar e criar lançamento
+            {installments.length > 1
+              ? `Criar ${installments.length} parcelas`
+              : 'Confirmar e criar lançamento'}
           </Button>
         </DialogFooter>
       </DialogContent>
