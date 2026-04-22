@@ -5,6 +5,8 @@ import logoLsa from '@/assets/logo-lsa-new.jpg';
 import { getProductImageUrl, getProductImageFallback, getBestProductImageUrl } from '@/utils/productImage';
 import { getQuoteFileName } from '@/utils/quoteLabel';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+
 // Helper to check if URL is external
 function isExternalUrl(url: string): boolean {
   if (!url || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
@@ -16,6 +18,18 @@ function isExternalUrl(url: string): boolean {
     return false;
   }
 }
+
+// Route external (cross-origin) image URLs through our edge proxy so the
+// browser can read pixels without CORS-tainting the canvas. Supabase Storage
+// URLs already serve permissive CORS, so we leave those untouched.
+function toFetchableUrl(url: string): string {
+  if (!isExternalUrl(url)) return url;
+  if (!SUPABASE_URL) return url;
+  // Supabase Storage public URLs are CORS-friendly already
+  if (url.includes('/storage/v1/object/public/')) return url;
+  return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 
 // Maximum image size for PDF optimization (reduces file size significantly)
 const MAX_IMAGE_SIZE = 100;
@@ -128,19 +142,22 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url || url === '/placeholder.svg') {
     return null;
   }
-  
+
+  // Route cross-origin URLs through our proxy to bypass CORS
+  const effectiveUrl = toFetchableUrl(url);
+
   // For external URLs (like Supabase Storage), try fetch first as it handles CORS better
-  if (isExternalUrl(url)) {
-    const fetchResult = await fetchImageAsBase64(url);
+  if (isExternalUrl(effectiveUrl)) {
+    const fetchResult = await fetchImageAsBase64(effectiveUrl);
     if (fetchResult) {
       return fetchResult;
     }
     // Fallback to element method
-    console.log('Fetch failed, trying element method for:', url.substring(0, 50));
+    console.log('Fetch failed, trying element method for:', effectiveUrl.substring(0, 50));
   }
-  
+
   // For local URLs or as fallback, use element method
-  return loadImageViaElement(url);
+  return loadImageViaElement(effectiveUrl);
 }
 
 // Cache for loaded images (per session, cleared on each PDF generation for fresh data)
