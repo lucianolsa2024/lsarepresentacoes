@@ -342,30 +342,109 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-  // Table header - adjusted for image column
+// Table header
+  const COL = { item: 15, img: 25, desc: 54, qty: 148, unit: 158, total: 178 };
+  const IMG_SIZE = 22;
+  const ROW_MIN_H = IMG_SIZE + 6;
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setFillColor(245, 245, 245);
-  doc.rect(15, y - 4, pageWidth - 30, 7, 'F');
-  doc.text('Item', 17, y);
-  doc.text('Img', 28, y);
-  doc.text('Descrição', 45, y);
-  doc.text('Qtd', 140, y);
-  doc.text('Unit.', 155, y);
-  doc.text('Total', 175, y);
-  y += 6;
-
-  // Determine if surcharge should be baked into prices
-  const isSurcharge = quote.payment.discountType === 'percentage' && quote.payment.discountValue < 0;
-  const surchargeMultiplier = isSurcharge ? 1 + Math.abs(quote.payment.discountValue) / 100 : 1;
-  const getItemMultiplier = (item: QuoteItem) => {
-    const v = item.itemDiscountValue || 0;
-    return v === 0 ? 1 : 1 - v / 100;
-  };
-  const getDisplayPrice = (item: QuoteItem) => Math.round(item.price * surchargeMultiplier * getItemMultiplier(item) * 100) / 100;
+  doc.setFillColor(26, 26, 26);
+  doc.setTextColor(255, 255, 255);
+  doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
+  doc.text('Item', COL.item + 1, y);
+  doc.text('Img',  COL.img + 1,  y);
+  doc.text('Descrição', COL.desc, y);
+  doc.text('Qtd',  COL.qty,  y);
+  doc.text('Unit.', COL.unit, y);
+  doc.text('Total', COL.total, y);
+  doc.setTextColor(0);
+  y += 7;
 
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
+    if (y > 230) { doc.addPage(); y = 20; }
+
+    const cacheKey = item.imageUrl || item.productName;
+    const productImage = imageCache[cacheKey];
+
+    const details = [
+      item.factory ? `Fábrica: ${item.factory}` : '',
+      `Mod: ${item.modulation}`,
+      item.sizeDescription ? `Tam: ${item.sizeDescription}` : '',
+      item.base ? `BASE/PE: ${item.base} | Base: ${item.base}` : '',
+      `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
+    ].filter(Boolean).join(' | ');
+
+    const splitDetails = doc.splitTextToSize(details, 88);
+    const textHeight = (splitDetails.length + 1) * 4.5 + 4;
+    const rowH = Math.max(textHeight, ROW_MIN_H);
+
+    // Zebra suave
+    if (index % 2 === 0) {
+      doc.setFillColor(250, 250, 250);
+    } else {
+      doc.setFillColor(255, 255, 255);
+    }
+    doc.rect(15, y - 2, pageWidth - 30, rowH, 'F');
+
+    // Número do item
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(160);
+    doc.text(`${index + 1}`, COL.item + 1, y + 4);
+    doc.setTextColor(0);
+
+    // Imagem maior
+    if (productImage) {
+      try {
+        doc.addImage(productImage, 'JPEG', COL.img, y - 1, IMG_SIZE, IMG_SIZE);
+      } catch { /* sem imagem */ }
+    }
+
+    // Nome do produto em destaque
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20);
+    doc.text(item.productName, COL.desc, y + 3);
+
+    // Detalhes técnicos abaixo do nome
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100);
+    doc.text(splitDetails, COL.desc, y + 8);
+    doc.setTextColor(0);
+
+    // Qtd / Preços
+    const displayPrice = getDisplayPrice(item);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60);
+    doc.text(item.quantity.toString(), COL.qty, y + 4);
+    doc.text(formatCurrency(displayPrice), COL.unit, y + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20);
+    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4);
+    doc.setFont('helvetica', 'normal');
+
+    y += rowH;
+
+    // Observações do item
+    if (item.observations?.trim()) {
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      const splitObs = doc.splitTextToSize(`Obs: ${item.observations}`, 150);
+      doc.text(splitObs, COL.desc, y);
+      y += splitObs.length * 3.5 + 1;
+      doc.setTextColor(0);
+    }
+
+    // Linha divisória entre itens
+    doc.setDrawColor(220);
+    doc.setLineWidth(0.2);
+    doc.line(15, y, pageWidth - 15, y);
+    y += 2;
+  });
     // Check if we need a new page
     if (y > 220) {
       doc.addPage();
@@ -438,7 +517,24 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   const totalWithIpi = quote.total + ipiValue;
 
   // Totals - only show IPI and final total (no subtotal or discount lines)
+  y += 8;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120);
+  doc.text('IPI (3,25%):', 130, y);
+  doc.text(formatCurrency(ipiValue), pageWidth - 15, y, { align: 'right' });
+  y += 8;
+
+  // Caixa total escura
+  doc.setFillColor(26, 26, 26);
+  doc.roundedRect(110, y - 5, pageWidth - 125, 12, 2, 2, 'F');
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL GERAL:', 115, y + 3);
+  doc.text(formatCurrency(totalWithIpi), pageWidth - 17, y + 3, { align: 'right' });
+  doc.setTextColor(0);
+  y += 16;
 
   // IPI
   doc.text('IPI (3,25%):', 120, y);
