@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { FinanceDashboard } from './FinanceDashboard';
 import { FinancePlaceholder } from './FinancePlaceholder';
 import { EntriesManager } from './EntriesManager';
+import { DocumentUpload } from './DocumentUpload';
 
 type Section =
   | 'dashboard'
@@ -174,13 +175,7 @@ export function FinanceiroLSA() {
               description="Projeção e realizado de entradas e saídas, com cenários e alertas de saldo."
             />
           )}
-          {section === 'upload' && (
-            <FinancePlaceholder
-              icon={Upload}
-              title="Upload de Documentos"
-              description="Centralize notas fiscais, boletos e extratos bancários para auditoria e arquivamento."
-            />
-          )}
+          {section === 'upload' && <DocumentUpload />}
         </section>
       </div>
     </div>
