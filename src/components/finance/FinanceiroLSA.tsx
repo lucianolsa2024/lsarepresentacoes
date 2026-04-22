@@ -20,6 +20,7 @@ import { FinanceDashboard } from './FinanceDashboard';
 import { FinancePlaceholder } from './FinancePlaceholder';
 import { EntriesManager } from './EntriesManager';
 import { DocumentUpload } from './DocumentUpload';
+import { BankReconciliation } from './BankReconciliation';
 
 type Section =
   | 'dashboard'
