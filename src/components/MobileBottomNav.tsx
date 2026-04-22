@@ -31,6 +31,9 @@ interface MobileBottomNavProps {
 export function MobileBottomNav({ activeTab, onTabChange, isRep, isAdmin }: MobileBottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
 
+  const { user } = useAuth();
+  const showFinanceiro = canAccessFinanceiroLSA(user?.email, isAdmin);
+
   const allItems: NavItem[] = [
     { value: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     ...(isRep !== false ? [{ value: 'comercial', label: 'Comercial', icon: <Briefcase className="h-5 w-5" /> }] : []),
@@ -40,6 +43,7 @@ export function MobileBottomNav({ activeTab, onTabChange, isRep, isAdmin }: Mobi
     { value: 'operations', label: 'Operação', icon: <Settings className="h-5 w-5" /> },
     { value: 'products', label: 'Produtos', icon: <Package className="h-5 w-5" /> },
     ...(isAdmin ? [{ value: 'admin', label: 'Admin', icon: <ShieldCheck className="h-5 w-5" /> }] : []),
+    ...(showFinanceiro ? [{ value: 'financeiro', label: 'Financeiro', icon: <Landmark className="h-5 w-5" /> }] : []),
   ];
 
   // Show first 4 items in the bar, rest in "More" menu
