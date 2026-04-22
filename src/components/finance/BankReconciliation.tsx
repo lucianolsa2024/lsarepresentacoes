@@ -59,7 +59,7 @@ export function BankReconciliation() {
     loadTransactions,
   } = useReconciliation();
 
-  const { entries, refresh: refreshEntries } = useFinanceEntries();
+  const { entries, companies, categories, reload: refreshEntries, createEntry } = useFinanceEntries();
 
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [periodFrom, setPeriodFrom] = useState<string>('');
