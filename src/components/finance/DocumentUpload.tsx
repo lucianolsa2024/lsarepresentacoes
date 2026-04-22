@@ -63,6 +63,12 @@ interface FinanceDocument {
   created_at: string;
 }
 
+interface ExtractedInstallment {
+  number?: number;
+  due_date: string;
+  amount: number;
+}
+
 interface ExtractedData {
   document_type?: string;
   counterparty?: string | null;
@@ -76,6 +82,7 @@ interface ExtractedData {
   boleto_line?: string | null;
   confidence?: 'alta' | 'media' | 'baixa';
   notes?: string | null;
+  installments?: ExtractedInstallment[] | null;
 }
 
 const fmtBRL = (v: number | null | undefined) =>
@@ -175,9 +182,12 @@ export function DocumentUpload() {
         }
         const validType =
           file.type === 'application/pdf' ||
+          file.type === 'text/xml' ||
+          file.type === 'application/xml' ||
+          file.name.toLowerCase().endsWith('.xml') ||
           file.type.startsWith('image/');
         if (!validType) {
-          toast.error(`${file.name}: tipo não suportado (use PDF ou imagem)`);
+          toast.error(`${file.name}: tipo não suportado (PDF, XML ou imagem)`);
           continue;
         }
 
@@ -200,9 +210,14 @@ export function DocumentUpload() {
           const ext = file.name.split('.').pop() || 'bin';
           const storagePath = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
 
+          // Garante mime_type para XML (browser nem sempre define)
+          const effectiveMime =
+            file.type ||
+            (file.name.toLowerCase().endsWith('.xml') ? 'application/xml' : 'application/octet-stream');
+
           const { error: upErr } = await supabase.storage
             .from('finance-documents')
-            .upload(storagePath, file, { contentType: file.type, upsert: false });
+            .upload(storagePath, file, { contentType: effectiveMime, upsert: false });
           if (upErr) throw upErr;
 
           setUploadProgress((p) => ({ ...p, [tmpKey]: 70 }));
@@ -212,7 +227,7 @@ export function DocumentUpload() {
             .insert({
               file_name: file.name,
               storage_path: storagePath,
-              mime_type: file.type,
+              mime_type: effectiveMime,
               file_size: file.size,
               file_hash: hash,
               status: 'processing',
@@ -231,7 +246,7 @@ export function DocumentUpload() {
 
           await loadDocs();
           // dispara IA em background
-          triggerExtract(inserted.id, storagePath, file.type);
+          triggerExtract(inserted.id, storagePath, effectiveMime);
           toast.success(`${file.name} enviado — IA processando…`);
         } catch (err) {
           console.error(err);
@@ -340,13 +355,13 @@ export function DocumentUpload() {
             <div>
               <p className="font-semibold text-foreground">Arraste arquivos aqui ou clique para selecionar</p>
               <p className="text-xs text-muted-foreground">
-                PDFs e imagens (JPG, PNG) · até 20MB · IA extrai dados automaticamente
+                PDFs, XML (NFe) e imagens (JPG, PNG) · até 20MB · IA extrai dados e parcelas automaticamente
               </p>
             </div>
             <input
               ref={inputRef}
               type="file"
-              accept="application/pdf,image/*"
+              accept="application/pdf,image/*,text/xml,application/xml,.xml"
               multiple
               className="hidden"
               onChange={(e) => {
@@ -562,12 +577,12 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
     company_id: '',
     notes: '',
   });
+  const [installments, setInstallments] = useState<ExtractedInstallment[]>([]);
 
   useEffect(() => {
     if (!doc || !ext) return;
     // pré-preenche campos
     const desc = ext.description || `${ext.document_type ?? 'Documento'} ${ext.document_number ?? ''}`.trim();
-    // tenta sugerir categoria pelo nome
     let suggestedCatId = '';
     if (ext.suggested_category) {
       const found = categories.find(
@@ -575,11 +590,23 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
       );
       if (found) suggestedCatId = found.id;
     }
+    const detected = (ext.installments ?? []).filter(
+      (p) => p && p.due_date && Number.isFinite(p.amount) && p.amount > 0,
+    );
+    setInstallments(
+      detected.length > 0
+        ? detected.map((p, i) => ({
+            number: p.number ?? i + 1,
+            due_date: p.due_date,
+            amount: Number(p.amount),
+          }))
+        : [],
+    );
     setForm({
       entry_type: ext.entry_type ?? 'a_pagar',
       description: desc || doc.file_name,
       amount: ext.amount ?? 0,
-      due_date: ext.due_date ?? ext.issue_date ?? new Date().toISOString().slice(0, 10),
+      due_date: ext.due_date ?? detected[0]?.due_date ?? ext.issue_date ?? new Date().toISOString().slice(0, 10),
       counterparty: ext.counterparty ?? '',
       document: ext.document_number ?? '',
       category_id: suggestedCatId,
@@ -728,6 +755,127 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />
             </div>
+
+            {/* Parcelas detectadas */}
+            <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">
+                  Parcelas {installments.length > 0 ? `(${installments.length})` : ''}
+                </Label>
+                <div className="flex gap-1">
+                  {installments.length === 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() =>
+                        setInstallments([
+                          { number: 1, due_date: form.due_date, amount: form.amount },
+                        ])
+                      }
+                    >
+                      + Adicionar parcelas
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() =>
+                          setInstallments((prev) => [
+                            ...prev,
+                            {
+                              number: prev.length + 1,
+                              due_date: prev[prev.length - 1]?.due_date ?? form.due_date,
+                              amount: 0,
+                            },
+                          ])
+                        }
+                      >
+                        + Parcela
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-destructive"
+                        onClick={() => setInstallments([])}
+                      >
+                        Limpar
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {installments.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Será criado 1 lançamento único com os dados acima.
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {installments.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-6">{i + 1}.</span>
+                        <Input
+                          type="date"
+                          className="h-8 text-xs"
+                          value={p.due_date}
+                          onChange={(e) =>
+                            setInstallments((prev) =>
+                              prev.map((row, idx) =>
+                                idx === i ? { ...row, due_date: e.target.value } : row,
+                              ),
+                            )
+                          }
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs w-32"
+                          value={p.amount}
+                          onChange={(e) =>
+                            setInstallments((prev) =>
+                              prev.map((row, idx) =>
+                                idx === i
+                                  ? { ...row, amount: parseFloat(e.target.value) || 0 }
+                                  : row,
+                              ),
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() =>
+                            setInstallments((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const sum = installments.reduce((a, p) => a + (p.amount || 0), 0);
+                    const diff = Math.abs(sum - form.amount);
+                    const ok = diff < 0.02;
+                    return (
+                      <p className={cn('text-xs', ok ? 'text-emerald-600' : 'text-amber-600')}>
+                        Soma das parcelas: {fmtBRL(sum)}{' '}
+                        {!ok && `· difere do total (${fmtBRL(form.amount)})`}
+                      </p>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -746,6 +894,13 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
                   category_id: form.category_id || null,
                   company_id: form.company_id || null,
                   notes: form.notes || null,
+                  installments_list:
+                    installments.length > 0
+                      ? installments.map((p) => ({
+                          due_date: p.due_date,
+                          amount: p.amount,
+                        }))
+                      : undefined,
                 },
                 doc.id,
               )
@@ -753,7 +908,9 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
             disabled={!form.description || !form.amount || !form.due_date}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
-            Confirmar e criar lançamento
+            {installments.length > 1
+              ? `Criar ${installments.length} parcelas`
+              : 'Confirmar e criar lançamento'}
           </Button>
         </DialogFooter>
       </DialogContent>

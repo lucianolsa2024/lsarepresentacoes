@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const ALLOWED_EMAIL = 'lucianoabreu@lsarepresentacoes.com.br';
 
-const SYSTEM_PROMPT = `Você é um assistente especializado em extração de dados de documentos financeiros brasileiros (notas fiscais, boletos bancários, recibos, faturas).
+const SYSTEM_PROMPT = `Você é um assistente especializado em extração de dados de documentos financeiros brasileiros (notas fiscais, boletos bancários, recibos, faturas, DANFE, NFe).
 
 Analise o documento enviado e extraia os campos. Sempre responda chamando a função extract_finance_data.
 
@@ -19,7 +19,8 @@ Regras:
 - entry_type: "a_pagar" se for despesa/conta a pagar (NF de fornecedor, boleto, fatura) ou "a_receber" se for recebível (NF emitida pela LSA)
 - suggested_category: sugira UMA categoria entre: Aluguel, Fornecedores, Marketing, Vendas, Salários, Impostos, Energia, Água, Internet/Telefone, Manutenção, Combustível, Frete, Comissões, Material de Escritório, Serviços de Terceiros, Outros
 - confidence: "alta" (todos os campos legíveis), "media" (alguns campos incertos), "baixa" (documento ruim/parcial)
-- Se algum campo não estiver visível, retorne null`;
+- Se algum campo não estiver visível, retorne null
+- IMPORTANTE — PARCELAS: Se o documento mencionar múltiplos vencimentos/parcelas/duplicatas, preencha o array "installments" com TODAS as parcelas, cada uma com number (1,2,3...), due_date (YYYY-MM-DD) e amount. A soma das parcelas deve bater com o "amount" total. Se houver apenas 1 vencimento, retorne installments como [] ou null.`;
 
 const TOOL = {
   type: 'function',
@@ -37,13 +38,26 @@ const TOOL = {
         document_number: { type: ['string', 'null'], description: 'Número da NF, boleto ou documento' },
         amount: { type: ['number', 'null'], description: 'Valor total do documento em reais' },
         issue_date: { type: ['string', 'null'], description: 'Data de emissão (YYYY-MM-DD)' },
-        due_date: { type: ['string', 'null'], description: 'Data de vencimento (YYYY-MM-DD)' },
+        due_date: { type: ['string', 'null'], description: 'Vencimento da 1ª parcela (ou única)' },
         description: { type: ['string', 'null'], description: 'Descrição resumida do documento' },
         entry_type: { type: 'string', enum: ['a_pagar', 'a_receber'] },
         suggested_category: { type: ['string', 'null'] },
         boleto_line: { type: ['string', 'null'], description: 'Linha digitável do boleto se houver' },
         confidence: { type: 'string', enum: ['alta', 'media', 'baixa'] },
         notes: { type: ['string', 'null'], description: 'Observações relevantes' },
+        installments: {
+          type: ['array', 'null'],
+          description: 'Lista de parcelas/duplicatas com vencimento e valor.',
+          items: {
+            type: 'object',
+            properties: {
+              number: { type: 'number' },
+              due_date: { type: 'string', description: 'YYYY-MM-DD' },
+              amount: { type: 'number' },
+            },
+            required: ['number', 'due_date', 'amount'],
+          },
+        },
       },
       required: ['document_type', 'entry_type', 'confidence'],
       additionalProperties: false,
@@ -123,19 +137,40 @@ Deno.serve(async (req) => {
     }
 
     const buf = new Uint8Array(await fileBlob.arrayBuffer());
-    let base64 = '';
-    const CHUNK = 0x8000;
-    for (let i = 0; i < buf.length; i += CHUNK) {
-      base64 += String.fromCharCode(...buf.subarray(i, i + CHUNK));
-    }
-    base64 = btoa(base64);
-    const dataUrl = `data:${mime_type};base64,${base64}`;
+    const isXml =
+      mime_type === 'text/xml' ||
+      mime_type === 'application/xml' ||
+      storage_path.toLowerCase().endsWith('.xml');
 
-    // Monta payload multimodal — Gemini suporta PDF e imagens via image_url
-    const userContent: Array<Record<string, unknown>> = [
-      { type: 'text', text: 'Extraia os dados deste documento financeiro.' },
-      { type: 'image_url', image_url: { url: dataUrl } },
-    ];
+    let userContent: Array<Record<string, unknown>>;
+
+    if (isXml) {
+      // Envia XML como texto puro — geralmente NFe/duplicatas vêm bem estruturadas
+      const xmlText = new TextDecoder('utf-8').decode(buf).slice(0, 200000); // até ~200KB
+      userContent = [
+        {
+          type: 'text',
+          text:
+            'Extraia os dados financeiros deste XML de Nota Fiscal Eletrônica (NFe). ' +
+            'Atenção especial às duplicatas/parcelas em <dup><nDup><dVenc><vDup>. ' +
+            'Cada <dup> é uma parcela: number=nDup, due_date=dVenc, amount=vDup. ' +
+            'O total deve bater com <ICMSTot><vNF> ou <vLiq>.\n\n' +
+            xmlText,
+        },
+      ];
+    } else {
+      let base64 = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        base64 += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+      }
+      base64 = btoa(base64);
+      const dataUrl = `data:${mime_type};base64,${base64}`;
+      userContent = [
+        { type: 'text', text: 'Extraia os dados deste documento financeiro.' },
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ];
+    }
 
     const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
