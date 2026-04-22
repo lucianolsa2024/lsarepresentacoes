@@ -7,6 +7,11 @@ import { getQuoteFileName } from '@/utils/quoteLabel';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 
+// Returns the unit price to display in the PDF (uses item.price as the source of truth)
+function getDisplayPrice(item: QuoteItem): number {
+  return Number((item as any).price ?? (item as any).unitPrice ?? 0);
+}
+
 // Helper to check if URL is external
 function isExternalUrl(url: string): boolean {
   if (!url || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/')) {
@@ -445,75 +450,15 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.line(15, y, pageWidth - 15, y);
     y += 2;
   });
-    // Check if we need a new page
-    if (y > 220) {
-      doc.addPage();
-      y = 20;
-    }
-
-    const startY = y;
-    doc.text(`${index + 1}`, 17, y);
-
-    // Add product image if available
-    const cacheKey = item.imageUrl || item.productName;
-    const productImage = imageCache[cacheKey];
-    if (productImage) {
-      try {
-        doc.addImage(productImage, 'JPEG', 27, y - 3, 12, 12);
-      } catch {
-        // Image failed, continue without
-      }
-    }
-
-    // Product details with size description - adjusted for image
-    const details = [
-      item.productName,
-      item.factory ? `Fábrica: ${item.factory}` : '',
-      `Mod: ${item.modulation}`,
-      item.sizeDescription ? `Tam: ${item.sizeDescription}` : '',
-      item.base ? `Base: ${item.base}` : '',
-      `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
-    ]
-      .filter(Boolean)
-      .join(' | ');
-
-    const splitDetails = doc.splitTextToSize(details, 90);
-    doc.text(splitDetails, 45, y);
-
-    const displayPrice = getDisplayPrice(item);
-    doc.text(item.quantity.toString(), 140, y);
-    doc.text(formatCurrency(displayPrice), 155, y);
-    doc.text(formatCurrency(displayPrice * item.quantity), 175, y);
-
-    // Ensure minimum row height for image
-    const textHeight = splitDetails.length * 5 + 2;
-    const imageHeight = 14;
-    y += Math.max(textHeight, imageHeight);
-    
-    // Item observations
-    if (item.observations && item.observations.trim()) {
-      doc.setFontSize(8);
-      doc.setTextColor(100);
-      const obsText = `Obs: ${item.observations}`;
-      const splitObs = doc.splitTextToSize(obsText, 150);
-      doc.text(splitObs, 45, y);
-      y += splitObs.length * 4 + 2;
-      doc.setFontSize(9);
-      doc.setTextColor(0);
-    }
-    
-    y += 1;
-  });
 
   y += 5;
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
-  // Calculate IPI (3.25% on total after surcharge adjustment)
+  // Calculate IPI (3.25% on total)
   const ipiRate = 0.0325;
-  const displaySubtotal = isSurcharge ? quote.total : quote.subtotal;
-  const ipiValue = displaySubtotal * ipiRate;
+  const ipiValue = quote.total * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
 
   // Totals - only show IPI and final total (no subtotal or discount lines)
@@ -535,17 +480,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(formatCurrency(totalWithIpi), pageWidth - 17, y + 3, { align: 'right' });
   doc.setTextColor(0);
   y += 16;
-
-  // IPI
-  doc.text('IPI (3,25%):', 120, y);
-  doc.text(formatCurrency(ipiValue), 175, y);
-  y += 6;
-
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL GERAL:', 120, y);
-  doc.text(formatCurrency(totalWithIpi), 175, y);
-  y += 12;
 
   // Payment Conditions
   doc.setDrawColor(180);
