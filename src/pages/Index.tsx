@@ -46,9 +46,11 @@ import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
 import { FichaCliente } from '@/components/portfolio/FichaCliente';
 import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
+import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
+import { canAccessFinanceiroLSA } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
