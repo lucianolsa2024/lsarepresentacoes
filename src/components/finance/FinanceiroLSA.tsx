@@ -10,6 +10,7 @@ import {
   Upload,
   Landmark,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -24,9 +25,11 @@ import { BankReconciliation } from './BankReconciliation';
 import { DreReport } from './DreReport';
 import { CashflowProjection } from './CashflowProjection';
 import { FinanceSettings } from './FinanceSettings';
+import { ExecutiveDashboard } from './ExecutiveDashboard';
 
 type Section =
   | 'dashboard'
+  | 'executivo'
   | 'pagar'
   | 'receber'
   | 'conciliacao'
@@ -37,6 +40,7 @@ type Section =
 
 const NAV: Array<{ id: Section; label: string; icon: typeof LayoutDashboard; description: string }> = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Visão consolidada do financeiro.' },
+  { id: 'executivo', label: 'Executivo (IA)', icon: Sparkles, description: 'KPIs, insights de IA e relatório executivo.' },
   { id: 'pagar', label: 'Contas a Pagar', icon: ArrowDownCircle, description: 'Gestão de despesas, vencimentos e baixas.' },
   { id: 'receber', label: 'Contas a Receber', icon: ArrowUpCircle, description: 'Acompanhamento de recebíveis e cobranças.' },
   { id: 'conciliacao', label: 'Conciliação', icon: GitCompareArrows, description: 'Conciliação bancária e cartões.' },
@@ -158,6 +162,7 @@ export function FinanceiroLSA() {
           </div>
 
           {section === 'dashboard' && <FinanceDashboard onNavigate={(s) => setSection(s as Section)} />}
+          {section === 'executivo' && <ExecutiveDashboard />}
           {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
           {section === 'conciliacao' && <BankReconciliation />}
