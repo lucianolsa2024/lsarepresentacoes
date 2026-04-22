@@ -63,6 +63,12 @@ interface FinanceDocument {
   created_at: string;
 }
 
+interface ExtractedInstallment {
+  number?: number;
+  due_date: string;
+  amount: number;
+}
+
 interface ExtractedData {
   document_type?: string;
   counterparty?: string | null;
@@ -76,6 +82,7 @@ interface ExtractedData {
   boleto_line?: string | null;
   confidence?: 'alta' | 'media' | 'baixa';
   notes?: string | null;
+  installments?: ExtractedInstallment[] | null;
 }
 
 const fmtBRL = (v: number | null | undefined) =>
