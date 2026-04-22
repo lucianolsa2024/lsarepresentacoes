@@ -37,6 +37,7 @@ import { OrderImporter } from '@/components/orders/OrderImporter';
 import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { QuoteExcelImporter } from '@/components/quote/QuoteExcelImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
+import { AutomationManager } from '@/components/automations/AutomationManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
@@ -50,7 +51,7 @@ import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
 import { canAccessFinanceiroLSA } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
@@ -350,9 +351,9 @@ const Index = () => {
   const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
   const tabsCountClass = (() => {
     const base = isRep === false ? 6 : 7;
-    const total = base + (isAdmin ? 1 : 0) + (showFinanceiroTab ? 1 : 0);
+    const total = base + (isAdmin ? 2 : 0) + (showFinanceiroTab ? 1 : 0);
     const map: Record<number, string> = {
-      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9',
+      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9', 10: 'grid-cols-10',
     };
     return map[total] || 'grid-cols-7';
   })();
@@ -412,6 +413,15 @@ const Index = () => {
                 <TrendingUp className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Funis</span>
               </TabsTrigger>
+              {isAdmin && (
+              <TabsTrigger
+                value="automations"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <Zap className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Automações</span>
+              </TabsTrigger>
+              )}
               <TabsTrigger
                 value="service-orders"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -850,6 +860,12 @@ const Index = () => {
               <TabsContent value="funnels" className="mt-0">
                 <SalesFunnelManager />
               </TabsContent>
+
+              {isAdmin && (
+                <TabsContent value="automations" className="mt-0">
+                  <AutomationManager />
+                </TabsContent>
+              )}
 
               <TabsContent value="service-orders" className="mt-0">
                 <ServiceOrderManager />
