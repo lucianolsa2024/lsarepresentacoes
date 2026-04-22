@@ -58,32 +58,56 @@ function compressImage(img: HTMLImageElement, maxSize: number, quality: number):
 }
 
 // Helper to load image via fetch (handles CORS better)
+// Works with WebP, AVIF, PNG, JPEG — converts everything to JPEG via canvas.
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
-    console.log('Fetching image via fetch:', url.substring(0, 80));
+    console.log('[PDF] Fetching image:', url.substring(0, 100));
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('Fetch failed with status:', response.status);
+      console.warn('[PDF] Fetch failed with status:', response.status, 'for', url.substring(0, 80));
       return null;
     }
     const blob = await response.blob();
-    
-    // Create an image element to resize/compress
+    console.log('[PDF] Fetched blob:', blob.type, blob.size, 'bytes');
+
+    // Create an image element to decode + re-encode as JPEG
+    const objectUrl = URL.createObjectURL(blob);
     return new Promise((resolve) => {
       const img = new Image();
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
+      const timeout = setTimeout(() => {
+        console.warn('[PDF] Decode timeout for', url.substring(0, 80));
+        cleanup();
+        resolve(null);
+      }, 8000);
       img.onload = () => {
-        const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.5);
-        console.log('Image fetched and compressed:', url.substring(0, 50));
-        resolve(compressed || null);
+        clearTimeout(timeout);
+        try {
+          const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.7);
+          cleanup();
+          if (compressed && compressed.startsWith('data:image/jpeg')) {
+            console.log('[PDF] ✓ Image converted to JPEG:', url.substring(0, 60));
+            resolve(compressed);
+          } else {
+            console.warn('[PDF] Compression returned invalid data for', url.substring(0, 60));
+            resolve(null);
+          }
+        } catch (e) {
+          console.warn('[PDF] Canvas conversion error:', e);
+          cleanup();
+          resolve(null);
+        }
       };
-      img.onerror = () => {
-        console.log('Image load error after fetch');
+      img.onerror = (e) => {
+        clearTimeout(timeout);
+        console.warn('[PDF] Image decode error for', url.substring(0, 80), e);
+        cleanup();
         resolve(null);
       };
-      img.src = URL.createObjectURL(blob);
+      img.src = objectUrl;
     });
   } catch (e) {
-    console.log('Fetch error:', e);
+    console.warn('[PDF] Fetch exception:', e);
     return null;
   }
 }
@@ -137,7 +161,8 @@ async function loadImageViaElement(url: string): Promise<string | null> {
   });
 }
 
-// Main image loading function - tries fetch first for external URLs, then element
+// Main image loading function — always tries fetch first (handles WebP/AVIF
+// via blob decoding), then falls back to <img> element for local URLs.
 async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url || url === '/placeholder.svg') {
     return null;
@@ -146,17 +171,15 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   // Route cross-origin URLs through our proxy to bypass CORS
   const effectiveUrl = toFetchableUrl(url);
 
-  // For external URLs (like Supabase Storage), try fetch first as it handles CORS better
-  if (isExternalUrl(effectiveUrl)) {
-    const fetchResult = await fetchImageAsBase64(effectiveUrl);
-    if (fetchResult) {
-      return fetchResult;
-    }
-    // Fallback to element method
-    console.log('Fetch failed, trying element method for:', effectiveUrl.substring(0, 50));
+  // Always try fetch first — works for both external (proxied) and same-origin
+  // URLs, and properly handles WebP/AVIF formats by decoding via blob.
+  const fetchResult = await fetchImageAsBase64(effectiveUrl);
+  if (fetchResult) {
+    return fetchResult;
   }
 
-  // For local URLs or as fallback, use element method
+  // Fallback to <img> element method (mainly for local /images/products/* JPEGs)
+  console.log('[PDF] Fetch failed, trying <img> element for:', effectiveUrl.substring(0, 80));
   return loadImageViaElement(effectiveUrl);
 }
 
