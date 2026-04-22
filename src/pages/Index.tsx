@@ -960,7 +960,14 @@ const Index = () => {
         isRep={isRep}
         isAdmin={isAdmin}
       />
-      <AICopilot activeTab={activeTab} />
+    <AICopilot
+  activeTab={activeTab}
+  clients={clients}
+  activities={activities}
+  quotes={quotes}
+  opportunities={opportunities}
+  orders={orders}
+/>
     </div>
   );
 };
