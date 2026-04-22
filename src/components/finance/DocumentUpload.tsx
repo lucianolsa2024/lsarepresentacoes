@@ -182,9 +182,12 @@ export function DocumentUpload() {
         }
         const validType =
           file.type === 'application/pdf' ||
+          file.type === 'text/xml' ||
+          file.type === 'application/xml' ||
+          file.name.toLowerCase().endsWith('.xml') ||
           file.type.startsWith('image/');
         if (!validType) {
-          toast.error(`${file.name}: tipo não suportado (use PDF ou imagem)`);
+          toast.error(`${file.name}: tipo não suportado (PDF, XML ou imagem)`);
           continue;
         }
 
