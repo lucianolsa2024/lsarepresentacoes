@@ -577,12 +577,12 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
     company_id: '',
     notes: '',
   });
+  const [installments, setInstallments] = useState<ExtractedInstallment[]>([]);
 
   useEffect(() => {
     if (!doc || !ext) return;
     // pré-preenche campos
     const desc = ext.description || `${ext.document_type ?? 'Documento'} ${ext.document_number ?? ''}`.trim();
-    // tenta sugerir categoria pelo nome
     let suggestedCatId = '';
     if (ext.suggested_category) {
       const found = categories.find(
@@ -590,11 +590,23 @@ function ReviewDialog({ doc, previewUrl, companies, categories, onClose, onConfi
       );
       if (found) suggestedCatId = found.id;
     }
+    const detected = (ext.installments ?? []).filter(
+      (p) => p && p.due_date && Number.isFinite(p.amount) && p.amount > 0,
+    );
+    setInstallments(
+      detected.length > 0
+        ? detected.map((p, i) => ({
+            number: p.number ?? i + 1,
+            due_date: p.due_date,
+            amount: Number(p.amount),
+          }))
+        : [],
+    );
     setForm({
       entry_type: ext.entry_type ?? 'a_pagar',
       description: desc || doc.file_name,
       amount: ext.amount ?? 0,
-      due_date: ext.due_date ?? ext.issue_date ?? new Date().toISOString().slice(0, 10),
+      due_date: ext.due_date ?? detected[0]?.due_date ?? ext.issue_date ?? new Date().toISOString().slice(0, 10),
       counterparty: ext.counterparty ?? '',
       document: ext.document_number ?? '',
       category_id: suggestedCatId,
