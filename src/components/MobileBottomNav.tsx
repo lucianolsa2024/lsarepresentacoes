@@ -8,9 +8,12 @@ import {
   Settings,
   Package,
   ShieldCheck,
+  Landmark,
   MoreHorizontal,
   X,
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { canAccessFinanceiroLSA } from '@/lib/access';
 
 interface NavItem {
   value: string;
