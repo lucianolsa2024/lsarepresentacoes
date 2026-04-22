@@ -37,6 +37,7 @@ import { OrderImporter } from '@/components/orders/OrderImporter';
 import { OrderPdfImporter } from '@/components/orders/OrderPdfImporter';
 import { QuoteExcelImporter } from '@/components/quote/QuoteExcelImporter';
 import { SalesFunnelManager } from '@/components/sales/SalesFunnelManager';
+import { AutomationManager } from '@/components/automations/AutomationManager';
 import { OperationManager } from '@/components/operations/OperationManager';
 import { ServiceOrderManager } from '@/components/operations/ServiceOrderManager';
 import { RepHomeDashboard } from '@/components/dashboard/RepHomeDashboard';
