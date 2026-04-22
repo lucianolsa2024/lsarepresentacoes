@@ -442,6 +442,15 @@ const Index = () => {
                 <span className="hidden sm:inline">Admin</span>
               </TabsTrigger>
               )}
+              {showFinanceiroTab && (
+              <TabsTrigger
+                value="financeiro"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <Landmark className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Financeiro</span>
+              </TabsTrigger>
+              )}
             </TabsList>
 
             <div className="p-2 sm:p-4 md:p-6">
