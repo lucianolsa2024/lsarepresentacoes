@@ -352,26 +352,47 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-// Table header — Total centralizado dentro do bloco final
-  const COL = { item: 15, img: 22, desc: 48, qty: 138, unit: 152, total: 185 };
+// Table header — 2 linhas, colunas com mais respiro e separadores verticais
+  // Centros das colunas numéricas (qty/unit/total) para alinhamento centralizado
+  const COL = {
+    item: 15,           // x início "Item"
+    img: 22,            // x início imagem (col 20-46)
+    desc: 48,           // x início descrição (col 46-130)
+    qtyC: 138,          // CENTRO da coluna Quantidade (130-146)
+    unitC: 162,         // CENTRO da coluna Preço Unitário (146-178)
+    totalC: 186,        // CENTRO da coluna Preço Total (178-195)
+  };
+  // Separadores verticais (limites entre colunas)
+  const COL_DIVIDERS = [20, 46, 130, 146, 178];
   const IMG_SIZE = 22;
   const ROW_MIN_H = IMG_SIZE + 6;
+  const HEADER_H = 12;
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setFillColor(26, 26, 26);
   doc.setTextColor(255, 255, 255);
-  doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
+  doc.rect(15, y - 5, pageWidth - 30, HEADER_H, 'F');
+
+  // Linha 1 dos cabeçalhos
   doc.text('Item', COL.item + 1, y);
   doc.text('Imagem', COL.img + 1, y);
   doc.text('Descrição', COL.desc, y);
-  doc.text('Quantidade', COL.qty, y);
-  doc.text('Preço Unitário', COL.unit, y);
-  doc.text('Total', COL.total, y, { align: 'center' });
+  doc.text('Quanti-', COL.qtyC, y, { align: 'center' });
+  doc.text('Preço', COL.unitC, y, { align: 'center' });
+  doc.text('Preço', COL.totalC, y, { align: 'center' });
+  // Linha 2
+  doc.text('dade', COL.qtyC, y + 4, { align: 'center' });
+  doc.text('Unitário', COL.unitC, y + 4, { align: 'center' });
+  doc.text('Total', COL.totalC, y + 4, { align: 'center' });
+
+  // Pipes brancos divisores no header
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.2);
+  COL_DIVIDERS.forEach((x) => doc.line(x, y - 5, x, y - 5 + HEADER_H));
+
   doc.setTextColor(0);
-  y += 7;
-  doc.setTextColor(0);
-  y += 7;
+  y += HEADER_H - 1;
 
   doc.setFont('helvetica', 'normal');
   quote.items.forEach((item, index) => {
@@ -427,16 +448,16 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(splitDetails, COL.desc, y + 8);
     doc.setTextColor(0);
 
-    // Qtd / Preços
+    // Qtd / Preços (todos centralizados na coluna)
     const displayPrice = getDisplayPrice(item);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60);
-    doc.text(item.quantity.toString(), COL.qty, y + 4);
-    doc.text(formatCurrency(displayPrice), COL.unit, y + 4);
+    doc.text(item.quantity.toString(), COL.qtyC, y + 4, { align: 'center' });
+    doc.text(formatCurrency(displayPrice), COL.unitC, y + 4, { align: 'center' });
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
-    doc.text(formatCurrency(displayPrice * item.quantity), COL.total, y + 4, { align: 'center' });
+    doc.text(formatCurrency(displayPrice * item.quantity), COL.totalC, y + 4, { align: 'center' });
     doc.setFont('helvetica', 'normal');
 
     y += rowH;
@@ -445,15 +466,19 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     if (item.observations?.trim()) {
       doc.setFontSize(7.5);
       doc.setTextColor(120);
-      const splitObs = doc.splitTextToSize(`Obs: ${item.observations}`, 150);
+      const splitObs = doc.splitTextToSize(`Obs: ${item.observations}`, 110);
       doc.text(splitObs, COL.desc, y);
       y += splitObs.length * 3.5 + 1;
       doc.setTextColor(0);
     }
 
-    // Linha divisória entre itens
+    // Pipes verticais cinzas entre as colunas (na altura da linha)
     doc.setDrawColor(220);
     doc.setLineWidth(0.2);
+    const rowTop = y - rowH - 2;
+    COL_DIVIDERS.forEach((x) => doc.line(x, rowTop, x, y));
+
+    // Linha divisória horizontal entre itens
     doc.line(15, y, pageWidth - 15, y);
     y += 2;
   });
