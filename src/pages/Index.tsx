@@ -874,6 +874,11 @@ const Index = () => {
                   <AdminPanel />
                 </TabsContent>
               )}
+              {showFinanceiroTab && (
+                <TabsContent value="financeiro" className="mt-0">
+                  <FinanceiroLSA />
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
