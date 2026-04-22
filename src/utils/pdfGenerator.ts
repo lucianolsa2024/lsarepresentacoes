@@ -58,32 +58,56 @@ function compressImage(img: HTMLImageElement, maxSize: number, quality: number):
 }
 
 // Helper to load image via fetch (handles CORS better)
+// Works with WebP, AVIF, PNG, JPEG — converts everything to JPEG via canvas.
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
-    console.log('Fetching image via fetch:', url.substring(0, 80));
+    console.log('[PDF] Fetching image:', url.substring(0, 100));
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('Fetch failed with status:', response.status);
+      console.warn('[PDF] Fetch failed with status:', response.status, 'for', url.substring(0, 80));
       return null;
     }
     const blob = await response.blob();
-    
-    // Create an image element to resize/compress
+    console.log('[PDF] Fetched blob:', blob.type, blob.size, 'bytes');
+
+    // Create an image element to decode + re-encode as JPEG
+    const objectUrl = URL.createObjectURL(blob);
     return new Promise((resolve) => {
       const img = new Image();
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
+      const timeout = setTimeout(() => {
+        console.warn('[PDF] Decode timeout for', url.substring(0, 80));
+        cleanup();
+        resolve(null);
+      }, 8000);
       img.onload = () => {
-        const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.5);
-        console.log('Image fetched and compressed:', url.substring(0, 50));
-        resolve(compressed || null);
+        clearTimeout(timeout);
+        try {
+          const compressed = compressImage(img, MAX_IMAGE_SIZE, 0.7);
+          cleanup();
+          if (compressed && compressed.startsWith('data:image/jpeg')) {
+            console.log('[PDF] ✓ Image converted to JPEG:', url.substring(0, 60));
+            resolve(compressed);
+          } else {
+            console.warn('[PDF] Compression returned invalid data for', url.substring(0, 60));
+            resolve(null);
+          }
+        } catch (e) {
+          console.warn('[PDF] Canvas conversion error:', e);
+          cleanup();
+          resolve(null);
+        }
       };
-      img.onerror = () => {
-        console.log('Image load error after fetch');
+      img.onerror = (e) => {
+        clearTimeout(timeout);
+        console.warn('[PDF] Image decode error for', url.substring(0, 80), e);
+        cleanup();
         resolve(null);
       };
-      img.src = URL.createObjectURL(blob);
+      img.src = objectUrl;
     });
   } catch (e) {
-    console.log('Fetch error:', e);
+    console.warn('[PDF] Fetch exception:', e);
     return null;
   }
 }
