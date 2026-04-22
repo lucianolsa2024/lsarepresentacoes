@@ -46,9 +46,11 @@ import { MapaCarteira } from '@/components/portfolio/MapaCarteira';
 import { FichaCliente } from '@/components/portfolio/FichaCliente';
 import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
+import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
+import { canAccessFinanceiroLSA } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
@@ -345,6 +347,15 @@ const Index = () => {
 
   const subtotal = calculateSubtotal();
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
+  const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const tabsCountClass = (() => {
+    const base = isRep === false ? 6 : 7;
+    const total = base + (isAdmin ? 1 : 0) + (showFinanceiroTab ? 1 : 0);
+    const map: Record<number, string> = {
+      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9',
+    };
+    return map[total] || 'grid-cols-7';
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 pb-20 md:pb-0">
@@ -370,7 +381,7 @@ const Index = () => {
         {/* Main Content */}
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`hidden md:grid w-full ${isRep === false ? (isAdmin ? 'grid-cols-7' : 'grid-cols-6') : (isAdmin ? 'grid-cols-8' : 'grid-cols-7')} h-auto p-0 bg-muted rounded-none`}>
+            <TabsList className={`hidden md:grid w-full ${tabsCountClass} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
                 className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
@@ -429,6 +440,15 @@ const Index = () => {
               >
                 <ShieldCheck className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Admin</span>
+              </TabsTrigger>
+              )}
+              {showFinanceiroTab && (
+              <TabsTrigger
+                value="financeiro"
+                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+              >
+                <Landmark className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Financeiro</span>
               </TabsTrigger>
               )}
             </TabsList>
@@ -852,6 +872,11 @@ const Index = () => {
               {isAdmin && (
                 <TabsContent value="admin" className="mt-0">
                   <AdminPanel />
+                </TabsContent>
+              )}
+              {showFinanceiroTab && (
+                <TabsContent value="financeiro" className="mt-0">
+                  <FinanceiroLSA />
                 </TabsContent>
               )}
             </div>
