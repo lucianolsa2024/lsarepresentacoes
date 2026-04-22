@@ -155,8 +155,8 @@ export function AutomationManager() {
   const fetchAll = useCallback(async () => {
     if (!ownerEmail) return;
     const [aRes, lRes] = await Promise.all([
-      supabase.from("automations").select("*").eq("created_by", ownerEmail).order("created_at", { ascending: false }),
-      supabase.from("automation_logs").select("*").order("executed_at", { ascending: false }).limit(100),
+      (supabase as any).from("automations").select("*").eq("created_by", ownerEmail).order("created_at", { ascending: false }),
+      (supabase as any).from("automation_logs").select("*").order("executed_at", { ascending: false }).limit(100),
     ]);
     setAutomations((aRes.data as any as Automation[]) || []);
     setLogs((lRes.data as any as AutomationLog[]) || []);
@@ -194,9 +194,9 @@ export function AutomationManager() {
       created_by: ownerEmail,
     };
     if (editId) {
-      await supabase.from("automations").update(payload as any).eq("id", editId);
+      await (supabase as any).from("automations").update(payload as any).eq("id", editId);
     } else {
-      await supabase.from("automations").insert(payload as any);
+      await (supabase as any).from("automations").insert(payload as any);
     }
     setBuilderOpen(false);
     fetchAll();
@@ -204,19 +204,19 @@ export function AutomationManager() {
   };
 
   const toggleActive = async (id: string, active: boolean) => {
-    await supabase.from("automations").update({ is_active: active } as any).eq("id", id);
+    await (supabase as any).from("automations").update({ is_active: active } as any).eq("id", id);
     fetchAll();
     toast({ title: active ? "Automação ativada" : "Automação desativada" });
   };
 
   const deleteAutomation = async (id: string) => {
-    await supabase.from("automations").delete().eq("id", id);
+    await (supabase as any).from("automations").delete().eq("id", id);
     fetchAll();
     toast({ title: "Automação excluída" });
   };
 
   const duplicateAutomation = async (auto: Automation) => {
-    await supabase.from("automations").insert({
+    await (supabase as any).from("automations").insert({
       name: `${auto.name} (cópia)`,
       description: auto.description,
       trigger: auto.trigger as any,
