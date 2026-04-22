@@ -114,7 +114,8 @@ export function useFinanceEntries() {
         (p) => p && p.due_date && Number.isFinite(p.amount) && p.amount > 0,
       );
 
-      let rows: Array<Record<string, unknown>>;
+      type EntryRow = Database['public']['Tables']['finance_entries']['Insert'];
+      let rows: EntryRow[];
       let total: number;
       let recurrenceId: string | null;
       let isRecurrence = false;
