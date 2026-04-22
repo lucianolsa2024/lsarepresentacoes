@@ -818,6 +818,118 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_bank_accounts: {
+        Row: {
+          account_number: string | null
+          account_type: string
+          active: boolean
+          agency: string | null
+          bank_name: string | null
+          company_id: string | null
+          created_at: string
+          id: string
+          initial_balance: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          account_type?: string
+          active?: boolean
+          agency?: string | null
+          bank_name?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          initial_balance?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          account_type?: string
+          active?: boolean
+          agency?: string | null
+          bank_name?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          initial_balance?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "finance_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_bank_transactions: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          bank_account_id: string
+          created_at: string
+          description: string
+          fitid: string | null
+          id: string
+          imported_at: string
+          memo: string | null
+          raw_data: Json | null
+          reconciliation_status: string
+          source: string
+          transaction_date: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          bank_account_id: string
+          created_at?: string
+          description: string
+          fitid?: string | null
+          id?: string
+          imported_at?: string
+          memo?: string | null
+          raw_data?: Json | null
+          reconciliation_status?: string
+          source?: string
+          transaction_date: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          bank_account_id?: string
+          created_at?: string
+          description?: string
+          fitid?: string | null
+          id?: string
+          imported_at?: string
+          memo?: string | null
+          raw_data?: Json | null
+          reconciliation_status?: string
+          source?: string
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_bank_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_categories: {
         Row: {
           active: boolean
@@ -1014,6 +1126,57 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "finance_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_reconciliations: {
+        Row: {
+          bank_transaction_id: string
+          confirmed_at: string
+          confirmed_by: string | null
+          created_at: string
+          entry_id: string
+          id: string
+          match_score: number | null
+          match_type: string
+          notes: string | null
+        }
+        Insert: {
+          bank_transaction_id: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          created_at?: string
+          entry_id: string
+          id?: string
+          match_score?: number | null
+          match_type?: string
+          notes?: string | null
+        }
+        Update: {
+          bank_transaction_id?: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          created_at?: string
+          entry_id?: string
+          id?: string
+          match_score?: number | null
+          match_type?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_reconciliations_bank_transaction_id_fkey"
+            columns: ["bank_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_bank_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliations_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "finance_entries"
             referencedColumns: ["id"]
           },
         ]
