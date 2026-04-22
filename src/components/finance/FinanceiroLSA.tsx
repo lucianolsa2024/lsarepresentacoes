@@ -17,10 +17,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FinanceDashboard } from './FinanceDashboard';
-import { FinancePlaceholder } from './FinancePlaceholder';
 import { EntriesManager } from './EntriesManager';
 import { DocumentUpload } from './DocumentUpload';
 import { BankReconciliation } from './BankReconciliation';
+import { DreReport } from './DreReport';
+import { CashflowReport } from './CashflowReport';
 
 type Section =
   | 'dashboard'
@@ -156,20 +157,8 @@ export function FinanceiroLSA() {
           {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
           {section === 'conciliacao' && <BankReconciliation />}
-          {section === 'dre' && (
-            <FinancePlaceholder
-              icon={FileBarChart}
-              title="DRE — Demonstrativo de Resultado"
-              description="Receitas, custos, despesas e resultado líquido por período com comparativos mensais."
-            />
-          )}
-          {section === 'fluxo' && (
-            <FinancePlaceholder
-              icon={TrendingUp}
-              title="Fluxo de Caixa"
-              description="Projeção e realizado de entradas e saídas, com cenários e alertas de saldo."
-            />
-          )}
+          {section === 'dre' && <DreReport />}
+          {section === 'fluxo' && <CashflowReport />}
           {section === 'upload' && <DocumentUpload />}
         </section>
       </div>
