@@ -34,7 +34,7 @@ import { parseExtract } from '@/lib/ofxParser';
 import { suggestMatches, type FinanceEntry as MatchEntry, type MatchSuggestion } from '@/lib/reconciliationMatch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { EntryFormDialog } from './EntryFormDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
