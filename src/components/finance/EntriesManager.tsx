@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useFinanceEntries, type EntryType, type EntryStatus, type FinanceEntry } from '@/hooks/useFinanceEntries';
 import { EntryStatusBadge } from './EntryStatusBadge';
 import { EntryFormDialog } from './EntryFormDialog';
+import { EntryDetailDialog } from './EntryDetailDialog';
 
 const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (iso: string) => {
@@ -50,6 +51,7 @@ export function EntriesManager({ entryType }: Props) {
 
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<FinanceEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<FinanceEntry | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -180,8 +182,9 @@ export function EntriesManager({ entryType }: Props) {
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Categoria</TableHead>
-                  <TableHead>Empresa</TableHead>
+                  <TableHead>{isPagar ? 'Pagador (Empresa)' : 'Recebedor (Empresa)'}</TableHead>
                   <TableHead>{isPagar ? 'Fornecedor' : 'Cliente'}</TableHead>
+                  <TableHead>NF / Doc</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[60px]" />
@@ -190,18 +193,22 @@ export function EntriesManager({ entryType }: Props) {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
                   </TableRow>
                 )}
                 {!loading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhum lançamento encontrado.
                     </TableCell>
                   </TableRow>
                 )}
                 {filtered.map((e) => (
-                  <TableRow key={e.id}>
+                  <TableRow
+                    key={e.id}
+                    className="cursor-pointer"
+                    onClick={() => setDetailEntry(e)}
+                  >
                     <TableCell className="text-sm">{fmtDate(e.due_date)}</TableCell>
                     <TableCell className="font-medium">
                       {e.description}
@@ -218,11 +225,12 @@ export function EntriesManager({ entryType }: Props) {
                       {e.company_id ? companiesById[e.company_id]?.name ?? '—' : '—'}
                     </TableCell>
                     <TableCell className="text-sm">{e.counterparty ?? '—'}</TableCell>
+                    <TableCell className="text-sm font-mono text-xs">{e.document ?? '—'}</TableCell>
                     <TableCell className="text-right font-mono">{fmtBRL(Number(e.amount))}</TableCell>
                     <TableCell>
                       <EntryStatusBadge status={e.status} dueDate={e.due_date} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(ev) => ev.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -266,6 +274,14 @@ export function EntriesManager({ entryType }: Props) {
         companies={companies}
         categories={categories}
         onSubmit={createEntry}
+      />
+
+      <EntryDetailDialog
+        open={!!detailEntry}
+        onOpenChange={(o) => !o && setDetailEntry(null)}
+        entry={detailEntry}
+        companies={companies}
+        categories={categories}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
