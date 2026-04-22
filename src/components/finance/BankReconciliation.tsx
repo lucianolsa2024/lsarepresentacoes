@@ -577,25 +577,157 @@ export function BankReconciliation() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Criar lançamento prefilled */}
-      <EntryFormDialog
+      {/* Dialog: Criar lançamento rápido a partir da transação */}
+      <Dialog
         open={showEntryDialog}
-        onClose={() => {
-          setShowEntryDialog(false);
-          setPrefillEntry(null);
-        }}
-        defaultType={prefillEntry?.entry_type || 'a_pagar'}
-        prefill={prefillEntry || undefined}
-        onCreated={async (newEntryId) => {
-          await refreshEntries();
-          if (activeTx && newEntryId) {
-            await reconcile(activeTx.id, newEntryId, 1);
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowEntryDialog(false);
+            setPrefillEntry(null);
           }
-          setShowEntryDialog(false);
-          setPrefillEntry(null);
         }}
-      />
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar lançamento e conciliar</DialogTitle>
+            <DialogDescription>
+              Os dados foram pré-preenchidos a partir da transação bancária. Ajuste e confirme.
+            </DialogDescription>
+          </DialogHeader>
+          <QuickEntryForm
+            prefill={prefillEntry}
+            companies={companies}
+            categories={categories}
+            onCancel={() => {
+              setShowEntryDialog(false);
+              setPrefillEntry(null);
+            }}
+            onSubmit={async (data) => {
+              const ok = await createEntry(data);
+              if (ok && activeTx) {
+                // Busca o lançamento mais recente criado para concilliar
+                const { data: latest } = await supabase
+                  .from('finance_entries')
+                  .select('id')
+                  .eq('description', data.description)
+                  .eq('amount', data.amount)
+                  .eq('due_date', data.due_date)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                if (latest?.id) {
+                  await reconcile(activeTx.id, latest.id, 1);
+                }
+              }
+              await refreshEntries();
+              setShowEntryDialog(false);
+              setPrefillEntry(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function QuickEntryForm({
+  prefill,
+  companies,
+  categories,
+  onCancel,
+  onSubmit,
+}: {
+  prefill: { amount?: number; description?: string; due_date?: string; entry_type?: 'a_pagar' | 'a_receber' } | null;
+  companies: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; category_type: string }>;
+  onCancel: () => void;
+  onSubmit: (data: any) => Promise<void>;
+}) {
+  const [description, setDescription] = useState(prefill?.description || '');
+  const [amount, setAmount] = useState(String(prefill?.amount ?? ''));
+  const [dueDate, setDueDate] = useState(prefill?.due_date || new Date().toISOString().slice(0, 10));
+  const [entryType, setEntryType] = useState<'a_pagar' | 'a_receber'>(prefill?.entry_type || 'a_pagar');
+  const [categoryId, setCategoryId] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const filteredCats = categories.filter(
+    (c) => c.category_type === 'ambos' || c.category_type === (entryType === 'a_pagar' ? 'despesa' : 'receita'),
+  );
+
+  return (
+    <>
+      <div className="grid gap-3">
+        <div>
+          <Label className="text-xs">Tipo</Label>
+          <Select value={entryType} onValueChange={(v) => setEntryType(v as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="a_pagar">Conta a Pagar</SelectItem>
+              <SelectItem value="a_receber">Conta a Receber</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Descrição</Label>
+          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Valor (R$)</Label>
+            <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">Vencimento</Label>
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Categoria</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {filteredCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Empresa</Label>
+            <Select value={companyId} onValueChange={setCompanyId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <DialogFooter className="mt-4">
+        <Button variant="outline" onClick={onCancel} disabled={submitting}>Cancelar</Button>
+        <Button
+          disabled={submitting}
+          onClick={async () => {
+            if (!description || !amount || !dueDate) {
+              toast.error('Preencha descrição, valor e vencimento');
+              return;
+            }
+            setSubmitting(true);
+            await onSubmit({
+              entry_type: entryType,
+              description,
+              amount: Number(amount),
+              due_date: dueDate,
+              category_id: categoryId || null,
+              company_id: companyId || null,
+            });
+            setSubmitting(false);
+          }}
+        >
+          {submitting ? 'Salvando...' : 'Criar e conciliar'}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
