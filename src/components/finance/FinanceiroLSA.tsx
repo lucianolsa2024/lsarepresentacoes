@@ -20,6 +20,7 @@ import { FinanceDashboard } from './FinanceDashboard';
 import { FinancePlaceholder } from './FinancePlaceholder';
 import { EntriesManager } from './EntriesManager';
 import { DocumentUpload } from './DocumentUpload';
+import { BankReconciliation } from './BankReconciliation';
 
 type Section =
   | 'dashboard'
@@ -154,13 +155,7 @@ export function FinanceiroLSA() {
           {section === 'dashboard' && <FinanceDashboard onNavigate={(s) => setSection(s as Section)} />}
           {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
-          {section === 'conciliacao' && (
-            <FinancePlaceholder
-              icon={GitCompareArrows}
-              title="Conciliação Bancária"
-              description="Importe extratos OFX/CSV e concilie automaticamente com os lançamentos do sistema."
-            />
-          )}
+          {section === 'conciliacao' && <BankReconciliation />}
           {section === 'dre' && (
             <FinancePlaceholder
               icon={FileBarChart}
