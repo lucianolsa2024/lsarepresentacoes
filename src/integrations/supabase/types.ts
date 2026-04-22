@@ -878,6 +878,62 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_documents: {
+        Row: {
+          created_at: string
+          entry_id: string | null
+          error_message: string | null
+          extracted_data: Json | null
+          file_hash: string | null
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          ocr_confidence: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_hash?: string | null
+          file_name: string
+          file_size?: number
+          id?: string
+          mime_type: string
+          ocr_confidence?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_hash?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          ocr_confidence?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_documents_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "finance_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_entries: {
         Row: {
           amount: number
