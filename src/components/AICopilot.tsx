@@ -296,9 +296,8 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     };
 
     try {
-      // Detecta intenção analítica e chama crm-analytics antes do Claude
-      const analyticsCall = detectAnalyticsQuery(msg);
-      const analyticsData = analyticsCall ? await fetchAnalytics(analyticsCall) : null;
+      // Sempre tenta chamar crm-analytics antes do Claude
+      const analyticsData = await fetchAnalytics(msg);
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
