@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
