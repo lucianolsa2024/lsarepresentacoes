@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
 
