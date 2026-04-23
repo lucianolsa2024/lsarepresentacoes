@@ -5,9 +5,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLeft } from "lucide-react";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
+
+const STORAGE_KEY = "copilot_history";
+const MAX_STORED_MESSAGES = 50;
+
+function loadStoredHistory(): Msg[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(messages: Msg[]) {
+  try {
+    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
 const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-analytics`;
@@ -51,14 +74,25 @@ export function AICopilot({
   orders = [],
 }: AICopilotProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>(() => loadStoredHistory());
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Persist messages to localStorage (limited to last 50)
+  useEffect(() => {
+    saveHistory(messages);
+  }, [messages]);
+
+  const clearHistory = useCallback(() => {
+    setMessages([]);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  }, []);
 
   const getViewport = useCallback((): HTMLElement | null => {
     const root = scrollRef.current;
@@ -217,7 +251,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     const msg = text || input.trim();
     if (!msg || isLoading) return;
 
-    const userMsg: Msg = { role: "user", content: msg };
+    const userMsg: Msg = { role: "user", content: msg, timestamp: Date.now() };
     // Snapshot do histórico ANTES de adicionar a nova mensagem do usuário
     const historySnapshot = messagesRef.current;
     const fullConversation = [...historySnapshot, userMsg];
@@ -239,7 +273,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         if (last?.role === "assistant") {
           return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
         }
-        return [...prev, { role: "assistant", content: assistantSoFar }];
+        return [...prev, { role: "assistant", content: assistantSoFar, timestamp: Date.now() }];
       });
     };
 
@@ -251,7 +285,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       let params: any = {};
 
       const anoMatch = msg.match(/\b(202\d)\b/);
-      const ano = anoMatch ? parseInt(anoMatch[1]) : null;
+      let ano = anoMatch ? parseInt(anoMatch[1]) : null;
 
       // Captura nome de cliente após palavras-chave (cliente, para, do, da, pelo, by)
       const clienteKeywords = ["cliente ", "para ", "pelo cliente ", "pelo ", "da ", "do ", "by "];
@@ -285,6 +319,40 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         if (fallback) {
           cliente = fallback[1].toUpperCase();
           clienteMatchInfo = `fallback-caps="${fallback[1]}"`;
+        }
+      }
+
+      // Memória de contexto: se cliente não encontrado, herdar do histórico
+      if (!cliente) {
+        for (let i = historySnapshot.length - 1; i >= 0; i--) {
+          const prev = historySnapshot[i].content;
+          const prevLower = prev.toLowerCase();
+          for (const kw of clienteKeywords) {
+            const idx = prevLower.indexOf(kw);
+            if (idx !== -1) {
+              const after = prev.slice(idx + kw.length).trim();
+              const words = after.split(/\s+/).slice(0, 3).join(" ").replace(/[?!.,]/g, "");
+              if (words.length > 2) {
+                cliente = words.toUpperCase();
+                clienteMatchInfo = `herdado-do-histórico kw="${kw.trim()}" words="${words}"`;
+                console.log("[AICopilot] cliente herdado do histórico:", cliente);
+                break;
+              }
+            }
+          }
+          if (cliente) break;
+        }
+      }
+
+      // Memória de contexto: se ano não encontrado, herdar do histórico
+      if (!ano) {
+        for (let i = historySnapshot.length - 1; i >= 0; i--) {
+          const anoHist = historySnapshot[i].content.match(/\b(202\d)\b/);
+          if (anoHist) {
+            ano = parseInt(anoHist[1]);
+            console.log("[AICopilot] ano herdado do histórico:", ano);
+            break;
+          }
         }
       }
 
@@ -426,8 +494,23 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => setMessages([])}
-                  title="Limpar conversa"
+                  onClick={() => setShowHistory((v) => !v)}
+                  title={showHistory ? "Voltar ao chat" : "Ver histórico"}
+                >
+                  {showHistory ? (
+                    <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <History className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </Button>
+              )}
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={clearHistory}
+                  title="Limpar histórico"
                 >
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -435,7 +518,65 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
             </div>
           </div>
 
-          {/* Mensagens */}
+          {showHistory ? (
+            /* Painel de histórico */
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Histórico da conversa ({messages.length} mensagens)
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1"
+                  onClick={() => setShowHistory(false)}
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Fechar histórico
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-2 font-mono">
+                {messages.length === 0 ? (
+                  <p className="text-center text-xs text-muted-foreground py-6">
+                    Nenhuma mensagem no histórico.
+                  </p>
+                ) : (
+                  messages.map((m, i) => {
+                    const ts = m.timestamp
+                      ? new Date(m.timestamp).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
+                      : "—";
+                    const roleLabel = m.role === "user" ? "Você" : "Copilot";
+                    return (
+                      <div
+                        key={i}
+                        className="border border-border rounded-md p-2 bg-card text-[10px] leading-relaxed"
+                      >
+                        <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+                          <span className="text-[9px]">{ts}</span>
+                          <Badge
+                            variant={m.role === "user" ? "default" : "secondary"}
+                            className="text-[8px] h-4 px-1.5"
+                          >
+                            {roleLabel}
+                          </Badge>
+                        </div>
+                        <div className="whitespace-pre-wrap break-words text-foreground">
+                          {m.content}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+          /* Mensagens */
           <div className="relative flex-1 min-h-0 flex flex-col">
             <div
               ref={scrollRef as any}
@@ -503,6 +644,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               </Button>
             )}
           </div>
+          )}
 
           {/* Input */}
           <div className="border-t px-3 py-2 shrink-0">
