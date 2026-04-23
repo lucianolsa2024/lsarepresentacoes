@@ -200,6 +200,8 @@ export function AICopilot({
   const [userScrolled, setUserScrolled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<Msg[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const getViewport = useCallback((): HTMLElement | null => {
     const root = scrollRef.current;
