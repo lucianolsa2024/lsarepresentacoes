@@ -492,13 +492,13 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               <Badge variant="outline" className="text-[8px]">
                 {messages.filter((m) => m.role === "user").length} msgs
               </Badge>
-              {messages.length > 0 && (
+              {sessions.length > 0 && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => setShowHistory((v) => !v)}
-                  title={showHistory ? "Voltar ao chat" : "Ver histórico"}
+                  title={showHistory ? "Voltar ao chat" : "Ver sessões salvas"}
                 >
                   {showHistory ? (
                     <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
@@ -507,13 +507,13 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   )}
                 </Button>
               )}
-              {messages.length > 0 && (
+              {messages.length > 0 && !readOnly && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={clearHistory}
-                  title="Limpar histórico"
+                  onClick={archiveAndClear}
+                  title="Salvar e iniciar novo chat"
                 >
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -522,57 +522,68 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           </div>
 
           {showHistory ? (
-            /* Painel de histórico */
+            /* Painel de sessões salvas */
             <div className="flex-1 min-h-0 flex flex-col">
-              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
+              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                  Histórico da conversa ({messages.length} mensagens)
+                  Sessões salvas ({sessions.length})
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] gap-1"
-                  onClick={() => setShowHistory(false)}
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  Fechar histórico
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    onClick={startNewChat}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Novo chat
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    onClick={() => setShowHistory(false)}
+                  >
+                    <ArrowLeft className="h-3 w-3" />
+                    Voltar
+                  </Button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-2 font-mono">
-                {messages.length === 0 ? (
+              <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
+                {sessions.length === 0 ? (
                   <p className="text-center text-xs text-muted-foreground py-6">
-                    Nenhuma mensagem no histórico.
+                    Nenhuma sessão salva.
                   </p>
                 ) : (
-                  messages.map((m, i) => {
-                    const ts = m.timestamp
-                      ? new Date(m.timestamp).toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
-                      : "—";
-                    const roleLabel = m.role === "user" ? "Você" : "Copilot";
+                  sessions.map((s) => {
+                    const dateLabel = new Date(s.date).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    const firstUserMsg = s.messages.find((m) => m.role === "user");
+                    const preview = firstUserMsg
+                      ? firstUserMsg.content.slice(0, 80) +
+                        (firstUserMsg.content.length > 80 ? "…" : "")
+                      : "(sem mensagens)";
                     return (
-                      <div
-                        key={i}
-                        className="border border-border rounded-md p-2 bg-card text-[10px] leading-relaxed"
+                      <button
+                        key={s.id}
+                        onClick={() => openSession(s)}
+                        className="w-full text-left border border-border rounded-md p-2.5 bg-card hover:bg-accent transition-colors"
                       >
-                        <div className="flex items-center gap-2 mb-1 text-muted-foreground">
-                          <span className="text-[9px]">{ts}</span>
-                          <Badge
-                            variant={m.role === "user" ? "default" : "secondary"}
-                            className="text-[8px] h-4 px-1.5"
-                          >
-                            {roleLabel}
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-medium text-muted-foreground">
+                            {dateLabel}
+                          </span>
+                          <Badge variant="outline" className="text-[8px] h-4 px-1.5">
+                            {s.messages.length} msgs
                           </Badge>
                         </div>
-                        <div className="whitespace-pre-wrap break-words text-foreground">
-                          {m.content}
-                        </div>
-                      </div>
+                        <p className="text-xs text-foreground line-clamp-2">{preview}</p>
+                      </button>
                     );
                   })
                 )}
