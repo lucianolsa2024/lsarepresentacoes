@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bot, Send, Sparkles, Loader2, User, Trash2 } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -94,8 +94,33 @@ export function AICopilot({
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userScrolled, setUserScrolled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const getViewport = useCallback((): HTMLElement | null => {
+    const root = scrollRef.current;
+    if (!root) return null;
+    return (
+      (root.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null) || root
+    );
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const viewport = getViewport();
+    if (!viewport) return;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+    setUserScrolled(false);
+  }, [getViewport]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement | null;
+    const el = target || (e.currentTarget as HTMLElement);
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setUserScrolled(distanceFromBottom > 100);
+  }, []);
 
   const getContext = useCallback(() => {
   const today = new Date();
