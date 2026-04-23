@@ -359,7 +359,11 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     if (!msg || isLoading) return;
 
     const userMsg: Msg = { role: "user", content: msg };
-    setMessages((prev) => [...prev, userMsg]);
+    // Snapshot do histórico ANTES de adicionar a nova mensagem do usuário
+    const historySnapshot = messagesRef.current;
+    const fullConversation = [...historySnapshot, userMsg];
+
+    setMessages(fullConversation);
     setInput("");
     setIsLoading(true);
     setUserScrolled(false);
@@ -392,7 +396,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: [...messages, userMsg],
+          messages: fullConversation,
           context: getContext(),
           analytics_data: analyticsData,
         }),
