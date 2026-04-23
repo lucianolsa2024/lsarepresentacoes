@@ -201,11 +201,49 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
+  // Auto-scroll inteligente:
+  // - Se a última mensagem é do USUÁRIO → rola pro fim (mostra "digitando...")
+  // - Se é do ASSISTENTE e acabou de iniciar → rola até o início dela (topo da resposta)
+  // - Se é do ASSISTENTE e está crescendo → mantém posição (não persegue o fim)
+  const lastAssistantStartLenRef = useRef(0);
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const root = scrollRef.current;
+    if (!root) return;
+    // Radix ScrollArea: viewport real é um filho com data-radix-scroll-area-viewport
+    const viewport =
+      (root.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null) || root;
+
+    const last = messages[messages.length - 1];
+    if (!last) return;
+
+    if (last.role === "user") {
+      viewport.scrollTop = viewport.scrollHeight;
+      lastAssistantStartLenRef.current = 0;
+      return;
+    }
+
+    // Assistente: rola até o topo da última bolha somente no primeiro chunk
+    if (lastAssistantStartLenRef.current === 0) {
+      lastAssistantStartLenRef.current = last.content.length;
+      requestAnimationFrame(() => {
+        const bubbles = viewport.querySelectorAll<HTMLElement>("[data-msg-role='assistant']");
+        const target = bubbles[bubbles.length - 1];
+        if (target) {
+          const offset = target.offsetTop - viewport.offsetTop;
+          viewport.scrollTo({ top: Math.max(0, offset - 8), behavior: "smooth" });
+        }
+      });
     }
   }, [messages]);
+
+  // Reseta o marcador quando a conversa é limpa ou quando começa nova interação do usuário
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.role === "user") {
+      lastAssistantStartLenRef.current = 0;
+    }
+  }, [messages]);
+
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
@@ -360,7 +398,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                       <Bot className="h-3 w-3 text-primary" />
                     </div>
                   )}
-                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  <div data-msg-role={msg.role} className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                     {msg.role === "assistant" ? (
                       <div className="prose prose-xs prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
