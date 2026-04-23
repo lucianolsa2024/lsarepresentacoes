@@ -121,7 +121,10 @@ Quando o usuário pedir análises, use os dados fornecidos no contexto para:
 Sempre seja direto, prático e acionável. Responda em português brasileiro. Quando identificar uma oportunidade ou risco, sugira a ação específica a ser tomada.
 
 Contexto atual do sistema:
-${context}`;
+${context}
+
+=== DADOS ANALÍTICOS EM TEMPO REAL ===
+${analytics_data ? JSON.stringify(analytics_data, null, 2) : "Nenhum dado analítico disponível"}`;
 
     // Anthropic Messages API expects only user/assistant in `messages`,
     // and the system prompt as a separate top-level field.
