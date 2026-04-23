@@ -29,7 +29,7 @@ export function isWoodProduct(factory: string, category?: string): boolean {
   }
   return false;
 }
-}
+
 
 // Finish option from modulation_finishes table
 export interface ModulationFinish {
