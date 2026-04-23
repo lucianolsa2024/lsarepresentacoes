@@ -233,6 +233,10 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     };
 
     try {
+      // Detecta intenção analítica e chama crm-analytics antes do Claude
+      const analyticsCall = detectAnalyticsQuery(msg);
+      const analyticsData = analyticsCall ? await fetchAnalytics(analyticsCall) : null;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -242,6 +246,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         body: JSON.stringify({
           messages: [...messages, userMsg],
           context: getContext(),
+          analytics_data: analyticsData,
         }),
       });
 
