@@ -311,7 +311,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         params = { months: 6 };
       }
 
-      console.log("[AICopilot] query_type:", query_type, "| params:", params);
+      console.log("[AICopilot] query_type:", query_type, "| params:", JSON.stringify(params));
 
       if (query_type) {
         try {
@@ -323,11 +323,10 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
             },
             body: JSON.stringify({ query_type, params }),
           });
-          analyticsData = res.ok ? await res.json() : null;
-          console.log(
-            "[AICopilot] analyticsData:",
-            JSON.stringify(analyticsData)?.slice(0, 200),
-          );
+          console.log("[AICopilot] status crm-analytics:", res.status);
+          const rawText = await res.text();
+          console.log("[AICopilot] response raw:", rawText.slice(0, 500));
+          analyticsData = res.ok ? JSON.parse(rawText) : null;
         } catch (e) {
           console.error("[AICopilot] Erro ao buscar analytics:", e);
         }
