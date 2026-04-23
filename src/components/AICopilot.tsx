@@ -398,58 +398,62 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           </div>
 
           {/* Mensagens */}
-          <div className="relative flex-1 min-h-0">
-          <ScrollArea className="h-full px-4" ref={scrollRef as any} onScroll={handleScroll}>
-            <div className="py-3 space-y-3">
-              {messages.length === 0 && (
-                <div className="text-center py-6">
-                  <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
-                  <div className="flex flex-wrap gap-1.5 justify-center">
-                    {SUGGESTIONS.map((s) => (
-                      <button key={s} onClick={() => sendMessage(s)}
-                        className="text-[10px] px-2.5 py-1.5 rounded-full border border-border hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
-                        {s}
-                      </button>
-                    ))}
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <div
+              ref={scrollRef as any}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto min-h-0 px-4"
+            >
+              <div className="py-3 space-y-3">
+                {messages.length === 0 && (
+                  <div className="text-center py-6">
+                    <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      {SUGGESTIONS.map((s) => (
+                        <button key={s} onClick={() => sendMessage(s)}
+                          className="text-[10px] px-2.5 py-1.5 rounded-full border border-border hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "assistant" && (
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {msg.role === "assistant" && (
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
+                        <Bot className="h-3 w-3 text-primary" />
+                      </div>
+                    )}
+                    <div data-msg-role={msg.role} className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                      {msg.role === "assistant" ? (
+                        <div className="prose prose-xs prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      ) : msg.content}
+                    </div>
+                    {msg.role === "user" && (
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 mt-0.5">
+                        <User className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+                  <div className="flex gap-2">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                       <Bot className="h-3 w-3 text-primary" />
                     </div>
-                  )}
-                  <div data-msg-role={msg.role} className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                    {msg.role === "assistant" ? (
-                      <div className="prose prose-xs prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : msg.content}
-                  </div>
-                  {msg.role === "user" && (
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 mt-0.5">
-                      <User className="h-3 w-3" />
+                    <div className="bg-muted rounded-lg px-3 py-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                     </div>
-                  )}
-                </div>
-              ))}
-
-              {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex gap-2">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
-                    <Bot className="h-3 w-3 text-primary" />
                   </div>
-                  <div className="bg-muted rounded-lg px-3 py-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </ScrollArea>
             {userScrolled && (
               <Button
                 size="sm"
