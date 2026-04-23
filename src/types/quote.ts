@@ -17,7 +17,7 @@ export function isTableCategory(category: string): boolean {
   return lower.includes('mesa') || lower.includes('buffet');
 }
 
-// Helper to check if a product uses the new modulation_finishes system (CENTURY WOOD)
+
 // Helper to check if a product uses the modulation_finishes system (wood products)
 // Applies to: CENTURY WOOD, PV WOOD, and SOHOME tables/buffets/aparadores
 export function isWoodProduct(factory: string, category?: string): boolean {
