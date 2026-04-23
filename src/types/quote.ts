@@ -3,7 +3,6 @@ export const FABRIC_TIERS = ['SEM TEC', 'FORNECIDO', 'FX B', 'FX C', 'FX D', 'FX
 export type FabricTier = typeof FABRIC_TIERS[number];
 
 // Table finish tiers (mapped to existing price columns)
-// These map to: FX B, FX C, FX D, FX E, FX F respectively
 export const TABLE_TIERS = [
   { key: 'FX B' as FabricTier, label: 'Tampo: Vidro Fosco ou Clear / Corpo: Laca ou Lamina' },
   { key: 'FX C' as FabricTier, label: 'Tampo: Laca ou Lamina com ou sem Vidro Normal Pintado / Corpo: Laca ou Lamina' },
@@ -18,6 +17,20 @@ export function isTableCategory(category: string): boolean {
   return lower.includes('mesa') || lower.includes('buffet');
 }
 
+// Helper to check if a product uses the new modulation_finishes system (CENTURY WOOD)
+export function isWoodProduct(factory: string): boolean {
+  return factory?.toUpperCase().includes('CENTURY WOOD') ||
+         factory?.toUpperCase().includes('PV WOOD') ||
+         factory?.toUpperCase().includes('CENTURY WOOD');
+}
+
+// Finish option from modulation_finishes table
+export interface ModulationFinish {
+  id: string;
+  finishName: string;
+  price: number;
+}
+
 export interface ModulationSize {
   id: string;
   description: string;
@@ -25,9 +38,11 @@ export interface ModulationSize {
   length: string;
   depth: string;
   height: string;
-  base: string; // Extracted from description (e.g., "FOSCA/METALIZADO", "MTX")
+  base: string;
   fabricQuantity: number;
   prices: Record<FabricTier, number>;
+  // New: finishes from modulation_finishes table (CENTURY WOOD products)
+  finishes: ModulationFinish[];
 }
 
 export interface ProductModulation {
