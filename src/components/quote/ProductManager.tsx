@@ -181,6 +181,7 @@ export function ProductManager({
         base: '',
         fabricQuantity: 0,
         prices: convertPricesToNumbers(s.prices),
+        finishes: [],
       })),
     }));
 
