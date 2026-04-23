@@ -592,8 +592,8 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           ) : (
           <>
             {readOnly && (
-              <div className="px-3 py-2 border-b bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-medium text-yellow-900 dark:text-yellow-100">
+              <div className="px-3 py-2 border-b bg-warning/15 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-warning-foreground">
                   📂 Histórico — somente leitura
                 </span>
                 <Button
