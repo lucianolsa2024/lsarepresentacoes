@@ -1452,6 +1452,38 @@ export type Database = {
           },
         ]
       }
+      modulation_finishes: {
+        Row: {
+          created_at: string | null
+          finish_name: string
+          id: string
+          price: number
+          size_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          finish_name: string
+          id?: string
+          price: number
+          size_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          finish_name?: string
+          id?: string
+          price?: number
+          size_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modulation_finishes_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "modulation_sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modulation_sizes: {
         Row: {
           created_at: string | null
@@ -1862,6 +1894,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_finish_prices: {
+        Row: {
+          acabamento: string
+          created_at: string | null
+          id: string
+          modulacao: string
+          preco: number
+          product_code: string
+          product_name: string | null
+          tamanho: string
+        }
+        Insert: {
+          acabamento: string
+          created_at?: string | null
+          id?: string
+          modulacao: string
+          preco: number
+          product_code: string
+          product_name?: string | null
+          tamanho: string
+        }
+        Update: {
+          acabamento?: string
+          created_at?: string | null
+          id?: string
+          modulacao?: string
+          preco?: number
+          product_code?: string
+          product_name?: string | null
+          tamanho?: string
+        }
+        Relationships: []
+      }
       product_modulations: {
         Row: {
           created_at: string | null
@@ -1906,6 +1971,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          tipo_precificacao: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1919,6 +1985,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          tipo_precificacao?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1932,6 +1999,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          tipo_precificacao?: string | null
           updated_at?: string | null
         }
         Relationships: []
