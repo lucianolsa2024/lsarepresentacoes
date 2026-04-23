@@ -32,6 +32,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log("[ai-copilot] Body recebido (keys):", JSON.stringify(Object.keys(body)));
+    console.log("[ai-copilot] analytics_data presente:", !!body.analytics_data);
+    if (body.analytics_data) {
+      console.log("[ai-copilot] analytics_data preview:", JSON.stringify(body.analytics_data).slice(0, 500));
+    }
+
     const { messages, context, analytics_data } = body as {
       messages: InMessage[];
       context?: string;
@@ -132,9 +138,9 @@ NÃO inclua data da última venda, quantidade de dias parados, valores ou coluna
 
 Contexto atual do sistema:
 ${context}
-
-=== DADOS ANALÍTICOS EM TEMPO REAL ===
-${analytics_data ? JSON.stringify(analytics_data, null, 2) : "Nenhum dado analítico disponível"}`;
+${analytics_data
+  ? `\n\n=== DADOS REAIS DO BANCO (use estes para responder, NÃO invente) ===\n${JSON.stringify(analytics_data, null, 2)}`
+  : "\n\n=== DADOS ANALÍTICOS ===\nNenhum dado analítico disponível"}`;
 
     // Anthropic Messages API expects only user/assistant in `messages`,
     // and the system prompt as a separate top-level field.

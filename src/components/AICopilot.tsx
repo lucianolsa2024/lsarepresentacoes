@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -299,6 +299,9 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       // Sempre tenta chamar crm-analytics antes do Claude
       const analyticsData = await fetchAnalytics(msg);
 
+      console.log("[AICopilot] Analytics data:", JSON.stringify(analyticsData));
+      console.log("[AICopilot] Enviando para ai-copilot com analytics:", !!analyticsData);
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -368,6 +371,10 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogTitle className="sr-only">AI Copilot LSA</DialogTitle>
+          <DialogDescription className="sr-only">
+            Assistente de inteligência artificial para análise comercial
+          </DialogDescription>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
