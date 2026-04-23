@@ -10,9 +10,9 @@ interface ProductImageProps {
 }
 
 const sizeClasses = {
-  sm: 'w-10 h-10',
-  md: 'w-16 h-16',
-  lg: 'w-24 h-24',
+  sm: 'w-16 h-16',
+  md: 'w-20 h-20',
+  lg: 'w-28 h-28',
 };
 
 export function ProductImage({ productName, imageUrl, className, size = 'md' }: ProductImageProps) {
@@ -50,7 +50,7 @@ export function ProductImage({ productName, imageUrl, className, size = 'md' }: 
       alt={productName}
       className={cn(
         sizeClasses[size],
-        'object-cover rounded-md bg-muted',
+        'object-contain rounded-md bg-muted p-1',
         className
       )}
       onError={handleError}
