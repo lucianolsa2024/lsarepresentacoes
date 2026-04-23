@@ -590,8 +590,25 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               </div>
             </div>
           ) : (
-          /* Mensagens */
-          <div className="relative flex-1 min-h-0 flex flex-col">
+          <>
+            {readOnly && (
+              <div className="px-3 py-2 border-b bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-yellow-900 dark:text-yellow-100">
+                  📂 Histórico — somente leitura
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] gap-1"
+                  onClick={startNewChat}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Novo chat
+                </Button>
+              </div>
+            )}
+            {/* Mensagens */}
+            <div className="relative flex-1 min-h-0 flex flex-col">
             <div
               ref={scrollRef as any}
               onScroll={handleScroll}
