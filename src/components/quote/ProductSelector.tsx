@@ -68,13 +68,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
   }, [selectedModulation]);
 
   // Detectar tipo de produto
-  const isWood = useMemo(() => {
-  if (!selectedProduct) return false;
-  const hasFinishes = selectedProduct.modulations.some(m =>
-    m.sizes.some(s => s.finishes && s.finishes.length > 0)
-  );
-  return isWoodProduct(selectedProduct.factory, selectedProduct.category, hasFinishes);
-}, [selectedProduct]);
+  const isWood = useMemo(() => selectedProduct ? isWoodProduct(selectedProduct.factory) : false, [selectedProduct]);
   const isTable = useMemo(() => selectedProduct ? isTableCategory(selectedProduct.category) : false, [selectedProduct]);
   const isCarpet = useMemo(() => selectedProduct?.category === 'Tapetes', [selectedProduct]);
 
