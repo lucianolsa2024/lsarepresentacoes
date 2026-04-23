@@ -66,23 +66,6 @@ async function fetchAnalytics(msg: string): Promise<any | null> {
   }
 }
 
-async function fetchAnalytics(call: NonNullable<AnalyticsCall>): Promise<any | null> {
-  try {
-    const resp = await fetch(ANALYTICS_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify(call),
-    });
-    if (!resp.ok) return null;
-    return await resp.json();
-  } catch {
-    return null;
-  }
-}
-
 const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
   "Quais oportunidades estão paradas no funil?",
