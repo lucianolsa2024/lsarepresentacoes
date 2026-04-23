@@ -494,8 +494,23 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => setMessages([])}
-                  title="Limpar conversa"
+                  onClick={() => setShowHistory((v) => !v)}
+                  title={showHistory ? "Voltar ao chat" : "Ver histórico"}
+                >
+                  {showHistory ? (
+                    <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <History className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </Button>
+              )}
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={clearHistory}
+                  title="Limpar histórico"
                 >
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -503,7 +518,65 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
             </div>
           </div>
 
-          {/* Mensagens */}
+          {showHistory ? (
+            /* Painel de histórico */
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Histórico da conversa ({messages.length} mensagens)
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1"
+                  onClick={() => setShowHistory(false)}
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Fechar histórico
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-2 font-mono">
+                {messages.length === 0 ? (
+                  <p className="text-center text-xs text-muted-foreground py-6">
+                    Nenhuma mensagem no histórico.
+                  </p>
+                ) : (
+                  messages.map((m, i) => {
+                    const ts = m.timestamp
+                      ? new Date(m.timestamp).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
+                      : "—";
+                    const roleLabel = m.role === "user" ? "Você" : "Copilot";
+                    return (
+                      <div
+                        key={i}
+                        className="border border-border rounded-md p-2 bg-card text-[10px] leading-relaxed"
+                      >
+                        <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+                          <span className="text-[9px]">{ts}</span>
+                          <Badge
+                            variant={m.role === "user" ? "default" : "secondary"}
+                            className="text-[8px] h-4 px-1.5"
+                          >
+                            {roleLabel}
+                          </Badge>
+                        </div>
+                        <div className="whitespace-pre-wrap break-words text-foreground">
+                          {m.content}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+          /* Mensagens */
           <div className="relative flex-1 min-h-0 flex flex-col">
             <div
               ref={scrollRef as any}
