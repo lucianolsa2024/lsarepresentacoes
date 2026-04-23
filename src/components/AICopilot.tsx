@@ -381,7 +381,8 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           </div>
 
           {/* Mensagens */}
-          <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollRef as any}>
+          <div className="relative flex-1 min-h-0">
+          <ScrollArea className="h-full px-4" ref={scrollRef as any} onScroll={handleScroll}>
             <div className="py-3 space-y-3">
               {messages.length === 0 && (
                 <div className="text-center py-6">
