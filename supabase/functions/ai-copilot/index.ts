@@ -32,6 +32,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log("[ai-copilot] Body recebido (keys):", JSON.stringify(Object.keys(body)));
+    console.log("[ai-copilot] analytics_data presente:", !!body.analytics_data);
+    if (body.analytics_data) {
+      console.log("[ai-copilot] analytics_data preview:", JSON.stringify(body.analytics_data).slice(0, 500));
+    }
+
     const { messages, context, analytics_data } = body as {
       messages: InMessage[];
       context?: string;
