@@ -1,0 +1,321 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+interface Params {
+  start_date?: string;
+  end_date?: string;
+  marca?: string;
+  cliente?: string;
+  limit?: number;
+  days?: number;
+}
+
+const PAGE = 1000;
+
+async function fetchAll(supabase: any, build: (from: number, to: number) => any) {
+  const rows: any[] = [];
+  let from = 0;
+  // safety cap: 50k rows
+  for (let i = 0; i < 50; i++) {
+    const { data, error } = await build(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return rows;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!SUPABASE_URL || !SERVICE_ROLE) {
+      return json({ error: "Missing Supabase env vars" }, 500);
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body.query_type !== "string") {
+      return json({ error: "Body inválido. Esperado { query_type, params }" }, 400);
+    }
+
+    const { query_type } = body as { query_type: string };
+    const params: Params = body.params || {};
+
+    switch (query_type) {
+      case "monthly_comparison": {
+        const rows = await fetchAll(supabase, (from, to) => {
+          let q = supabase
+            .from("sellout_lsa")
+            .select("dt_emissao, marca, valor, quantidade")
+            .not("dt_emissao", "is", null)
+            .order("dt_emissao", { ascending: true })
+            .range(from, to);
+          if (params.start_date) q = q.gte("dt_emissao", params.start_date);
+          if (params.end_date) q = q.lte("dt_emissao", params.end_date);
+          if (params.marca) q = q.eq("marca", params.marca);
+          return q;
+        });
+
+        const map = new Map<string, { mes: string; marca: string; valor: number; quantidade: number; pedidos: number }>();
+        for (const r of rows) {
+          const mes = String(r.dt_emissao).slice(0, 7); // YYYY-MM
+          const marca = r.marca || "SEM MARCA";
+          const key = `${mes}|${marca}`;
+          const cur = map.get(key) || { mes, marca, valor: 0, quantidade: 0, pedidos: 0 };
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          cur.pedidos += 1;
+          map.set(key, cur);
+        }
+        const result = Array.from(map.values()).sort((a, b) =>
+          a.mes === b.mes ? a.marca.localeCompare(b.marca) : a.mes.localeCompare(b.mes),
+        );
+        return json({ query_type, count: result.length, data: result });
+      }
+
+      case "top_clients": {
+        const limit = Math.min(Math.max(Number(params.limit) || 20, 1), 200);
+        const rows = await fetchAll(supabase, (from, to) => {
+          let q = supabase
+            .from("sellout_lsa")
+            .select("cliente, marca, valor, quantidade, dt_emissao")
+            .not("cliente", "is", null)
+            .range(from, to);
+          if (params.start_date) q = q.gte("dt_emissao", params.start_date);
+          if (params.end_date) q = q.lte("dt_emissao", params.end_date);
+          if (params.marca) q = q.eq("marca", params.marca);
+          return q;
+        });
+
+        const map = new Map<string, { cliente: string; valor: number; quantidade: number; pedidos: number; marcas: Set<string> }>();
+        for (const r of rows) {
+          const cliente = r.cliente || "SEM CLIENTE";
+          const cur = map.get(cliente) || { cliente, valor: 0, quantidade: 0, pedidos: 0, marcas: new Set<string>() };
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          cur.pedidos += 1;
+          if (r.marca) cur.marcas.add(r.marca);
+          map.set(cliente, cur);
+        }
+        const result = Array.from(map.values())
+          .map((c) => ({ ...c, marcas: Array.from(c.marcas) }))
+          .sort((a, b) => b.valor - a.valor)
+          .slice(0, limit);
+        return json({ query_type, count: result.length, data: result });
+      }
+
+      case "products_no_sale": {
+        const days = Math.max(Number(params.days) || 90, 1);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+        const allRows = await fetchAll(supabase, (from, to) =>
+          supabase
+            .from("sellout_lsa")
+            .select("produto_completo, marca, categoria, dt_emissao")
+            .not("produto_completo", "is", null)
+            .range(from, to),
+        );
+
+        const lastSale = new Map<string, { produto: string; marca: string | null; categoria: string | null; ultima_venda: string | null }>();
+        for (const r of allRows) {
+          const key = r.produto_completo;
+          const cur = lastSale.get(key);
+          const dt = r.dt_emissao || null;
+          if (!cur) {
+            lastSale.set(key, { produto: key, marca: r.marca || null, categoria: r.categoria || null, ultima_venda: dt });
+          } else if (dt && (!cur.ultima_venda || dt > cur.ultima_venda)) {
+            cur.ultima_venda = dt;
+          }
+        }
+
+        const result = Array.from(lastSale.values())
+          .filter((p) => !p.ultima_venda || p.ultima_venda < cutoffStr)
+          .sort((a, b) => (a.ultima_venda || "").localeCompare(b.ultima_venda || ""));
+
+        return json({ query_type, cutoff_date: cutoffStr, count: result.length, data: result });
+      }
+
+      case "client_mix": {
+        if (!params.cliente) return json({ error: "params.cliente é obrigatório" }, 400);
+        const rows = await fetchAll(supabase, (from, to) => {
+          let q = supabase
+            .from("sellout_lsa")
+            .select("categoria, marca, valor, quantidade, dt_emissao")
+            .ilike("cliente", `%${params.cliente}%`)
+            .range(from, to);
+          if (params.start_date) q = q.gte("dt_emissao", params.start_date);
+          if (params.end_date) q = q.lte("dt_emissao", params.end_date);
+          return q;
+        });
+
+        const map = new Map<string, { categoria: string; marca: string; valor: number; quantidade: number; pedidos: number; ultima_compra: string | null }>();
+        for (const r of rows) {
+          const categoria = r.categoria || "SEM CATEGORIA";
+          const marca = r.marca || "SEM MARCA";
+          const key = `${categoria}|${marca}`;
+          const cur = map.get(key) || { categoria, marca, valor: 0, quantidade: 0, pedidos: 0, ultima_compra: null };
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          cur.pedidos += 1;
+          if (r.dt_emissao && (!cur.ultima_compra || r.dt_emissao > cur.ultima_compra)) {
+            cur.ultima_compra = r.dt_emissao;
+          }
+          map.set(key, cur);
+        }
+        const result = Array.from(map.values()).sort((a, b) => b.valor - a.valor);
+        return json({ query_type, cliente: params.cliente, count: result.length, data: result });
+      }
+
+      case "lookalike": {
+        if (!params.cliente) return json({ error: "params.cliente é obrigatório" }, 400);
+
+        // 1) Perfil do cliente alvo
+        const targetRows = await fetchAll(supabase, (from, to) =>
+          supabase
+            .from("sellout_lsa")
+            .select("categoria, marca, valor")
+            .ilike("cliente", `%${params.cliente}%`)
+            .range(from, to),
+        );
+        if (targetRows.length === 0) {
+          return json({ query_type, cliente: params.cliente, count: 0, data: [], message: "Cliente sem histórico" });
+        }
+        const targetCategorias = new Set<string>();
+        const targetMarcas = new Set<string>();
+        let targetValor = 0;
+        for (const r of targetRows) {
+          if (r.categoria) targetCategorias.add(r.categoria);
+          if (r.marca) targetMarcas.add(r.marca);
+          targetValor += Number(r.valor || 0);
+        }
+        const ticketAlvo = targetValor; // total histórico
+        const minValor = ticketAlvo * 0.5;
+        const maxValor = ticketAlvo * 2;
+
+        // 2) Todos os clientes
+        const allRows = await fetchAll(supabase, (from, to) =>
+          supabase
+            .from("sellout_lsa")
+            .select("cliente, categoria, marca, valor")
+            .not("cliente", "is", null)
+            .range(from, to),
+        );
+
+        const clientes = new Map<string, { cliente: string; valor: number; categorias: Set<string>; marcas: Set<string> }>();
+        for (const r of allRows) {
+          const cliente = r.cliente;
+          const cur = clientes.get(cliente) || { cliente, valor: 0, categorias: new Set<string>(), marcas: new Set<string>() };
+          cur.valor += Number(r.valor || 0);
+          if (r.categoria) cur.categorias.add(r.categoria);
+          if (r.marca) cur.marcas.add(r.marca);
+          clientes.set(cliente, cur);
+        }
+
+        const targetKey = (params.cliente || "").toLowerCase();
+        const result = Array.from(clientes.values())
+          .filter((c) => !c.cliente.toLowerCase().includes(targetKey))
+          .filter((c) => c.valor >= minValor && c.valor <= maxValor)
+          .map((c) => {
+            const catOverlap = Array.from(c.categorias).filter((x) => targetCategorias.has(x)).length;
+            const marcaOverlap = Array.from(c.marcas).filter((x) => targetMarcas.has(x)).length;
+            const score =
+              (catOverlap / Math.max(targetCategorias.size, 1)) * 0.6 +
+              (marcaOverlap / Math.max(targetMarcas.size, 1)) * 0.4;
+            return {
+              cliente: c.cliente,
+              valor_total: c.valor,
+              categorias: Array.from(c.categorias),
+              marcas: Array.from(c.marcas),
+              categorias_em_comum: catOverlap,
+              marcas_em_comum: marcaOverlap,
+              similaridade: Number(score.toFixed(3)),
+            };
+          })
+          .filter((c) => c.similaridade > 0)
+          .sort((a, b) => b.similaridade - a.similaridade)
+          .slice(0, Math.min(Number(params.limit) || 20, 100));
+
+        return json({
+          query_type,
+          cliente: params.cliente,
+          perfil_alvo: {
+            valor_total: ticketAlvo,
+            faixa_busca: { min: minValor, max: maxValor },
+            categorias: Array.from(targetCategorias),
+            marcas: Array.from(targetMarcas),
+          },
+          count: result.length,
+          data: result,
+        });
+      }
+
+      case "brand_comparison": {
+        const marcas = ["CENTURY", "PONTO VIRGULA", "TAPETES SC"];
+        const rows = await fetchAll(supabase, (from, to) => {
+          let q = supabase
+            .from("sellout_lsa")
+            .select("marca, valor, quantidade, cliente, categoria, dt_emissao")
+            .in("marca", marcas)
+            .range(from, to);
+          if (params.start_date) q = q.gte("dt_emissao", params.start_date);
+          if (params.end_date) q = q.lte("dt_emissao", params.end_date);
+          return q;
+        });
+
+        const agg = new Map<string, { marca: string; valor: number; quantidade: number; pedidos: number; clientes: Set<string>; categorias: Set<string> }>();
+        for (const m of marcas) {
+          agg.set(m, { marca: m, valor: 0, quantidade: 0, pedidos: 0, clientes: new Set(), categorias: new Set() });
+        }
+        for (const r of rows) {
+          const cur = agg.get(r.marca);
+          if (!cur) continue;
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          cur.pedidos += 1;
+          if (r.cliente) cur.clientes.add(r.cliente);
+          if (r.categoria) cur.categorias.add(r.categoria);
+        }
+        const totalValor = Array.from(agg.values()).reduce((s, x) => s + x.valor, 0);
+        const result = Array.from(agg.values()).map((c) => ({
+          marca: c.marca,
+          valor: c.valor,
+          quantidade: c.quantidade,
+          pedidos: c.pedidos,
+          clientes_unicos: c.clientes.size,
+          categorias_unicas: c.categorias.size,
+          ticket_medio: c.pedidos ? Number((c.valor / c.pedidos).toFixed(2)) : 0,
+          share_pct: totalValor ? Number(((c.valor / totalValor) * 100).toFixed(2)) : 0,
+        }));
+        return json({ query_type, periodo: { start: params.start_date, end: params.end_date }, total_valor: totalValor, data: result });
+      }
+
+      default:
+        return json({ error: `query_type inválido: ${query_type}` }, 400);
+    }
+  } catch (err) {
+    console.error("crm-analytics error:", err);
+    return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
+  }
+});
