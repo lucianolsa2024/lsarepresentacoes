@@ -18,12 +18,11 @@ export function isTableCategory(category: string): boolean {
 }
 
 
-// Helper to check if a product uses the modulation_finishes system (wood products)
-// Applies to: CENTURY WOOD, PV WOOD, and SOHOME tables/buffets/aparadores
-export function isWoodProduct(factory: string, category?: string): boolean {
+// Detecta produtos de madeira (CENTURY WOOD, PV WOOD, SOHOME mesas com modulation_finishes)
+export function isWoodProduct(factory: string, category?: string, hasFinishes?: boolean): boolean {
   const f = factory?.toUpperCase() || '';
   if (f.includes('CENTURY WOOD') || f.includes('PV WOOD')) return true;
-  if (f === 'SOHOME' && category) {
+  if (f === 'SOHOME' && category && hasFinishes) {
     const c = category.toLowerCase();
     return c.includes('mesa') || c.includes('buffet') || c.includes('aparador');
   }
