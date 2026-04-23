@@ -32,10 +32,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { messages, context } = body as { messages: InMessage[]; context?: string };
+    const { messages, context, analytics_data } = body as {
+      messages: InMessage[];
+      context?: string;
+      analytics_data?: unknown;
+    };
 
     // context é uma string longa já formatada pelo frontend (AICopilot.tsx)
-    // contendo métricas, atividades, clientes, etc. Incluída diretamente no prompt.
+    // analytics_data vem da edge function crm-analytics quando detectada intenção analítica
     const systemPrompt = `Você é o AI Copilot da LSA Representações, assistente especializado em gestão comercial de móveis e decoração de alto padrão B2B.
 
 ## SOBRE A LSA REPRESENTAÇÕES
@@ -117,7 +121,10 @@ Quando o usuário pedir análises, use os dados fornecidos no contexto para:
 Sempre seja direto, prático e acionável. Responda em português brasileiro. Quando identificar uma oportunidade ou risco, sugira a ação específica a ser tomada.
 
 Contexto atual do sistema:
-${context}`;
+${context}
+
+=== DADOS ANALÍTICOS EM TEMPO REAL ===
+${analytics_data ? JSON.stringify(analytics_data, null, 2) : "Nenhum dado analítico disponível"}`;
 
     // Anthropic Messages API expects only user/assistant in `messages`,
     // and the system prompt as a separate top-level field.

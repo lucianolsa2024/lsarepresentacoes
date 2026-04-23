@@ -10,6 +10,49 @@ import { Bot, Send, Sparkles, Loader2, User, Trash2 } from "lucide-react";
 type Msg = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
+const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-analytics`;
+
+type AnalyticsCall = { query_type: string; params: Record<string, any> } | null;
+
+/** Detecta intenção analítica na mensagem e devolve a query a executar (ou null). */
+function detectAnalyticsQuery(text: string): AnalyticsCall {
+  const t = text.toLowerCase();
+  const has = (...words: string[]) => words.some((w) => t.includes(w));
+
+  if (has("sem venda", "sem compra", "inativos", "parados")) {
+    return { query_type: "products_no_sale", params: { days: 90 } };
+  }
+  if (has("century vs", "compare", "comparar", "marcas", "brand")) {
+    return { query_type: "brand_comparison", params: { months: 3 } };
+  }
+  if (has("top clientes", "maiores clientes", "ranking clientes")) {
+    return { query_type: "top_clients", params: { limit: 10 } };
+  }
+  if (has("mensal", "comparativo", "evolução", "evolucao") || /\bm[êe]s\b/.test(t)) {
+    return { query_type: "monthly_comparison", params: { months: 6 } };
+  }
+  if (has("perfil", "similar", "parecido", "look")) {
+    return { query_type: "lookalike", params: { limit: 5 } };
+  }
+  return null;
+}
+
+async function fetchAnalytics(call: NonNullable<AnalyticsCall>): Promise<any | null> {
+  try {
+    const resp = await fetch(ANALYTICS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(call),
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch {
+    return null;
+  }
+}
 
 const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
@@ -190,6 +233,10 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     };
 
     try {
+      // Detecta intenção analítica e chama crm-analytics antes do Claude
+      const analyticsCall = detectAnalyticsQuery(msg);
+      const analyticsData = analyticsCall ? await fetchAnalytics(analyticsCall) : null;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -199,6 +246,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         body: JSON.stringify({
           messages: [...messages, userMsg],
           context: getContext(),
+          analytics_data: analyticsData,
         }),
       });
 
