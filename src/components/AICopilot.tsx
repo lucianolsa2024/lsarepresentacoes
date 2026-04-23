@@ -278,108 +278,68 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     };
 
     try {
-      // 1. Detectar intenção e buscar analytics
+      // 1. Extrair entidades via Claude (substitui regex)
       let analyticsData: any = null;
-      const lower = msg.toLowerCase();
+      let cliente: string | null = null;
+      let ano: number | null = null;
       let query_type: string | null = null;
       let params: any = {};
 
-      const anoMatch = msg.match(/\b(202\d)\b/);
-      let ano = anoMatch ? parseInt(anoMatch[1]) : null;
+      try {
+        const historyContext = historySnapshot
+          .slice(-6)
+          .map((m) => `${m.role === "user" ? "Usuário" : "Assistente"}: ${m.content}`)
+          .join("\n");
 
-      // Captura nome de cliente após palavras-chave (cliente, para, do, da, pelo, by)
-      const clienteKeywords = ["cliente ", "para ", "pelo cliente ", "pelo ", "da ", "do ", "by "];
-      let cliente: string | null = null;
-      let clienteMatchInfo: string | null = null;
-      for (const kw of clienteKeywords) {
-        const idx = lower.indexOf(kw);
-        if (idx !== -1) {
-          const after = msg.slice(idx + kw.length).trim();
-          const nameMatch = after.match(
-            /^([a-záéíóúâêîôûãõçA-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõçA-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]{2,40}?)(?:\s*[?!.,]|\s+(?:em|no|na|de|do|da|para|com|em\s)|$)/i,
-          );
-          if (nameMatch) {
-            cliente = nameMatch[1].trim().toUpperCase();
-            clienteMatchInfo = `kw="${kw.trim()}" match="${nameMatch[1]}"`;
-            break;
-          }
-          const words = after.split(/\s+/).slice(0, 3).join(" ").replace(/[?!.,]/g, "");
-          if (words.length > 2) {
-            cliente = words.toUpperCase();
-            clienteMatchInfo = `kw="${kw.trim()}" fallback-words="${words}"`;
-            break;
-          }
-        }
-      }
-      // Fallback: regex original (palavras capitalizadas)
-      if (!cliente) {
-        const fallback = msg.match(
-          /\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*){1,4})\b/,
-        );
-        if (fallback) {
-          cliente = fallback[1].toUpperCase();
-          clienteMatchInfo = `fallback-caps="${fallback[1]}"`;
-        }
-      }
+        const extractResp = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${BEARER}`,
+          },
+          body: JSON.stringify({
+            extract_only: true,
+            messages: [
+              {
+                role: "user",
+                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
+              },
+            ],
+          }),
+        });
 
-      // Memória de contexto: se cliente não encontrado, herdar do histórico
-      if (!cliente) {
-        for (let i = historySnapshot.length - 1; i >= 0; i--) {
-          const prev = historySnapshot[i].content;
-          const prevLower = prev.toLowerCase();
-          for (const kw of clienteKeywords) {
-            const idx = prevLower.indexOf(kw);
-            if (idx !== -1) {
-              const after = prev.slice(idx + kw.length).trim();
-              const words = after.split(/\s+/).slice(0, 3).join(" ").replace(/[?!.,]/g, "");
-              if (words.length > 2) {
-                cliente = words.toUpperCase();
-                clienteMatchInfo = `herdado-do-histórico kw="${kw.trim()}" words="${words}"`;
-                console.log("[AICopilot] cliente herdado do histórico:", cliente);
-                break;
-              }
-            }
-          }
-          if (cliente) break;
+        const extractText = await extractResp.text();
+        console.log("[AICopilot] resposta extract_only raw:", extractText.slice(0, 300));
+        const jsonMatch = extractText.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          const entities = JSON.parse(jsonMatch[0]);
+          cliente = entities.cliente || null;
+          ano = entities.ano || null;
+          query_type = entities.intent || null;
+          console.log("[AICopilot] entidades extraídas pelo Claude:", entities);
         }
+      } catch (e) {
+        console.error("[AICopilot] Erro ao extrair entidades:", e);
       }
 
-      // Memória de contexto: se ano não encontrado, herdar do histórico
-      if (!ano) {
-        for (let i = historySnapshot.length - 1; i >= 0; i--) {
-          const anoHist = historySnapshot[i].content.match(/\b(202\d)\b/);
-          if (anoHist) {
-            ano = parseInt(anoHist[1]);
-            console.log("[AICopilot] ano herdado do histórico:", ano);
-            break;
-          }
+      // 2. Montar params conforme intent
+      if (query_type === "client_top_product" || query_type === "client_history") {
+        if (!cliente) {
+          query_type = null; // sem cliente não há como consultar
+        } else {
+          params = { cliente, ano: ano || new Date().getFullYear() };
         }
-      }
-
-      console.log("[AICopilot] mensagem original:", msg);
-      console.log("[AICopilot] lower:", lower);
-      console.log("[AICopilot] clienteMatch info:", clienteMatchInfo);
-      console.log("[AICopilot] cliente extraído:", cliente);
-      console.log("[AICopilot] ano extraído:", ano);
-
-      if (cliente && lower.match(/produto|vendido|comprou|faixa|histórico|historico|compra/)) {
-        query_type = "client_top_product";
-        params = { cliente, ano: ano || 2025 };
-      } else if (lower.match(/compar|marca|century|ponto v|wood|brand/)) {
-        query_type = "brand_comparison";
+      } else if (query_type === "brand_comparison") {
         params = { months: 6 };
-      } else if (lower.match(/top|maior|ranking/)) {
-        query_type = "top_clients";
+      } else if (query_type === "top_clients") {
         params = { limit: 10 };
-      } else if (lower.match(/sem venda|parado|inativo/)) {
-        query_type = "products_no_sale";
+      } else if (query_type === "products_no_sale") {
         params = { days: 90 };
-      } else if (lower.match(/mês|mensal|comparativo|evolução/)) {
-        query_type = "monthly_comparison";
+      } else if (query_type === "monthly_comparison") {
         params = { months: 6 };
       }
 
-      console.log("[AICopilot] query_type:", query_type, "| params:", JSON.stringify(params));
+      console.log("[AICopilot] query_type final:", query_type, "| params:", JSON.stringify(params));
 
       if (query_type) {
         try {
