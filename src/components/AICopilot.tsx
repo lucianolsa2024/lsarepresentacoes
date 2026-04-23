@@ -12,132 +12,58 @@ type Msg = { role: "user" | "assistant"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
 const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-analytics`;
 
-type AnalyticsCall = { query_type: string; params: Record<string, any> } | null;
+const BEARER = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-/** Stopwords que nunca devem ser tratadas como nome de cliente. */
-const CLIENT_STOPWORDS = new Set([
-  "QUAL","QUAIS","QUE","COMO","QUANDO","ONDE","PORQUE","POR","PARA","COM","SEM",
-  "DOS","DAS","DEL","DOM","DUM","DUMA","UMA","UNS","UMAS","DOIS","TRES","TRÊS",
-  "PRODUTO","PRODUTOS","CLIENTE","CLIENTES","VENDA","VENDAS","VENDIDO","VENDIDA","VENDIDAS","VENDIDOS",
-  "COMPROU","COMPRA","COMPRAS","HISTORICO","HISTÓRICO","FAIXA","PRECO","PREÇO","PRECOS","PREÇOS",
-  "ANO","MES","MÊS","MARCA","MARCAS","CATEGORIA","CATEGORIAS","TECIDO","TECIDOS",
-  "PELO","PELA","PELOS","PELAS","DEU","FOI","TEM","TEVE","SEUS","SUAS",
-  "MAIS","MENOS","TOP","RANKING","TOTAL","VALOR","QUANTIDADE","QTD","QTDE",
-  "JANEIRO","FEVEREIRO","MARCO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO",
-  "AI","COPILOT","LSA","CRM","ERP","NF","PDF","XLSX",
-]);
+async function fetchAnalytics(msg: string): Promise<any | null> {
+  const lower = msg.toLowerCase();
+  let query_type: string | null = null;
+  let params: any = {};
 
-/** Limpa e valida um candidato a nome de cliente. */
-function cleanClientCandidate(raw: string): string | null {
-  const cleaned = raw
-    .replace(/\b(cliente|loja|empresa|fantasia|razao|razão|social|do|da|de|no|na)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-  if (!cleaned) return null;
-  const tokens = cleaned.split(" ").filter((t) => t.length >= 2 && !CLIENT_STOPWORDS.has(t));
-  if (tokens.length < 1) return null;
-  // Precisa ter pelo menos 1 token alfabético com 3+ letras
-  if (!tokens.some((t) => /[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}/.test(t))) return null;
-  return tokens.join(" ");
-}
+  // Extrair ano (2020-2029)
+  const anoMatch = msg.match(/\b(202[0-9])\b/);
+  const ano = anoMatch ? parseInt(anoMatch[1]) : null;
 
-/** Extrai possível nome de cliente: aspas, "cliente XYZ", ou sequência de palavras significativas. */
-function extractClientName(text: string): string | null {
-  // 1) Texto entre aspas (qualquer caixa)
-  const quoted = text.match(/["“”']([^"“”']{2,80})["“”']/);
-  if (quoted) {
-    const c = cleanClientCandidate(quoted[1]);
-    if (c) return c;
+  // Extrair nome do cliente — sequência de 2+ palavras maiúsculas
+  const clienteMatch = msg.match(/\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,})+)\b/);
+  const cliente = clienteMatch ? clienteMatch[1] : null;
+
+  if (
+    cliente &&
+    (lower.includes("produto") ||
+      lower.includes("vendido") ||
+      lower.includes("comprou") ||
+      lower.includes("faixa") ||
+      lower.includes("histórico") ||
+      lower.includes("historico"))
+  ) {
+    query_type = ano ? "client_top_product" : "client_history";
+    params = ano ? { cliente, ano } : { cliente };
+  } else if (lower.match(/compar|marca|century|ponto v[ií]rgula|wood|brand/)) {
+    query_type = "brand_comparison";
+    params = { months: 6 };
+  } else if (lower.match(/top|maior|ranking|melhor cliente/)) {
+    query_type = "top_clients";
+    params = { limit: 10 };
+  } else if (lower.match(/sem venda|parado|inativo|sem compra/)) {
+    query_type = "products_no_sale";
+    params = { days: 90 };
+  } else if (lower.match(/mês|mensal|comparativo|evolução|evolucao|período|periodo/)) {
+    query_type = "monthly_comparison";
+    params = { months: 6 };
   }
 
-  // 2) Padrão "cliente XYZ" / "loja XYZ" / "empresa XYZ" — captura até 5 palavras seguintes
-  const labeled = text.match(/\b(?:cliente|loja|empresa)\s+([A-Za-zÀ-ÿ&][\wÀ-ÿ&]*(?:\s+[A-Za-zÀ-ÿ&][\wÀ-ÿ&]*){0,4})/i);
-  if (labeled) {
-    const c = cleanClientCandidate(labeled[1]);
-    if (c) return c;
-  }
+  if (!query_type) return null;
 
-  // 3) 2+ palavras consecutivas em CAIXA ALTA (mín. 3 letras cada)
-  const upper = text.match(/\b([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ&]{2,}){1,5})\b/);
-  if (upper) {
-    const c = cleanClientCandidate(upper[1]);
-    if (c) return c;
+  try {
+    const res = await fetch(ANALYTICS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${BEARER}` },
+      body: JSON.stringify({ query_type, params }),
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
   }
-
-  // 4) Heurística agressiva: pega 2-4 palavras "significativas" (não-stopword) consecutivas
-  // Útil para "bella home", "casa & decor", etc. quando usuário escreve em minúsculo.
-  const words = text.split(/\s+/).map((w) => w.replace(/[^\wÀ-ÿ&]/g, ""));
-  let best: string[] = [];
-  let cur: string[] = [];
-  for (const w of words) {
-    const u = w.toUpperCase();
-    const isWord = /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ&][A-ZÁÉÍÓÚÂÊÔÃÕÇ&]{1,}$/.test(u);
-    if (isWord && !CLIENT_STOPWORDS.has(u) && !/^\d+$/.test(u)) {
-      cur.push(u);
-      if (cur.length > best.length) best = [...cur];
-    } else {
-      cur = [];
-    }
-  }
-  if (best.length >= 2) {
-    const c = cleanClientCandidate(best.join(" "));
-    if (c) return c;
-  }
-
-  return null;
-}
-
-function extractYear(text: string): number | null {
-  const m = text.match(/\b(20\d{2})\b/);
-  return m ? Number(m[1]) : null;
-}
-
-/** Detecta intenção analítica na mensagem e devolve a query a executar (ou null). */
-function detectAnalyticsQuery(text: string): AnalyticsCall {
-  const t = text.toLowerCase();
-  const has = (...words: string[]) => words.some((w) => t.includes(w));
-
-  const cliente = extractClientName(text);
-  const ano = extractYear(text);
-
-  // Palavras-chave que indicam intenção sobre produtos/compras de um cliente
-  const clientProductIntent = has(
-    "produto", "produtos", "vendido", "vendida", "vendidos", "vendidas",
-    "comprou", "compra", "compras", "histórico", "historico",
-    "faixa", "preço", "preco", "mais vendido", "top produto", "campeão", "campeao",
-    "mais comprou", "comprou mais", "todos os pedidos",
-  );
-  const yearMentioned = ano !== null;
-
-  // 1) Histórico do cliente (intenção explícita de histórico)
-  if (cliente && has("histórico", "historico", "mais comprou", "comprou mais", "todos os pedidos")) {
-    return { query_type: "client_history", params: ano ? { cliente, ano } : { cliente } };
-  }
-
-  // 2) Produto mais vendido / top produto por cliente (com ou sem ano)
-  if (cliente && (clientProductIntent || yearMentioned)) {
-    const params: Record<string, any> = { cliente };
-    if (ano) params.ano = ano;
-    return { query_type: "client_top_product", params };
-  }
-
-  if (has("sem venda", "sem compra", "inativos", "parados")) {
-    return { query_type: "products_no_sale", params: { days: 90 } };
-  }
-  if (has("century vs", "compare", "comparar", "marcas", "brand")) {
-    return { query_type: "brand_comparison", params: { months: 3 } };
-  }
-  if (has("top clientes", "maiores clientes", "ranking clientes")) {
-    return { query_type: "top_clients", params: { limit: 10 } };
-  }
-  if (has("mensal", "comparativo", "evolução", "evolucao") || /\bm[êe]s\b/.test(t)) {
-    return { query_type: "monthly_comparison", params: { months: 6 } };
-  }
-  if (has("perfil", "similar", "parecido", "look")) {
-    return { query_type: "lookalike", params: { limit: 5 } };
-  }
-  return null;
 }
 
 async function fetchAnalytics(call: NonNullable<AnalyticsCall>): Promise<any | null> {
