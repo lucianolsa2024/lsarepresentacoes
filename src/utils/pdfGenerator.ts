@@ -543,8 +543,14 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(`Forma: ${paymentMethodLabels[quote.payment.method]}`, 15, y);
   y += 5;
 
+  const planLabel = quote.payment.installmentPlan
+    ? `${quote.payment.installmentPlan} dias`
+    : `${quote.payment.installments}x`;
+
   if (quote.payment.method === 'parcelado') {
     const installmentValue = totalWithIpi / quote.payment.installments;
+    doc.text(`Prazo: ${planLabel}`, 15, y);
+    y += 5;
     doc.text(
       `${quote.payment.installments}x de ${formatCurrency(installmentValue)}`,
       15,
@@ -555,6 +561,8 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     const remaining = totalWithIpi - quote.payment.downPayment;
     const installmentValue = remaining / quote.payment.installments;
     doc.text(`Entrada: ${formatCurrency(quote.payment.downPayment)}`, 15, y);
+    y += 5;
+    doc.text(`Prazo: ${planLabel}`, 15, y);
     y += 5;
     doc.text(
       `${quote.payment.installments}x de ${formatCurrency(installmentValue)}`,
