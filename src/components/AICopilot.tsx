@@ -322,6 +322,40 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
         }
       }
 
+      // Memória de contexto: se cliente não encontrado, herdar do histórico
+      if (!cliente) {
+        for (let i = historySnapshot.length - 1; i >= 0; i--) {
+          const prev = historySnapshot[i].content;
+          const prevLower = prev.toLowerCase();
+          for (const kw of clienteKeywords) {
+            const idx = prevLower.indexOf(kw);
+            if (idx !== -1) {
+              const after = prev.slice(idx + kw.length).trim();
+              const words = after.split(/\s+/).slice(0, 3).join(" ").replace(/[?!.,]/g, "");
+              if (words.length > 2) {
+                cliente = words.toUpperCase();
+                clienteMatchInfo = `herdado-do-histórico kw="${kw.trim()}" words="${words}"`;
+                console.log("[AICopilot] cliente herdado do histórico:", cliente);
+                break;
+              }
+            }
+          }
+          if (cliente) break;
+        }
+      }
+
+      // Memória de contexto: se ano não encontrado, herdar do histórico
+      if (!ano) {
+        for (let i = historySnapshot.length - 1; i >= 0; i--) {
+          const anoHist = historySnapshot[i].content.match(/\b(202\d)\b/);
+          if (anoHist) {
+            ano = parseInt(anoHist[1]);
+            console.log("[AICopilot] ano herdado do histórico:", ano);
+            break;
+          }
+        }
+      }
+
       console.log("[AICopilot] mensagem original:", msg);
       console.log("[AICopilot] lower:", lower);
       console.log("[AICopilot] clienteMatch info:", clienteMatchInfo);
