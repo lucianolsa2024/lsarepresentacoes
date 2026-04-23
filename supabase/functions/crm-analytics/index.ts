@@ -20,6 +20,7 @@ interface Params {
   cliente?: string;
   limit?: number;
   days?: number;
+  ano?: number;
 }
 
 const PAGE = 1000;
@@ -309,6 +310,105 @@ Deno.serve(async (req) => {
           share_pct: totalValor ? Number(((c.valor / totalValor) * 100).toFixed(2)) : 0,
         }));
         return json({ query_type, periodo: { start: params.start_date, end: params.end_date }, total_valor: totalValor, data: result });
+      }
+
+      case "client_history": {
+        if (!params.cliente) return json({ error: "params.cliente é obrigatório" }, 400);
+        const ano = params.ano ? Number(params.ano) : null;
+        const start = ano ? `${ano}-01-01` : null;
+        const end = ano ? `${ano}-12-31` : null;
+
+        const rows = await fetchAll(supabase, (from, to) => {
+          let q = supabase
+            .from("sellout_lsa")
+            .select("produto_completo, marca, categoria, valor, quantidade, dt_emissao")
+            .ilike("cliente", `%${params.cliente}%`)
+            .not("produto_completo", "is", null)
+            .range(from, to);
+          if (start) q = q.gte("dt_emissao", start);
+          if (end) q = q.lte("dt_emissao", end);
+          return q;
+        });
+
+        const map = new Map<string, { produto_completo: string; marca: string; categoria: string | null; valor: number; quantidade: number; pedidos: number; ultima_compra: string | null }>();
+        for (const r of rows) {
+          const produto = r.produto_completo;
+          const marca = r.marca || "SEM MARCA";
+          const key = `${produto}|${marca}`;
+          const cur = map.get(key) || {
+            produto_completo: produto,
+            marca,
+            categoria: r.categoria || null,
+            valor: 0,
+            quantidade: 0,
+            pedidos: 0,
+            ultima_compra: null,
+          };
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          cur.pedidos += 1;
+          if (r.dt_emissao && (!cur.ultima_compra || r.dt_emissao > cur.ultima_compra)) {
+            cur.ultima_compra = r.dt_emissao;
+          }
+          map.set(key, cur);
+        }
+        const result = Array.from(map.values()).sort((a, b) => b.valor - a.valor);
+        const totalValor = result.reduce((s, x) => s + x.valor, 0);
+        const totalQtd = result.reduce((s, x) => s + x.quantidade, 0);
+        return json({
+          query_type,
+          cliente: params.cliente,
+          ano,
+          totals: { valor: totalValor, quantidade: totalQtd, produtos_distintos: result.length },
+          count: result.length,
+          data: result,
+        });
+      }
+
+      case "client_top_product": {
+        if (!params.cliente) return json({ error: "params.cliente é obrigatório" }, 400);
+        if (!params.ano) return json({ error: "params.ano é obrigatório" }, 400);
+        const ano = Number(params.ano);
+        const start = `${ano}-01-01`;
+        const end = `${ano}-12-31`;
+
+        const rows = await fetchAll(supabase, (from, to) =>
+          supabase
+            .from("sellout_lsa")
+            .select("produto_completo, marca, categoria, faixa_preco, tecido, valor, quantidade, dt_emissao")
+            .ilike("cliente", `%${params.cliente}%`)
+            .not("produto_completo", "is", null)
+            .gte("dt_emissao", start)
+            .lte("dt_emissao", end)
+            .range(from, to),
+        );
+
+        if (rows.length === 0) {
+          return json({ query_type, cliente: params.cliente, ano, data: null, message: "Sem vendas no período" });
+        }
+
+        const map = new Map<string, { produto_completo: string; marca: string; categoria: string | null; faixa_preco: string | null; tecido: string | null; valor: number; quantidade: number }>();
+        for (const r of rows) {
+          const key = r.produto_completo;
+          const cur = map.get(key) || {
+            produto_completo: r.produto_completo,
+            marca: r.marca || "SEM MARCA",
+            categoria: r.categoria || null,
+            faixa_preco: r.faixa_preco || null,
+            tecido: r.tecido || null,
+            valor: 0,
+            quantidade: 0,
+          };
+          cur.valor += Number(r.valor || 0);
+          cur.quantidade += Number(r.quantidade || 0);
+          // mantém última faixa/tecido vistos se não houver
+          if (!cur.faixa_preco && r.faixa_preco) cur.faixa_preco = r.faixa_preco;
+          if (!cur.tecido && r.tecido) cur.tecido = r.tecido;
+          map.set(key, cur);
+        }
+        const sorted = Array.from(map.values()).sort((a, b) => b.valor - a.valor);
+        const top = sorted[0];
+        return json({ query_type, cliente: params.cliente, ano, data: top });
       }
 
       default:

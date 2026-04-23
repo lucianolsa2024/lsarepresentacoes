@@ -14,10 +14,44 @@ const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-ana
 
 type AnalyticsCall = { query_type: string; params: Record<string, any> } | null;
 
+/** Extrai um possível nome de cliente: texto entre aspas OU sequência de palavras maiúsculas. */
+function extractClientName(text: string): string | null {
+  const quoted = text.match(/["“”']([^"“”']{2,80})["“”']/);
+  if (quoted) return quoted[1].trim().toUpperCase();
+
+  // 2+ palavras consecutivas em CAIXA ALTA (mín. 3 letras cada)
+  const upper = text.match(/\b([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ&]{2,}){1,5})\b/);
+  if (upper) return upper[1].trim();
+
+  return null;
+}
+
+function extractYear(text: string): number | null {
+  const m = text.match(/\b(20\d{2})\b/);
+  return m ? Number(m[1]) : null;
+}
+
 /** Detecta intenção analítica na mensagem e devolve a query a executar (ou null). */
 function detectAnalyticsQuery(text: string): AnalyticsCall {
   const t = text.toLowerCase();
   const has = (...words: string[]) => words.some((w) => t.includes(w));
+
+  const cliente = extractClientName(text);
+  const ano = extractYear(text);
+
+  // 1) Produto mais vendido por cliente em um ano específico (cliente + ano)
+  if (cliente && ano && has("mais vendido", "produto mais", "top produto", "campeão", "campeao") ) {
+    return { query_type: "client_top_product", params: { cliente, ano } };
+  }
+  // Heurística leve: cliente + ano sem outras intenções analíticas → top product do ano
+  if (cliente && ano && !has("compare", "comparar", "marcas", "ranking", "evolução", "evolucao", "mensal", "perfil", "similar", "parecido", "sem venda", "inativos", "parados")) {
+    return { query_type: "client_top_product", params: { cliente, ano } };
+  }
+
+  // 2) Histórico do cliente (com ou sem ano)
+  if (cliente && has("histórico", "historico", "mais comprou", "comprou mais", "todos os pedidos", "produto mais vendido")) {
+    return { query_type: "client_history", params: ano ? { cliente, ano } : { cliente } };
+  }
 
   if (has("sem venda", "sem compra", "inativos", "parados")) {
     return { query_type: "products_no_sale", params: { days: 90 } };
