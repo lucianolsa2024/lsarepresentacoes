@@ -18,15 +18,10 @@ export function isTableCategory(category: string): boolean {
 }
 
 
-// Detecta produtos de madeira (CENTURY WOOD, PV WOOD, SOHOME mesas com modulation_finishes)
-export function isWoodProduct(factory: string, category?: string, hasFinishes?: boolean): boolean {
+// Detecta produtos de madeira (CENTURY WOOD, PV WOOD)
+export function isWoodProduct(factory: string): boolean {
   const f = factory?.toUpperCase() || '';
-  if (f.includes('CENTURY WOOD') || f.includes('PV WOOD')) return true;
-  if (f === 'SOHOME' && category && hasFinishes) {
-    const c = category.toLowerCase();
-    return c.includes('mesa') || c.includes('buffet') || c.includes('aparador');
-  }
-  return false;
+  return f.includes('CENTURY WOOD') || f.includes('PV WOOD');
 }
 
 
