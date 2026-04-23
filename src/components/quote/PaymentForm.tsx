@@ -544,12 +544,12 @@ export function PaymentForm({ payment, onChange, subtotal }: PaymentFormProps) {
                 {payment.method === 'entrada_parcelas' && payment.downPayment > 0 && (
                   <div>Entrada: {formatCurrency(payment.downPayment)}</div>
                 )}
-                <div>
-                  {payment.installments > 1 
-                    ? `${payment.installments}x de ${formatCurrency(getInstallmentValue())} (${payment.installmentPlan} dias)`
-                    : `Pagamento em ${payment.installmentPlan} dias`
-                  }
-                </div>
+                <div>Prazo: {payment.installmentPlan} dias</div>
+                {payment.installments > 1 && (
+                  <div>
+                    {payment.installments}x de {formatCurrency(getInstallmentValue())}
+                  </div>
+                )}
               </div>
             )}
           </div>
