@@ -398,7 +398,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                       <Bot className="h-3 w-3 text-primary" />
                     </div>
                   )}
-                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  <div data-msg-role={msg.role} className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                     {msg.role === "assistant" ? (
                       <div className="prose prose-xs prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
