@@ -251,7 +251,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     const msg = text || input.trim();
     if (!msg || isLoading) return;
 
-    const userMsg: Msg = { role: "user", content: msg };
+    const userMsg: Msg = { role: "user", content: msg, timestamp: Date.now() };
     // Snapshot do histórico ANTES de adicionar a nova mensagem do usuário
     const historySnapshot = messagesRef.current;
     const fullConversation = [...historySnapshot, userMsg];
