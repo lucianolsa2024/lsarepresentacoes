@@ -14,58 +14,6 @@ const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-ana
 
 const BEARER = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-async function fetchAnalytics(msg: string): Promise<any | null> {
-  const lower = msg.toLowerCase();
-  let query_type: string | null = null;
-  let params: any = {};
-
-  // Extrair ano (2020-2029)
-  const anoMatch = msg.match(/\b(202[0-9])\b/);
-  const ano = anoMatch ? parseInt(anoMatch[1]) : null;
-
-  // Extrair nome do cliente — sequência de 2+ palavras maiúsculas
-  const clienteMatch = msg.match(/\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,})+)\b/);
-  const cliente = clienteMatch ? clienteMatch[1] : null;
-
-  if (
-    cliente &&
-    (lower.includes("produto") ||
-      lower.includes("vendido") ||
-      lower.includes("comprou") ||
-      lower.includes("faixa") ||
-      lower.includes("histórico") ||
-      lower.includes("historico"))
-  ) {
-    query_type = ano ? "client_top_product" : "client_history";
-    params = ano ? { cliente, ano } : { cliente };
-  } else if (lower.match(/compar|marca|century|ponto v[ií]rgula|wood|brand/)) {
-    query_type = "brand_comparison";
-    params = { months: 6 };
-  } else if (lower.match(/top|maior|ranking|melhor cliente/)) {
-    query_type = "top_clients";
-    params = { limit: 10 };
-  } else if (lower.match(/sem venda|parado|inativo|sem compra/)) {
-    query_type = "products_no_sale";
-    params = { days: 90 };
-  } else if (lower.match(/mês|mensal|comparativo|evolução|evolucao|período|periodo/)) {
-    query_type = "monthly_comparison";
-    params = { months: 6 };
-  }
-
-  if (!query_type) return null;
-
-  try {
-    const res = await fetch(ANALYTICS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${BEARER}` },
-      body: JSON.stringify({ query_type, params }),
-    });
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
-  }
-}
-
 const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
   "Quais oportunidades estão paradas no funil?",
