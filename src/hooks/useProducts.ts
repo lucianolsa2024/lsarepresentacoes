@@ -1,36 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Product, ProductModulation, ModulationSize, FabricTier } from '@/types/quote';
+import { Product, ProductModulation, ModulationSize, ModulationFinish, FabricTier } from '@/types/quote';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Helper to extract base from description
 const extractBaseFromDescription = (description: string): string => {
   const baseMatch = description.match(/BASE\/PE:\s*([A-Z\/]+)/i);
   return baseMatch ? baseMatch[1] : '';
 };
 
-// Helper to convert DB size to app format
-const dbSizeToApp = (size: {
-  id: string;
-  description: string;
-  dimensions: string | null;
-  length: string | null;
-  depth: string | null;
-  height: string | null;
-  fabric_quantity: number | null;
-  price_sem_tec: number | null;
-  price_fx_b: number | null;
-  price_fx_c: number | null;
-  price_fx_d: number | null;
-  price_fx_e: number | null;
-  price_fx_f: number | null;
-  price_fx_g: number | null;
-  price_fx_h: number | null;
-  price_fx_i: number | null;
-  price_fx_j: number | null;
-  price_fx_3d: number | null;
-  price_fx_couro: number | null;
-}): ModulationSize => ({
+const dbSizeToApp = (
+  size: {
+    id: string;
+    description: string;
+    dimensions: string | null;
+    length: string | null;
+    depth: string | null;
+    height: string | null;
+    fabric_quantity: number | null;
+    price_sem_tec: number | null;
+    price_fx_b: number | null;
+    price_fx_c: number | null;
+    price_fx_d: number | null;
+    price_fx_e: number | null;
+    price_fx_f: number | null;
+    price_fx_g: number | null;
+    price_fx_h: number | null;
+    price_fx_i: number | null;
+    price_fx_j: number | null;
+    price_fx_3d: number | null;
+    price_fx_couro: number | null;
+  },
+  finishes: ModulationFinish[] = []
+): ModulationSize => ({
   id: size.id,
   description: size.description,
   dimensions: size.dimensions || '',
@@ -54,6 +55,7 @@ const dbSizeToApp = (size: {
     'FX 3D': size.price_fx_3d || 0,
     'FX COURO': size.price_fx_couro || 0,
   },
+  finishes,
 });
 
 export function useProducts() {
@@ -63,18 +65,16 @@ export function useProducts() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Fetch products
+
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .order('name');
-      
       if (productsError) throw productsError;
-      
+
       const batchSize = 1000;
 
-      // Fetch modulations in batches to handle more than 1000 records
+      // Fetch modulations
       let allModulationsData: {
         id: string;
         product_id: string;
@@ -83,25 +83,24 @@ export function useProducts() {
         created_at: string | null;
       }[] = [];
       {
-        let modOffset = 0;
-        let modHasMore = true;
-        while (modHasMore) {
-          const { data: modBatch, error: modulationsError } = await supabase
+        let offset = 0, hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase
             .from('product_modulations')
             .select('*')
-            .range(modOffset, modOffset + batchSize - 1);
-          if (modulationsError) throw modulationsError;
-          if (modBatch && modBatch.length > 0) {
-            allModulationsData = [...allModulationsData, ...modBatch];
-            modOffset += batchSize;
-            modHasMore = modBatch.length === batchSize;
+            .range(offset, offset + batchSize - 1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allModulationsData = [...allModulationsData, ...data];
+            offset += batchSize;
+            hasMore = data.length === batchSize;
           } else {
-            modHasMore = false;
+            hasMore = false;
           }
         }
       }
-      
-      // Fetch sizes in batches to handle more than 1000 records
+
+      // Fetch sizes
       type SizeRow = {
         id: string;
         modulation_id: string;
@@ -126,63 +125,92 @@ export function useProducts() {
         created_at: string | null;
       };
       let allSizesData: SizeRow[] = [];
-      let offset = 0;
-      // batchSize already declared above
-      let hasMore = true;
-      
-      while (hasMore) {
-        const { data: sizeBatch, error: sizesError } = await supabase
-          .from('modulation_sizes')
-          .select('*')
-          .range(offset, offset + batchSize - 1);
-        
-        if (sizesError) throw sizesError;
-        
-        if (sizeBatch && sizeBatch.length > 0) {
-          allSizesData = [...(allSizesData || []), ...sizeBatch];
-          offset += batchSize;
-          hasMore = sizeBatch.length === batchSize;
-        } else {
-          hasMore = false;
+      {
+        let offset = 0, hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('modulation_sizes')
+            .select('*')
+            .range(offset, offset + batchSize - 1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allSizesData = [...allSizesData, ...data];
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
         }
       }
-      
-      // Group sizes by modulation_id
-      const sizesByModulation: Record<string, typeof allSizesData> = {};
-      allSizesData?.forEach(size => {
-        if (!sizesByModulation[size.modulation_id]) {
-          sizesByModulation[size.modulation_id] = [];
+
+      // Fetch finishes (modulation_finishes) — para produtos CENTURY WOOD / PV WOOD
+      type FinishRow = {
+        id: string;
+        size_id: string;
+        finish_name: string;
+        price: number;
+        created_at: string | null;
+      };
+      let allFinishesData: FinishRow[] = [];
+      {
+        let offset = 0, hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('modulation_finishes')
+            .select('*')
+            .range(offset, offset + batchSize - 1);
+          if (error) {
+            // Tabela pode não existir em ambientes antigos — ignorar erro
+            console.warn('modulation_finishes not available:', error.message);
+            hasMore = false;
+          } else if (data && data.length > 0) {
+            allFinishesData = [...allFinishesData, ...data];
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
         }
-        sizesByModulation[size.modulation_id].push(size);
-      });
-      
-      // Group modulations by product_id
-      const modulationsByProduct: Record<string, (typeof allModulationsData[0] & { sizes: ModulationSize[] })[]> = {};
-      allModulationsData?.forEach(mod => {
-        if (!modulationsByProduct[mod.product_id]) {
-          modulationsByProduct[mod.product_id] = [];
-        }
-        modulationsByProduct[mod.product_id].push({
-          ...mod,
-          sizes: (sizesByModulation[mod.id] || []).map(dbSizeToApp),
+      }
+
+      // Agrupar finishes por size_id
+      const finishesBySizeId: Record<string, ModulationFinish[]> = {};
+      allFinishesData.forEach(f => {
+        if (!finishesBySizeId[f.size_id]) finishesBySizeId[f.size_id] = [];
+        finishesBySizeId[f.size_id].push({
+          id: f.id,
+          finishName: f.finish_name,
+          price: f.price,
         });
       });
-      
-      // Extract unique bases from all sizes of a product
+
+      // Agrupar sizes por modulation_id
+      const sizesByModulation: Record<string, SizeRow[]> = {};
+      allSizesData.forEach(size => {
+        if (!sizesByModulation[size.modulation_id]) sizesByModulation[size.modulation_id] = [];
+        sizesByModulation[size.modulation_id].push(size);
+      });
+
+      // Agrupar modulations por product_id
+      const modulationsByProduct: Record<string, (typeof allModulationsData[0] & { sizes: ModulationSize[] })[]> = {};
+      allModulationsData.forEach(mod => {
+        if (!modulationsByProduct[mod.product_id]) modulationsByProduct[mod.product_id] = [];
+        modulationsByProduct[mod.product_id].push({
+          ...mod,
+          sizes: (sizesByModulation[mod.id] || []).map(s =>
+            dbSizeToApp(s, finishesBySizeId[s.id] || [])
+          ),
+        });
+      });
+
       const getProductBases = (productId: string): string[] => {
         const bases = new Set<string>();
-        const modulations = modulationsByProduct[productId] || [];
-        modulations.forEach(mod => {
-          mod.sizes.forEach(size => {
-            if (size.base) {
-              bases.add(size.base);
-            }
-          });
+        (modulationsByProduct[productId] || []).forEach(mod => {
+          mod.sizes.forEach(size => { if (size.base) bases.add(size.base); });
         });
         return Array.from(bases);
       };
-      
-      // Map to app format
+
       const mappedProducts: Product[] = (productsData || []).map(p => {
         const bases = getProductBases(p.id);
         return {
@@ -203,7 +231,7 @@ export function useProducts() {
           })),
         };
       });
-      
+
       setProducts(mappedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -219,7 +247,6 @@ export function useProducts() {
 
   const addProduct = async (product: Product) => {
     try {
-      // Insert product
       const { data: newProduct, error: productError } = await supabase
         .from('products')
         .insert({
@@ -232,24 +259,16 @@ export function useProducts() {
         })
         .select()
         .single();
-      
       if (productError) throw productError;
-      
-      // Insert modulations and their sizes
+
       for (const mod of product.modulations) {
         const { data: newMod, error: modError } = await supabase
           .from('product_modulations')
-          .insert({
-            product_id: newProduct.id,
-            name: mod.name,
-            description: mod.description,
-          })
+          .insert({ product_id: newProduct.id, name: mod.name, description: mod.description })
           .select()
           .single();
-        
         if (modError) throw modError;
-        
-        // Insert sizes for this modulation
+
         if (mod.sizes && mod.sizes.length > 0) {
           const sizesToInsert = mod.sizes.map(size => ({
             modulation_id: newMod.id,
@@ -272,15 +291,11 @@ export function useProducts() {
             price_fx_3d: size.prices['FX 3D'],
             price_fx_couro: size.prices['FX COURO'],
           }));
-          
-          const { error: sizesError } = await supabase
-            .from('modulation_sizes')
-            .insert(sizesToInsert);
-          
+          const { error: sizesError } = await supabase.from('modulation_sizes').insert(sizesToInsert);
           if (sizesError) throw sizesError;
         }
       }
-      
+
       await fetchProducts();
       toast.success('Produto adicionado com sucesso');
     } catch (error) {
@@ -291,7 +306,6 @@ export function useProducts() {
 
   const updateProduct = async (id: string, product: Product) => {
     try {
-      // Update product
       const { error: productError } = await supabase
         .from('products')
         .update({
@@ -303,31 +317,22 @@ export function useProducts() {
           available_bases: product.availableBases,
         })
         .eq('id', id);
-      
       if (productError) throw productError;
-      
-      // Delete existing modulations (cascade will delete sizes)
+
       const { error: deleteModError } = await supabase
         .from('product_modulations')
         .delete()
         .eq('product_id', id);
-      
       if (deleteModError) throw deleteModError;
-      
-      // Insert new modulations and sizes
+
       for (const mod of product.modulations) {
         const { data: newMod, error: modError } = await supabase
           .from('product_modulations')
-          .insert({
-            product_id: id,
-            name: mod.name,
-            description: mod.description,
-          })
+          .insert({ product_id: id, name: mod.name, description: mod.description })
           .select()
           .single();
-        
         if (modError) throw modError;
-        
+
         if (mod.sizes && mod.sizes.length > 0) {
           const sizesToInsert = mod.sizes.map(size => ({
             modulation_id: newMod.id,
@@ -350,15 +355,11 @@ export function useProducts() {
             price_fx_3d: size.prices['FX 3D'],
             price_fx_couro: size.prices['FX COURO'],
           }));
-          
-          const { error: sizesError } = await supabase
-            .from('modulation_sizes')
-            .insert(sizesToInsert);
-          
+          const { error: sizesError } = await supabase.from('modulation_sizes').insert(sizesToInsert);
           if (sizesError) throw sizesError;
         }
       }
-      
+
       await fetchProducts();
       toast.success('Produto atualizado com sucesso');
     } catch (error) {
@@ -369,13 +370,8 @@ export function useProducts() {
 
   const deleteProduct = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
-      
       await fetchProducts();
       toast.success('Produto excluído');
     } catch (error) {
@@ -384,12 +380,5 @@ export function useProducts() {
     }
   };
 
-  return {
-    products,
-    loading,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    refetch: fetchProducts,
-  };
+  return { products, loading, addProduct, updateProduct, deleteProduct, refetch: fetchProducts };
 }
