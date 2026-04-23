@@ -9,12 +9,18 @@ import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLe
 
 type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 
-const STORAGE_KEY = "copilot_history";
-const MAX_STORED_MESSAGES = 50;
+type Session = {
+  id: string;
+  date: string; // ISO
+  messages: Msg[];
+};
 
-function loadStoredHistory(): Msg[] {
+const SESSIONS_KEY = "copilot_sessions";
+const MAX_SESSIONS = 20;
+
+function loadSessions(): Session[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(SESSIONS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -23,13 +29,27 @@ function loadStoredHistory(): Msg[] {
   }
 }
 
-function saveHistory(messages: Msg[]) {
+function saveSessions(sessions: Session[]) {
   try {
-    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    const trimmed = sessions.slice(0, MAX_SESSIONS);
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
   } catch {
     // ignore storage errors
   }
+}
+
+function archiveCurrentSession(messages: Msg[]) {
+  if (messages.length === 0) return;
+  const session: Session = {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    date: new Date().toISOString(),
+    messages,
+  };
+  const existing = loadSessions();
+  saveSessions([session, ...existing]);
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
@@ -74,24 +94,47 @@ export function AICopilot({
   orders = [],
 }: AICopilotProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>(() => loadStoredHistory());
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
+  const [readOnly, setReadOnly] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Persist messages to localStorage (limited to last 50)
+  // Ao abrir o Copilot, sempre inicia chat novo (não carrega histórico)
   useEffect(() => {
-    saveHistory(messages);
-  }, [messages]);
+    if (open) {
+      setMessages([]);
+      setShowHistory(false);
+      setReadOnly(false);
+    }
+  }, [open]);
 
-  const clearHistory = useCallback(() => {
+  const startNewChat = useCallback(() => {
     setMessages([]);
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setReadOnly(false);
+    setShowHistory(false);
+  }, []);
+
+  const archiveAndClear = useCallback(() => {
+    const current = messagesRef.current;
+    if (current.length > 0) {
+      archiveCurrentSession(current);
+      setSessions(loadSessions());
+    }
+    setMessages([]);
+    setReadOnly(false);
+  }, []);
+
+  const openSession = useCallback((session: Session) => {
+    setMessages(session.messages);
+    setReadOnly(true);
+    setShowHistory(false);
   }, []);
 
   const getViewport = useCallback((): HTMLElement | null => {
@@ -449,13 +492,13 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               <Badge variant="outline" className="text-[8px]">
                 {messages.filter((m) => m.role === "user").length} msgs
               </Badge>
-              {messages.length > 0 && (
+              {sessions.length > 0 && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => setShowHistory((v) => !v)}
-                  title={showHistory ? "Voltar ao chat" : "Ver histórico"}
+                  title={showHistory ? "Voltar ao chat" : "Ver sessões salvas"}
                 >
                   {showHistory ? (
                     <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
@@ -464,13 +507,13 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   )}
                 </Button>
               )}
-              {messages.length > 0 && (
+              {messages.length > 0 && !readOnly && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={clearHistory}
-                  title="Limpar histórico"
+                  onClick={archiveAndClear}
+                  title="Salvar e iniciar novo chat"
                 >
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -479,65 +522,93 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           </div>
 
           {showHistory ? (
-            /* Painel de histórico */
+            /* Painel de sessões salvas */
             <div className="flex-1 min-h-0 flex flex-col">
-              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
+              <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                  Histórico da conversa ({messages.length} mensagens)
+                  Sessões salvas ({sessions.length})
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] gap-1"
-                  onClick={() => setShowHistory(false)}
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  Fechar histórico
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    onClick={startNewChat}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Novo chat
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    onClick={() => setShowHistory(false)}
+                  >
+                    <ArrowLeft className="h-3 w-3" />
+                    Voltar
+                  </Button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-2 font-mono">
-                {messages.length === 0 ? (
+              <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
+                {sessions.length === 0 ? (
                   <p className="text-center text-xs text-muted-foreground py-6">
-                    Nenhuma mensagem no histórico.
+                    Nenhuma sessão salva.
                   </p>
                 ) : (
-                  messages.map((m, i) => {
-                    const ts = m.timestamp
-                      ? new Date(m.timestamp).toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
-                      : "—";
-                    const roleLabel = m.role === "user" ? "Você" : "Copilot";
+                  sessions.map((s) => {
+                    const dateLabel = new Date(s.date).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    const firstUserMsg = s.messages.find((m) => m.role === "user");
+                    const preview = firstUserMsg
+                      ? firstUserMsg.content.slice(0, 80) +
+                        (firstUserMsg.content.length > 80 ? "…" : "")
+                      : "(sem mensagens)";
                     return (
-                      <div
-                        key={i}
-                        className="border border-border rounded-md p-2 bg-card text-[10px] leading-relaxed"
+                      <button
+                        key={s.id}
+                        onClick={() => openSession(s)}
+                        className="w-full text-left border border-border rounded-md p-2.5 bg-card hover:bg-accent transition-colors"
                       >
-                        <div className="flex items-center gap-2 mb-1 text-muted-foreground">
-                          <span className="text-[9px]">{ts}</span>
-                          <Badge
-                            variant={m.role === "user" ? "default" : "secondary"}
-                            className="text-[8px] h-4 px-1.5"
-                          >
-                            {roleLabel}
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-medium text-muted-foreground">
+                            {dateLabel}
+                          </span>
+                          <Badge variant="outline" className="text-[8px] h-4 px-1.5">
+                            {s.messages.length} msgs
                           </Badge>
                         </div>
-                        <div className="whitespace-pre-wrap break-words text-foreground">
-                          {m.content}
-                        </div>
-                      </div>
+                        <p className="text-xs text-foreground line-clamp-2">{preview}</p>
+                      </button>
                     );
                   })
                 )}
               </div>
             </div>
           ) : (
-          /* Mensagens */
-          <div className="relative flex-1 min-h-0 flex flex-col">
+          <>
+            {readOnly && (
+              <div className="px-3 py-2 border-b bg-warning/15 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-warning-foreground">
+                  📂 Histórico — somente leitura
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] gap-1"
+                  onClick={startNewChat}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Novo chat
+                </Button>
+              </div>
+            )}
+            {/* Mensagens */}
+            <div className="relative flex-1 min-h-0 flex flex-col">
             <div
               ref={scrollRef as any}
               onScroll={handleScroll}
@@ -604,27 +675,30 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               </Button>
             )}
           </div>
-          )}
 
           {/* Input */}
-          <div className="border-t px-3 py-2 shrink-0">
-            <div className="flex gap-2">
-              <Textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Pergunte sobre clientes, oportunidades, metas..."
-                className="min-h-[36px] max-h-[80px] resize-none text-xs"
-                rows={1}
-              />
-              <Button size="icon" className="h-9 w-9 shrink-0"
-                onClick={() => sendMessage()}
-                disabled={!input.trim() || isLoading}>
-                <Send className="h-3.5 w-3.5" />
-              </Button>
+          {!readOnly && (
+            <div className="border-t px-3 py-2 shrink-0">
+              <div className="flex gap-2">
+                <Textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Pergunte sobre clientes, oportunidades, metas..."
+                  className="min-h-[36px] max-h-[80px] resize-none text-xs"
+                  rows={1}
+                />
+                <Button size="icon" className="h-9 w-9 shrink-0"
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || isLoading}>
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
+          </>
+          )}
         </DialogContent>
       </Dialog>
     </>
