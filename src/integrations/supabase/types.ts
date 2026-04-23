@@ -2441,6 +2441,69 @@ export type Database = {
           },
         ]
       }
+      sellout_lsa: {
+        Row: {
+          categoria: string | null
+          cliente: string | null
+          cond_pgto: string | null
+          created_at: string | null
+          dimensoes: string | null
+          dt_cli: string | null
+          dt_emissao: string | null
+          faixa_preco: string | null
+          id: string
+          marca: string | null
+          numero_pedido: string | null
+          oc: string | null
+          produto_completo: string | null
+          quantidade: number | null
+          representante: string | null
+          tecido: string | null
+          tipo_pedido: string | null
+          valor: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          cliente?: string | null
+          cond_pgto?: string | null
+          created_at?: string | null
+          dimensoes?: string | null
+          dt_cli?: string | null
+          dt_emissao?: string | null
+          faixa_preco?: string | null
+          id?: string
+          marca?: string | null
+          numero_pedido?: string | null
+          oc?: string | null
+          produto_completo?: string | null
+          quantidade?: number | null
+          representante?: string | null
+          tecido?: string | null
+          tipo_pedido?: string | null
+          valor?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          cliente?: string | null
+          cond_pgto?: string | null
+          created_at?: string | null
+          dimensoes?: string | null
+          dt_cli?: string | null
+          dt_emissao?: string | null
+          faixa_preco?: string | null
+          id?: string
+          marca?: string | null
+          numero_pedido?: string | null
+          oc?: string | null
+          produto_completo?: string | null
+          quantidade?: number | null
+          representante?: string | null
+          tecido?: string | null
+          tipo_pedido?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       service_order_photos: {
         Row: {
           created_at: string
