@@ -101,18 +101,25 @@ function detectAnalyticsQuery(text: string): AnalyticsCall {
   const cliente = extractClientName(text);
   const ano = extractYear(text);
 
-  // 1) Produto mais vendido por cliente em um ano específico (cliente + ano)
-  if (cliente && ano && has("mais vendido", "produto mais", "top produto", "campeão", "campeao") ) {
-    return { query_type: "client_top_product", params: { cliente, ano } };
-  }
-  // Heurística leve: cliente + ano sem outras intenções analíticas → top product do ano
-  if (cliente && ano && !has("compare", "comparar", "marcas", "ranking", "evolução", "evolucao", "mensal", "perfil", "similar", "parecido", "sem venda", "inativos", "parados")) {
-    return { query_type: "client_top_product", params: { cliente, ano } };
+  // Palavras-chave que indicam intenção sobre produtos/compras de um cliente
+  const clientProductIntent = has(
+    "produto", "produtos", "vendido", "vendida", "vendidos", "vendidas",
+    "comprou", "compra", "compras", "histórico", "historico",
+    "faixa", "preço", "preco", "mais vendido", "top produto", "campeão", "campeao",
+    "mais comprou", "comprou mais", "todos os pedidos",
+  );
+  const yearMentioned = ano !== null;
+
+  // 1) Histórico do cliente (intenção explícita de histórico)
+  if (cliente && has("histórico", "historico", "mais comprou", "comprou mais", "todos os pedidos")) {
+    return { query_type: "client_history", params: ano ? { cliente, ano } : { cliente } };
   }
 
-  // 2) Histórico do cliente (com ou sem ano)
-  if (cliente && has("histórico", "historico", "mais comprou", "comprou mais", "todos os pedidos", "produto mais vendido")) {
-    return { query_type: "client_history", params: ano ? { cliente, ano } : { cliente } };
+  // 2) Produto mais vendido / top produto por cliente (com ou sem ano)
+  if (cliente && (clientProductIntent || yearMentioned)) {
+    const params: Record<string, any> = { cliente };
+    if (ano) params.ano = ano;
+    return { query_type: "client_top_product", params };
   }
 
   if (has("sem venda", "sem compra", "inativos", "parados")) {
