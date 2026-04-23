@@ -644,6 +644,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               </Button>
             )}
           </div>
+          )}
 
           {/* Input */}
           <div className="border-t px-3 py-2 shrink-0">
