@@ -299,6 +299,9 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       // Sempre tenta chamar crm-analytics antes do Claude
       const analyticsData = await fetchAnalytics(msg);
 
+      console.log("[AICopilot] Analytics data:", JSON.stringify(analyticsData));
+      console.log("[AICopilot] Enviando para ai-copilot com analytics:", !!analyticsData);
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
