@@ -32,10 +32,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { messages, context } = body as { messages: InMessage[]; context?: string };
+    const { messages, context, analytics_data } = body as {
+      messages: InMessage[];
+      context?: string;
+      analytics_data?: unknown;
+    };
 
     // context é uma string longa já formatada pelo frontend (AICopilot.tsx)
-    // contendo métricas, atividades, clientes, etc. Incluída diretamente no prompt.
+    // analytics_data vem da edge function crm-analytics quando detectada intenção analítica
     const systemPrompt = `Você é o AI Copilot da LSA Representações, assistente especializado em gestão comercial de móveis e decoração de alto padrão B2B.
 
 ## SOBRE A LSA REPRESENTAÇÕES
