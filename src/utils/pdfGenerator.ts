@@ -203,7 +203,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   console.log('Starting PDF generation with', quote.items.length, 'items');
   
   // Preload product images - prioritize storage URLs
-  // Create a map of productName -> imageUrl for unique products
   const productImageMap = new Map<string, string | null>();
   quote.items.forEach(item => {
     console.log('Item:', item.productName, 'imageUrl:', item.imageUrl);
@@ -216,7 +215,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     const cacheKey = imageUrl || productName;
     console.log('Loading image for:', productName, 'URL:', imageUrl);
     
-    // Try storage URL first if available
     if (imageUrl) {
       const base64 = await loadImageAsBase64(imageUrl);
       if (base64) {
@@ -226,7 +224,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
       }
     }
     
-    // Try local file
     const localUrl = getProductImageUrl(productName);
     console.log('Trying local URL:', localUrl);
     const localBase64 = await loadImageAsBase64(localUrl);
@@ -249,20 +246,17 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('pt-BR');
 
-  // ===== HEADER LAYOUT (similar to RD style) =====
-  // Logo on the left - true aspect ratio of source image (1000x546 ≈ 0.546)
+  // ===== HEADER =====
   const logoWidth = 38;
-  const logoHeight = logoWidth * 0.546; // ~20.7
+  const logoHeight = logoWidth * 0.546;
   const logoX = 15;
   doc.addImage(logoLsa, 'JPEG', logoX, y, logoWidth, logoHeight);
 
-  // Company info on the right (italic style)
   const rightX = pageWidth - 15;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bolditalic');
   doc.setTextColor(80);
   
-  // Representative name (if available)
   const representativeName = quote.payment.representativeName || 'Luciano Abreu';
   doc.text(representativeName, rightX, y + 3, { align: 'right' });
   
@@ -274,13 +268,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setTextColor(0);
   y += logoHeight + 10;
 
-  // Divider line
   doc.setDrawColor(200);
   doc.setLineWidth(0.3);
   doc.line(15, y, pageWidth - 15, y);
   y += 8;
 
-  // Title centered
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('ORÇAMENTO SOHOME', pageWidth / 2, y, { align: 'center' });
@@ -293,13 +285,12 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   });
   y += 10;
 
-  // Divider
   doc.setDrawColor(180);
   doc.setLineWidth(0.5);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
-  // Client Data
+  // ===== DADOS DO CLIENTE =====
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('DADOS DO CLIENTE', 15, y);
@@ -321,7 +312,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     y += 5;
   });
 
-  // Address
   const { address } = quote.client;
   if (address.street || address.city) {
     const addressParts = [
@@ -346,48 +336,46 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
-  // Items
+  // ===== ITENS DO ORÇAMENTO =====
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('ITENS DO ORÇAMENTO', 15, y);
   y += 8;
 
-// Table header — 2 linhas, larguras dimensionadas para valores longos
-  // Layout (margem 15→195 = 180mm úteis):
-  //  Item  Imagem  Descrição        | Qtd  | Unit.  | Total
-  //  15→20  20→44   44→118 (74mm)   118→132 132→160  160→195
+  // Layout colunas (180mm úteis: 15→195)
   const COL = {
-    item: 15,           // x início "#"
-    img: 20,            // x início imagem
-    desc: 44,           // x início descrição (74mm)
-    qtyC: 125,          // CENTRO Qtd  (118-132 = 14mm)
-    unitC: 146,         // CENTRO Unit. (132-160 = 28mm)
-    totalC: 177.5,      // CENTRO Total (160-195 = 35mm)
+    item: 15,
+    img: 20,
+    desc: 48,          // descrição começa depois da imagem maior
+    qtyC: 125,
+    unitC: 148,
+    totalC: 177.5,
   };
-  const COL_DIVIDERS = [20, 44, 118, 132, 160];
-  const IMG_SIZE = 22;
-  const ROW_MIN_H = IMG_SIZE + 6;
+  const COL_DIVIDERS = [20, 48, 118, 132, 160];
+
+  // FIX: imagem maior
+  const IMG_SIZE = 30;
+  const IMG_PADDING = 2;           // padding interno do fundo branco
+  const ROW_MIN_H = IMG_SIZE + 8;
   const HEADER_H = 12;
 
+  // Header escuro
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setFillColor(26, 26, 26);
   doc.setTextColor(255, 255, 255);
   doc.rect(15, y - 5, pageWidth - 30, HEADER_H, 'F');
 
-  // Linha 1 dos cabeçalhos (sem título "Item" — só o número aparece nas linhas)
   doc.text('#', COL.item + 1, y + 2);
   doc.text('Imagem', COL.img + 1, y + 2);
   doc.text('Descrição', COL.desc, y + 2);
   doc.text('Quanti-', COL.qtyC, y, { align: 'center' });
   doc.text('Preço', COL.unitC, y, { align: 'center' });
   doc.text('Preço', COL.totalC, y, { align: 'center' });
-  // Linha 2
   doc.text('dade', COL.qtyC, y + 4, { align: 'center' });
   doc.text('Unitário', COL.unitC, y + 4, { align: 'center' });
   doc.text('Total', COL.totalC, y + 4, { align: 'center' });
 
-  // Pipes brancos divisores no header
   doc.setDrawColor(255, 255, 255);
   doc.setLineWidth(0.2);
   COL_DIVIDERS.forEach((x) => doc.line(x, y - 5, x, y - 5 + HEADER_H));
@@ -396,6 +384,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += HEADER_H - 1;
 
   doc.setFont('helvetica', 'normal');
+
   quote.items.forEach((item, index) => {
     if (y > 230) { doc.addPage(); y = 20; }
 
@@ -410,16 +399,12 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
       `Tecido: ${item.fabricDescription} (${item.fabricTier})`,
     ].filter(Boolean).join(' | ');
 
-    const splitDetails = doc.splitTextToSize(details, 72);
+    const splitDetails = doc.splitTextToSize(details, 68);
     const textHeight = (splitDetails.length + 1) * 4.5 + 4;
     const rowH = Math.max(textHeight, ROW_MIN_H);
 
-    // Zebra suave
-    if (index % 2 === 0) {
-      doc.setFillColor(250, 250, 250);
-    } else {
-      doc.setFillColor(255, 255, 255);
-    }
+    // FIX: fundo sempre branco (sem zebra cinza)
+    doc.setFillColor(255, 255, 255);
     doc.rect(15, y - 2, pageWidth - 30, rowH, 'F');
 
     // Número do item
@@ -429,27 +414,46 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
     doc.text(`${index + 1}`, COL.item + 1, y + 4);
     doc.setTextColor(0);
 
-    // Imagem maior
+    // FIX: fundo branco explícito atrás da imagem + padding visual
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      COL.img - IMG_PADDING,
+      y - IMG_PADDING,
+      IMG_SIZE + IMG_PADDING * 2,
+      IMG_SIZE + IMG_PADDING * 2,
+      'F'
+    );
+
+    // FIX: imagem maior, centralizada no espaço com margem interna
     if (productImage) {
       try {
-        doc.addImage(productImage, 'JPEG', COL.img, y - 1, IMG_SIZE, IMG_SIZE);
+        doc.addImage(
+          productImage,
+          'JPEG',
+          COL.img + IMG_PADDING,
+          y + IMG_PADDING,
+          IMG_SIZE - IMG_PADDING * 2,
+          IMG_SIZE - IMG_PADDING * 2,
+          undefined,
+          'FAST'
+        );
       } catch { /* sem imagem */ }
     }
 
-    // Nome do produto em destaque
+    // Nome do produto
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20);
     doc.text(item.productName, COL.desc, y + 3);
 
-    // Detalhes técnicos abaixo do nome
+    // Detalhes técnicos
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(100);
     doc.text(splitDetails, COL.desc, y + 8);
     doc.setTextColor(0);
 
-    // Qtd / Preços (centralizados, com auto-shrink se valor exceder largura)
+    // Qtd / Preços
     const displayPrice = getDisplayPrice(item);
     const drawCentered = (text: string, cx: number, ty: number, maxW: number, baseSize: number, bold = false) => {
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -481,13 +485,13 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
       doc.setTextColor(0);
     }
 
-    // Pipes verticais cinzas entre as colunas (na altura da linha)
+    // Divisores verticais
     doc.setDrawColor(220);
     doc.setLineWidth(0.2);
     const rowTop = y - rowH - 2;
     COL_DIVIDERS.forEach((x) => doc.line(x, rowTop, x, y));
 
-    // Linha divisória horizontal entre itens
+    // Divisória horizontal
     doc.line(15, y, pageWidth - 15, y);
     y += 2;
   });
@@ -497,12 +501,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
-  // Calculate IPI (3.25% on total)
+  // ===== TOTAIS =====
   const ipiRate = 0.0325;
   const ipiValue = quote.total * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
 
-  // Totals - only show IPI and final total (no subtotal or discount lines)
   y += 8;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -511,7 +514,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(formatCurrency(ipiValue), pageWidth - 15, y, { align: 'right' });
   y += 8;
 
-  // Caixa total escura
   doc.setFillColor(26, 26, 26);
   doc.roundedRect(110, y - 5, pageWidth - 125, 12, 2, 2, 'F');
   doc.setFontSize(10);
@@ -522,12 +524,13 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setTextColor(0);
   y += 16;
 
-  // Payment Conditions
+  // ===== CONDIÇÕES DE PAGAMENTO =====
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
 
   doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.text('CONDIÇÕES DE PAGAMENTO', 15, y);
   y += 7;
 
@@ -575,16 +578,6 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.text(`Prazo de embarque: ${quote.payment.deliveryDays} dias corridos`, 15, y);
   y += 5;
 
-  // TODO: Cálculo automático de data de entrega desabilitado temporariamente
-  // if (quote.payment.estimatedClosingDate) {
-  //   const closingDate = new Date(quote.payment.estimatedClosingDate);
-  //   const deliveryDate = addDays(closingDate, quote.payment.deliveryDays);
-  //   const formattedDelivery = format(deliveryDate, 'dd/MM/yyyy');
-  //   doc.text(`Previsão de entrega: ${formattedDelivery}`, 15, y);
-  //   y += 5;
-  // }
-
-  // Carrier and freight type
   const freightType = quote.payment.freightType || 'CIF';
   const freightLabel = freightType === 'CIF' ? 'CIF (Frete Pago)' : 'FOB (Frete a Pagar)';
   if (quote.payment.carrier) {
@@ -607,7 +600,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
 
   y += 12;
 
-  // Footer
+  // ===== RODAPÉ =====
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 8;
@@ -618,6 +611,5 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 4;
   doc.text('Prazo de entrega em dias corridos, sujeito a alteração.', 15, y);
 
-  // Save
   doc.save(getQuoteFileName(quote));
 }
