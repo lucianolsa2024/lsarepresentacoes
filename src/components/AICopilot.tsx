@@ -9,12 +9,18 @@ import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLe
 
 type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 
-const STORAGE_KEY = "copilot_history";
-const MAX_STORED_MESSAGES = 50;
+type Session = {
+  id: string;
+  date: string; // ISO
+  messages: Msg[];
+};
 
-function loadStoredHistory(): Msg[] {
+const SESSIONS_KEY = "copilot_sessions";
+const MAX_SESSIONS = 20;
+
+function loadSessions(): Session[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(SESSIONS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -23,13 +29,27 @@ function loadStoredHistory(): Msg[] {
   }
 }
 
-function saveHistory(messages: Msg[]) {
+function saveSessions(sessions: Session[]) {
   try {
-    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    const trimmed = sessions.slice(0, MAX_SESSIONS);
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
   } catch {
     // ignore storage errors
   }
+}
+
+function archiveCurrentSession(messages: Msg[]) {
+  if (messages.length === 0) return;
+  const session: Session = {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    date: new Date().toISOString(),
+    messages,
+  };
+  const existing = loadSessions();
+  saveSessions([session, ...existing]);
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
