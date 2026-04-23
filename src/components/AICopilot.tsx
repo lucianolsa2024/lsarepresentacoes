@@ -285,7 +285,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       let params: any = {};
 
       const anoMatch = msg.match(/\b(202\d)\b/);
-      const ano = anoMatch ? parseInt(anoMatch[1]) : null;
+      let ano = anoMatch ? parseInt(anoMatch[1]) : null;
 
       // Captura nome de cliente após palavras-chave (cliente, para, do, da, pelo, by)
       const clienteKeywords = ["cliente ", "para ", "pelo cliente ", "pelo ", "da ", "do ", "by "];
