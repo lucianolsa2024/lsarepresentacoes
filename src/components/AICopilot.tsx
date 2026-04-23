@@ -5,9 +5,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLeft } from "lucide-react";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
+
+const STORAGE_KEY = "copilot_history";
+const MAX_STORED_MESSAGES = 50;
+
+function loadStoredHistory(): Msg[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(messages: Msg[]) {
+  try {
+    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
 const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-analytics`;
