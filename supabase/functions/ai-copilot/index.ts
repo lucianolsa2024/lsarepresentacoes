@@ -38,6 +38,46 @@ Deno.serve(async (req) => {
       console.log("[ai-copilot] analytics_data preview:", JSON.stringify(body.analytics_data).slice(0, 500));
     }
 
+    // === MODO EXTRACT_ONLY: extração de entidades, sem streaming ===
+    if (body.extract_only) {
+      console.log("[ai-copilot] modo extract_only ativo");
+      const extractMessages = body.messages
+        .filter((m: InMessage) => m.role === "user" || m.role === "assistant")
+        .map((m: InMessage) => ({ role: m.role, content: m.content }));
+
+      const extractResp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 200,
+          system:
+            "Você extrai entidades de mensagens comerciais. Responda APENAS com JSON puro, sem markdown, sem explicação.",
+          messages: extractMessages,
+        }),
+      });
+
+      if (!extractResp.ok) {
+        const errText = await extractResp.text().catch(() => "");
+        console.error("[ai-copilot] extract_only Anthropic error:", extractResp.status, errText);
+        return new Response(JSON.stringify({ cliente: null, ano: null, intent: null }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extractJson = await extractResp.json();
+      const text =
+        extractJson.content?.[0]?.type === "text" ? extractJson.content[0].text : "{}";
+      console.log("[ai-copilot] extract_only resultado:", text);
+      return new Response(text, {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { messages, context, analytics_data } = body as {
       messages: InMessage[];
       context?: string;
