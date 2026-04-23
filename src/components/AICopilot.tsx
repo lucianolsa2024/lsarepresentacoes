@@ -14,58 +14,6 @@ const ANALYTICS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-ana
 
 const BEARER = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-async function fetchAnalytics(msg: string): Promise<any | null> {
-  const lower = msg.toLowerCase();
-  let query_type: string | null = null;
-  let params: any = {};
-
-  // Extrair ano (2020-2029)
-  const anoMatch = msg.match(/\b(202[0-9])\b/);
-  const ano = anoMatch ? parseInt(anoMatch[1]) : null;
-
-  // Extrair nome do cliente — sequência de 2+ palavras maiúsculas
-  const clienteMatch = msg.match(/\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{2,})+)\b/);
-  const cliente = clienteMatch ? clienteMatch[1] : null;
-
-  if (
-    cliente &&
-    (lower.includes("produto") ||
-      lower.includes("vendido") ||
-      lower.includes("comprou") ||
-      lower.includes("faixa") ||
-      lower.includes("histórico") ||
-      lower.includes("historico"))
-  ) {
-    query_type = ano ? "client_top_product" : "client_history";
-    params = ano ? { cliente, ano } : { cliente };
-  } else if (lower.match(/compar|marca|century|ponto v[ií]rgula|wood|brand/)) {
-    query_type = "brand_comparison";
-    params = { months: 6 };
-  } else if (lower.match(/top|maior|ranking|melhor cliente/)) {
-    query_type = "top_clients";
-    params = { limit: 10 };
-  } else if (lower.match(/sem venda|parado|inativo|sem compra/)) {
-    query_type = "products_no_sale";
-    params = { days: 90 };
-  } else if (lower.match(/mês|mensal|comparativo|evolução|evolucao|período|periodo/)) {
-    query_type = "monthly_comparison";
-    params = { months: 6 };
-  }
-
-  if (!query_type) return null;
-
-  try {
-    const res = await fetch(ANALYTICS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${BEARER}` },
-      body: JSON.stringify({ query_type, params }),
-    });
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
-  }
-}
-
 const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
   "Quais oportunidades estão paradas no funil?",
@@ -296,17 +244,68 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     };
 
     try {
-      // Sempre tenta chamar crm-analytics antes do Claude
-      const analyticsData = await fetchAnalytics(msg);
+      // 1. Detectar intenção e buscar analytics
+      let analyticsData: any = null;
+      const lower = msg.toLowerCase();
+      let query_type: string | null = null;
+      let params: any = {};
 
-      console.log("[AICopilot] Analytics data:", JSON.stringify(analyticsData));
-      console.log("[AICopilot] Enviando para ai-copilot com analytics:", !!analyticsData);
+      const anoMatch = msg.match(/\b(202\d)\b/);
+      const ano = anoMatch ? parseInt(anoMatch[1]) : null;
 
+      // Captura nome de cliente (CamelCase ou misto): 2-5 palavras iniciadas em maiúscula
+      const clienteMatch = msg.match(
+        /\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*){1,4})\b/i,
+      );
+      const cliente = clienteMatch ? clienteMatch[1].toUpperCase() : null;
+
+      console.log("[AICopilot] cliente detectado:", cliente, "| ano:", ano);
+
+      if (cliente && lower.match(/produto|vendido|comprou|faixa|histórico|historico|compra/)) {
+        query_type = "client_top_product";
+        params = { cliente, ano: ano || 2025 };
+      } else if (lower.match(/compar|marca|century|ponto v|wood|brand/)) {
+        query_type = "brand_comparison";
+        params = { months: 6 };
+      } else if (lower.match(/top|maior|ranking/)) {
+        query_type = "top_clients";
+        params = { limit: 10 };
+      } else if (lower.match(/sem venda|parado|inativo/)) {
+        query_type = "products_no_sale";
+        params = { days: 90 };
+      } else if (lower.match(/mês|mensal|comparativo|evolução/)) {
+        query_type = "monthly_comparison";
+        params = { months: 6 };
+      }
+
+      console.log("[AICopilot] query_type:", query_type, "| params:", params);
+
+      if (query_type) {
+        try {
+          const res = await fetch(ANALYTICS_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${BEARER}`,
+            },
+            body: JSON.stringify({ query_type, params }),
+          });
+          analyticsData = res.ok ? await res.json() : null;
+          console.log(
+            "[AICopilot] analyticsData:",
+            JSON.stringify(analyticsData)?.slice(0, 200),
+          );
+        } catch (e) {
+          console.error("[AICopilot] Erro ao buscar analytics:", e);
+        }
+      }
+
+      // 2. Enviar para Claude com analytics
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${BEARER}`,
         },
         body: JSON.stringify({
           messages: fullConversation,
