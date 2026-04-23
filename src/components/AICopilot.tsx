@@ -74,14 +74,25 @@ export function AICopilot({
   orders = [],
 }: AICopilotProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>(() => loadStoredHistory());
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Persist messages to localStorage (limited to last 50)
+  useEffect(() => {
+    saveHistory(messages);
+  }, [messages]);
+
+  const clearHistory = useCallback(() => {
+    setMessages([]);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  }, []);
 
   const getViewport = useCallback((): HTMLElement | null => {
     const root = scrollRef.current;
