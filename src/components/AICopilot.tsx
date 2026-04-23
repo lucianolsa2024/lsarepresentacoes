@@ -367,7 +367,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
