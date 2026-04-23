@@ -433,6 +433,17 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
               )}
             </div>
           </ScrollArea>
+            {userScrolled && (
+              <Button
+                size="sm"
+                onClick={() => scrollToBottom("smooth")}
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 h-7 rounded-full shadow-md text-[10px] gap-1 px-3"
+              >
+                <ArrowDown className="h-3 w-3" />
+                Nova resposta
+              </Button>
+            )}
+          </div>
 
           {/* Input */}
           <div className="border-t px-3 py-2">
