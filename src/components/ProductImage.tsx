@@ -4,32 +4,42 @@ import { cn } from '@/lib/utils';
 
 interface ProductImageProps {
   productName: string;
-  imageUrl?: string | null;
+  imageUrl?: string | null; // Storage URL takes priority
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
 const sizeClasses = {
-  sm: 'w-16 h-16',   // era w-10 h-10 — aumentado
-  md: 'w-20 h-20',   // era w-16 h-16
-  lg: 'w-28 h-28',   // era w-24 h-24
+  sm: 'w-10 h-10',
+  md: 'w-16 h-16',
+  lg: 'w-24 h-24',
 };
 
 export function ProductImage({ productName, imageUrl, className, size = 'md' }: ProductImageProps) {
   const [hasError, setHasError] = useState(false);
   const [fallbackToLocal, setFallbackToLocal] = useState(false);
-
+  
+  // Priority: 1. Storage URL, 2. Local file, 3. Placeholder
   const getImageSource = () => {
-    if (hasError && fallbackToLocal) return getProductImageFallback();
-    if (hasError && imageUrl) return getProductImageUrl(productName);
-    if (imageUrl) return imageUrl;
+    if (hasError && fallbackToLocal) {
+      return getProductImageFallback();
+    }
+    if (hasError && imageUrl) {
+      // Storage image failed, try local
+      return getProductImageUrl(productName);
+    }
+    if (imageUrl) {
+      return imageUrl;
+    }
     return getProductImageUrl(productName);
   };
 
   const handleError = () => {
     if (imageUrl && !hasError) {
+      // First error: storage URL failed, try local
       setHasError(true);
     } else if (!fallbackToLocal) {
+      // Second error: local also failed, use placeholder
       setFallbackToLocal(true);
     }
   };
@@ -40,7 +50,7 @@ export function ProductImage({ productName, imageUrl, className, size = 'md' }: 
       alt={productName}
       className={cn(
         sizeClasses[size],
-        'object-contain rounded-md bg-muted p-1', // object-contain + padding interno
+        'object-cover rounded-md bg-muted',
         className
       )}
       onError={handleError}
