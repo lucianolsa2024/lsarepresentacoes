@@ -227,47 +227,24 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
   }, []);
 
   // Auto-scroll inteligente:
-  // - Se a última mensagem é do USUÁRIO → rola pro fim (mostra "digitando...")
-  // - Se é do ASSISTENTE e acabou de iniciar → rola até o início dela (topo da resposta)
-  // - Se é do ASSISTENTE e está crescendo → mantém posição (não persegue o fim)
-  const lastAssistantStartLenRef = useRef(0);
+  // - Última msg do usuário → sempre rola pro fim
+  // - Streaming do assistente → só rola pro fim se userScrolled === false
   useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-    // Radix ScrollArea: viewport real é um filho com data-radix-scroll-area-viewport
-    const viewport =
-      (root.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null) || root;
+    const viewport = getViewport();
+    if (!viewport) return;
 
     const last = messages[messages.length - 1];
     if (!last) return;
 
     if (last.role === "user") {
-      viewport.scrollTop = viewport.scrollHeight;
-      lastAssistantStartLenRef.current = 0;
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
       return;
     }
 
-    // Assistente: rola até o topo da última bolha somente no primeiro chunk
-    if (lastAssistantStartLenRef.current === 0) {
-      lastAssistantStartLenRef.current = last.content.length;
-      requestAnimationFrame(() => {
-        const bubbles = viewport.querySelectorAll<HTMLElement>("[data-msg-role='assistant']");
-        const target = bubbles[bubbles.length - 1];
-        if (target) {
-          const offset = target.offsetTop - viewport.offsetTop;
-          viewport.scrollTo({ top: Math.max(0, offset - 8), behavior: "smooth" });
-        }
-      });
+    if (!userScrolled) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
-  }, [messages]);
-
-  // Reseta o marcador quando a conversa é limpa ou quando começa nova interação do usuário
-  useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (!last || last.role === "user") {
-      lastAssistantStartLenRef.current = 0;
-    }
-  }, [messages]);
+  }, [messages, userScrolled, getViewport]);
 
 
   useEffect(() => {
@@ -282,6 +259,11 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
+    setUserScrolled(false);
+    requestAnimationFrame(() => {
+      const viewport = getViewport();
+      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    });
 
     let assistantSoFar = "";
     const upsertAssistant = (chunk: string) => {
