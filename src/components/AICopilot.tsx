@@ -94,24 +94,47 @@ export function AICopilot({
   orders = [],
 }: AICopilotProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>(() => loadStoredHistory());
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
+  const [readOnly, setReadOnly] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Persist messages to localStorage (limited to last 50)
+  // Ao abrir o Copilot, sempre inicia chat novo (não carrega histórico)
   useEffect(() => {
-    saveHistory(messages);
-  }, [messages]);
+    if (open) {
+      setMessages([]);
+      setShowHistory(false);
+      setReadOnly(false);
+    }
+  }, [open]);
 
-  const clearHistory = useCallback(() => {
+  const startNewChat = useCallback(() => {
     setMessages([]);
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setReadOnly(false);
+    setShowHistory(false);
+  }, []);
+
+  const archiveAndClear = useCallback(() => {
+    const current = messagesRef.current;
+    if (current.length > 0) {
+      archiveCurrentSession(current);
+      setSessions(loadSessions());
+    }
+    setMessages([]);
+    setReadOnly(false);
+  }, []);
+
+  const openSession = useCallback((session: Session) => {
+    setMessages(session.messages);
+    setReadOnly(true);
+    setShowHistory(false);
   }, []);
 
   const getViewport = useCallback((): HTMLElement | null => {
