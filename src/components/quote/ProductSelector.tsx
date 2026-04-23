@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Product, QuoteItem, FabricTier, FABRIC_TIERS, TABLE_TIERS, isTableCategory } from '@/types/quote';
+import { Product, QuoteItem, FabricTier, FABRIC_TIERS, TABLE_TIERS, isTableCategory, isWoodProduct, ModulationFinish } from '@/types/quote';
 import { FABRICS, getFabricsByTier } from '@/data/fabrics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,122 +29,80 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     base: '',
     fabricTier: '' as FabricTier | '',
     fabricCode: '',
+    finishId: '', // novo: ID do acabamento selecionado (modulation_finishes)
   });
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
-    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '', finishId: '' });
     setFabricSearch('');
   };
 
-  // Get selected modulation
   const selectedModulation = useMemo(() => {
     if (!selectedProduct || !config.modulationId) return null;
     return selectedProduct.modulations.find((m) => m.id === config.modulationId);
   }, [selectedProduct, config.modulationId]);
 
-  // Get available sizes for selected modulation
-  // For CAIXA products, each row is unique (description includes CAIXA tier)
   const availableSizes = useMemo(() => {
     if (!selectedModulation) return [];
-    
     let sizes = selectedModulation.sizes;
-    
-    if (config.base) {
-      sizes = sizes.filter(s => s.base === config.base);
-    }
-    
-    // Check if this is a CAIXA product (description contains "CAIXA:")
+    if (config.base) sizes = sizes.filter(s => s.base === config.base);
     const hasCaixa = sizes.some(s => s.description.toUpperCase().includes('CAIXA:'));
-
-    // Check if this size already carries a built-in finish/top definition
     const hasBuiltInFinish = sizes.some(s => /\b(TAMPO|TOPO):/i.test(s.description));
-
-    if (hasCaixa || hasBuiltInFinish) {
-      // For CAIXA products or products with built-in finish info, each row is unique - don't deduplicate
-      return sizes;
-    }
-
-    // For other products, deduplicate by full description to preserve unique variants
-    // (e.g., "AP MARMORE", "GIRATÓRIA", different finishes with same dimensions)
+    if (hasCaixa || hasBuiltInFinish) return sizes;
     const uniqueSizes = new Map<string, typeof sizes[0]>();
-    sizes.forEach(size => {
-      const key = size.description;
-
-      if (!uniqueSizes.has(key)) {
-        uniqueSizes.set(key, size);
-      }
-    });
-
+    sizes.forEach(size => { if (!uniqueSizes.has(size.description)) uniqueSizes.set(size.description, size); });
     return Array.from(uniqueSizes.values());
   }, [selectedModulation, config.base]);
 
-  // Get selected size
   const selectedSize = useMemo(() => {
     if (!selectedModulation || !config.sizeId) return null;
     return selectedModulation.sizes.find((s) => s.id === config.sizeId);
   }, [selectedModulation, config.sizeId]);
 
-  // Get unique bases for selected modulation
   const availableBases = useMemo(() => {
     if (!selectedModulation) return [];
     const bases = new Set<string>();
-    selectedModulation.sizes.forEach(s => {
-      if (s.base) bases.add(s.base);
-    });
+    selectedModulation.sizes.forEach(s => { if (s.base) bases.add(s.base); });
     return Array.from(bases);
   }, [selectedModulation]);
 
-  // Check if the selected product is a table
-  const isTable = useMemo(() => {
-    return selectedProduct ? isTableCategory(selectedProduct.category) : false;
-  }, [selectedProduct]);
+  // Detectar tipo de produto
+  const isWood = useMemo(() => selectedProduct ? isWoodProduct(selectedProduct.factory) : false, [selectedProduct]);
+  const isTable = useMemo(() => selectedProduct ? isTableCategory(selectedProduct.category) : false, [selectedProduct]);
+  const isCarpet = useMemo(() => selectedProduct?.category === 'Tapetes', [selectedProduct]);
 
-  // Check if the selected product is a carpet (no fabric selection needed)
-  const isCarpet = useMemo(() => {
-    return selectedProduct?.category === 'Tapetes';
-  }, [selectedProduct]);
+  // Acabamentos disponíveis para o tamanho selecionado (CENTURY WOOD)
+  const availableFinishes = useMemo((): ModulationFinish[] => {
+    if (!isWood || !selectedSize) return [];
+    return selectedSize.finishes || [];
+  }, [isWood, selectedSize]);
 
-  // Check if the selected size already includes finish info (TAMPO:/TOPO:) - skip fabric/finish step
-  const hasBuiltInFinishInSize = useMemo(() => {
-    return /\b(TAMPO|TOPO):/i.test(selectedSize?.description ?? '');
-  }, [selectedSize]);
+  const selectedFinish = useMemo(() => {
+    if (!config.finishId) return null;
+    return availableFinishes.find(f => f.id === config.finishId) || null;
+  }, [availableFinishes, config.finishId]);
 
+  const hasBuiltInFinishInSize = useMemo(() => /\b(TAMPO|TOPO):/i.test(selectedSize?.description ?? ''), [selectedSize]);
   const builtInFinishLabel = useMemo(() => {
     const match = selectedSize?.description.match(/\b(TAMPO|TOPO):\s*([^,\n]+)/i);
-    if (!match) return '';
-    return `${match[1].toUpperCase()}: ${match[2].trim()}`;
+    return match ? `${match[1].toUpperCase()}: ${match[2].trim()}` : '';
   }, [selectedSize]);
 
-  // Get available fabric/finish tiers (only those with price > 0)
   const availableFabricTiers = useMemo(() => {
-    if (!selectedSize) return [];
-
-    // If the finish/top is already in the size description, no need for separate selection
+    if (!selectedSize || isWood) return [];
     if (hasBuiltInFinishInSize) return [];
-
-    if (isTable) {
-      return TABLE_TIERS.filter(tier => {
-        const price = selectedSize.prices[tier.key] || 0;
-        return price > 0;
-      });
-    }
-
-    return FABRIC_TIERS.filter(tier => {
-      const price = selectedSize.prices[tier] || 0;
-      return price > 0;
-    });
-  }, [selectedSize, isTable, hasBuiltInFinishInSize]);
+    if (isTable) return TABLE_TIERS.filter(tier => (selectedSize.prices[tier.key] || 0) > 0);
+    return FABRIC_TIERS.filter(tier => (selectedSize.prices[tier] || 0) > 0);
+  }, [selectedSize, isTable, isWood, hasBuiltInFinishInSize]);
 
   const hasOnlySemTecOption = useMemo(() => {
-    if (!selectedSize || hasBuiltInFinishInSize || isCarpet) return false;
-
+    if (!selectedSize || hasBuiltInFinishInSize || isCarpet || isWood) return false;
     const tiers = isTable
-      ? (availableFabricTiers as Array<{ key: FabricTier; label: string }>).map(tier => tier.key)
+      ? (availableFabricTiers as Array<{ key: FabricTier; label: string }>).map(t => t.key)
       : (availableFabricTiers as FabricTier[]);
-
     return tiers.length === 1 && tiers[0] === 'SEM TEC';
-  }, [availableFabricTiers, hasBuiltInFinishInSize, isCarpet, isTable, selectedSize]);
+  }, [availableFabricTiers, hasBuiltInFinishInSize, isCarpet, isTable, isWood, selectedSize]);
 
   const effectiveFabricTier = hasOnlySemTecOption ? 'SEM TEC' : config.fabricTier;
 
@@ -153,28 +111,51 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     return priceEntry ? prices[priceEntry] : 0;
   };
 
-  // Get fabrics for selected tier, filtered by search
   const availableFabrics = useMemo(() => {
     if (!effectiveFabricTier || effectiveFabricTier === 'SEM TEC') return [];
     const tierFabrics = getFabricsByTier(effectiveFabricTier as FabricTier);
-
     if (!fabricSearch.trim()) return tierFabrics;
-
     const search = fabricSearch.toLowerCase().trim();
-    return tierFabrics.filter(f =>
-      f.code.toLowerCase().includes(search) ||
-      (f.notes && f.notes.toLowerCase().includes(search))
-    );
+    return tierFabrics.filter(f => f.code.toLowerCase().includes(search) || (f.notes && f.notes.toLowerCase().includes(search)));
   }, [effectiveFabricTier, fabricSearch]);
 
-  const handleConfirm = () => {
-    const needsFabricTier = !hasBuiltInFinishInSize && !isCarpet && !hasOnlySemTecOption;
-    const isSemTec = effectiveFabricTier === 'SEM TEC';
-    const needsFabricCode = !isTable && !hasBuiltInFinishInSize && !isCarpet && !isSemTec;
+  const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  const getCurrentPrice = () => {
+    if (!selectedSize) return 0;
+    if (isWood) return selectedFinish?.price || 0;
+    if (isCarpet) return selectedSize.prices['SEM TEC'] || 0;
+    if (hasBuiltInFinishInSize) return getFirstAvailablePrice(selectedSize.prices);
+    if (hasOnlySemTecOption) return selectedSize.prices['SEM TEC'] || 0;
+    if (!effectiveFabricTier) return 0;
+    return selectedSize.prices[effectiveFabricTier as FabricTier] || 0;
+  };
+
+  // Passos de exibição
+  const shouldShowFinishStep = isWood && Boolean(config.sizeId) && availableFinishes.length > 0;
+  const shouldShowFabricTierStep = !isWood && Boolean(config.sizeId) && !hasBuiltInFinishInSize && !isCarpet && !hasOnlySemTecOption;
+  const shouldShowFabricCodeStep = !isWood && Boolean(effectiveFabricTier) && !isTable && effectiveFabricTier !== 'SEM TEC';
+
+  const shouldShowItemSummary = Boolean(
+    (isWood && config.finishId) ||
+    (isCarpet && config.sizeId) ||
+    hasBuiltInFinishInSize ||
+    (isTable && !isWood && effectiveFabricTier) ||
+    (!isTable && !isCarpet && !isWood && (effectiveFabricTier === 'SEM TEC' || config.fabricCode))
+  );
+
+  const shouldShowPricePreview = !isWood && Boolean(!shouldShowItemSummary && !isTable && effectiveFabricTier && !config.fabricCode);
+
+  const isConfirmDisabled =
+    !config.modulationId ||
+    !config.sizeId ||
+    (isWood && availableFinishes.length > 0 && !config.finishId) ||
+    (!isWood && shouldShowFabricTierStep && !effectiveFabricTier) ||
+    (!isWood && shouldShowFabricCodeStep && !config.fabricCode);
+
+  const handleConfirm = () => {
     if (!selectedProduct || !config.modulationId || !config.sizeId) return;
-    if (needsFabricTier && !effectiveFabricTier) return;
-    if (needsFabricCode && !config.fabricCode) return;
+    if (isWood && availableFinishes.length > 0 && !config.finishId) return;
 
     const modulation = selectedProduct.modulations.find(m => m.id === config.modulationId);
     const size = modulation?.sizes.find(s => s.id === config.sizeId);
@@ -183,7 +164,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
     let price: number;
     let fabricDescription: string;
 
-    if (isCarpet) {
+    if (isWood) {
+      price = selectedFinish?.price || 0;
+      fabricDescription = selectedFinish?.finishName || 'Acabamento em madeira';
+    } else if (isCarpet) {
       price = size.prices['SEM TEC'] || 0;
       fabricDescription = 'Tapete - sem tecido';
     } else if (hasBuiltInFinishInSize) {
@@ -191,8 +175,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       fabricDescription = builtInFinishLabel || 'Acabamento incluído';
     } else {
       price = size.prices[effectiveFabricTier as FabricTier] || 0;
-
-      if (isSemTec) {
+      if (effectiveFabricTier === 'SEM TEC') {
         fabricDescription = 'Sem tecido';
       } else if (isTable) {
         const tableTier = TABLE_TIERS.find(t => t.key === effectiveFabricTier);
@@ -212,7 +195,7 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
       sizeId: config.sizeId,
       sizeDescription: size.description,
       base: size.base || config.base,
-      fabricTier: (isCarpet ? 'SEM TEC' : hasBuiltInFinishInSize ? 'SEM TEC' : effectiveFabricTier) as FabricTier,
+      fabricTier: (isWood ? 'SEM TEC' : isCarpet ? 'SEM TEC' : hasBuiltInFinishInSize ? 'SEM TEC' : effectiveFabricTier) as FabricTier,
       fabricDescription,
       price,
       quantity: 1,
@@ -222,89 +205,52 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
 
     onAddItem(item);
     setSelectedProduct(null);
-    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '' });
+    setConfig({ modulationId: '', sizeId: '', base: '', fabricTier: '', fabricCode: '', finishId: '' });
     setFabricSearch('');
   };
 
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
-  const getCurrentPrice = () => {
-    if (!selectedSize) return 0;
-    if (isCarpet) return selectedSize.prices['SEM TEC'] || 0;
-    if (hasBuiltInFinishInSize) return getFirstAvailablePrice(selectedSize.prices);
-    if (hasOnlySemTecOption) return selectedSize.prices['SEM TEC'] || 0;
-    if (!effectiveFabricTier) return 0;
-    return selectedSize.prices[effectiveFabricTier as FabricTier] || 0;
-  };
-
-  const shouldShowFabricTierStep = Boolean(config.sizeId) && !hasBuiltInFinishInSize && !isCarpet && !hasOnlySemTecOption;
-  const shouldShowFabricCodeStep = Boolean(effectiveFabricTier) && !isTable && effectiveFabricTier !== 'SEM TEC';
-  const shouldShowItemSummary = Boolean(
-    (isCarpet && config.sizeId) ||
-      hasBuiltInFinishInSize ||
-      (isTable && effectiveFabricTier) ||
-      (!isTable && !isCarpet && (effectiveFabricTier === 'SEM TEC' || config.fabricCode))
-  );
-  const shouldShowPricePreview = Boolean(!shouldShowItemSummary && !isTable && effectiveFabricTier && !config.fabricCode);
-  const isConfirmDisabled =
-    !config.modulationId ||
-    !config.sizeId ||
-    (shouldShowFabricTierStep && !effectiveFabricTier) ||
-    (shouldShowFabricCodeStep && !config.fabricCode);
-
-  // Filter products by search term (no factory filter - show all)
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return products;
-    
     const term = searchTerm.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.description.toLowerCase().includes(term) ||
-        p.code.toLowerCase().includes(term)
+    return products.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.description.toLowerCase().includes(term) ||
+      p.code.toLowerCase().includes(term)
     );
   }, [products, searchTerm]);
 
-  // Group products by category
   const groupedProducts = filteredProducts.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = [];
-    }
+    if (!acc[product.category]) acc[product.category] = [];
     acc[product.category].push(product);
     return acc;
   }, {} as Record<string, Product[]>);
 
   const handleModulationChange = (value: string) => {
-    setConfig({ ...config, modulationId: value, sizeId: '', base: '', fabricTier: '', fabricCode: '' });
+    setConfig({ ...config, modulationId: value, sizeId: '', base: '', fabricTier: '', fabricCode: '', finishId: '' });
     setFabricSearch('');
   };
-
   const handleBaseChange = (value: string) => {
-    setConfig({ ...config, base: value, sizeId: '', fabricTier: '', fabricCode: '' });
+    setConfig({ ...config, base: value, sizeId: '', fabricTier: '', fabricCode: '', finishId: '' });
     setFabricSearch('');
   };
-
   const handleSizeChange = (value: string) => {
-    setConfig({ ...config, sizeId: value, fabricTier: '', fabricCode: '' });
+    setConfig({ ...config, sizeId: value, fabricTier: '', fabricCode: '', finishId: '' });
     setFabricSearch('');
   };
-
   const handleFabricTierChange = (value: string) => {
     setConfig({ ...config, fabricTier: value as FabricTier, fabricCode: '' });
     setFabricSearch('');
   };
-
-  const handleFabricSelect = (code: string) => {
-    setConfig({ ...config, fabricCode: code });
+  const handleFinishChange = (value: string) => {
+    setConfig({ ...config, finishId: value });
   };
 
-  const getStepNumber = (step: 'base' | 'size' | 'fabricTier' | 'fabricCode') => {
+  const getStepNumber = (step: 'base' | 'size' | 'finish' | 'fabricTier' | 'fabricCode') => {
     const hasBase = availableBases.length > 0;
     switch (step) {
       case 'base': return 2;
       case 'size': return hasBase ? 3 : 2;
+      case 'finish': return hasBase ? 4 : 3;
       case 'fabricTier': return hasBase ? 4 : 3;
       case 'fabricCode': return hasBase ? 5 : 4;
       default: return 0;
@@ -320,7 +266,6 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Product Selection - Direct search without factory step */}
         {!selectedProduct ? (
           <div className="space-y-4">
             <div className="relative">
@@ -332,13 +277,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 className="pl-10"
               />
             </div>
-
             <div className="max-h-80 overflow-y-auto space-y-4">
               {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
                 <div key={category}>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                    {category}
-                  </h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">{category}</h4>
                   <div className="space-y-2">
                     {categoryProducts.map((product) => (
                       <button
@@ -359,26 +301,25 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               ))}
               {Object.keys(groupedProducts).length === 0 && searchTerm && (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum produto encontrado para "{searchTerm}"
-                </p>
+                <p className="text-center text-muted-foreground py-8">Nenhum produto encontrado para "{searchTerm}"</p>
               )}
               {products.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum produto cadastrado. Cadastre produtos na aba "Produtos".
-                </p>
+                <p className="text-center text-muted-foreground py-8">Nenhum produto cadastrado.</p>
               )}
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h4 className="font-bold text-lg">{selectedProduct.name}</h4>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedProduct(null)}
-              >
+              <div>
+                <h4 className="font-bold text-lg">{selectedProduct.name}</h4>
+                {isWood && (
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    {selectedProduct.factory}
+                  </span>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -386,19 +327,14 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
             <div className="space-y-4">
               {/* Step 1: Modulation */}
               <div className="space-y-2">
-                <Label>1. Modulação *</Label>
-                <Select
-                  value={config.modulationId}
-                  onValueChange={handleModulationChange}
-                >
+                <Label>1. {isWood ? 'Tipo' : 'Modulação'} *</Label>
+                <Select value={config.modulationId} onValueChange={handleModulationChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a modulação..." />
+                    <SelectValue placeholder={isWood ? 'Selecione o tipo...' : 'Selecione a modulação...'} />
                   </SelectTrigger>
                   <SelectContent>
                     {selectedProduct.modulations.map((mod) => (
-                      <SelectItem key={mod.id} value={mod.id}>
-                        {mod.name}
-                      </SelectItem>
+                      <SelectItem key={mod.id} value={mod.id}>{mod.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -408,17 +344,29 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
               {selectedModulation && availableBases.length > 0 && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('base')}. Acabamento da Base *</Label>
-                  <Select
-                    value={config.base}
-                    onValueChange={handleBaseChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o acabamento..." />
-                    </SelectTrigger>
+                  <Select value={config.base} onValueChange={handleBaseChange}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o acabamento..." /></SelectTrigger>
                     <SelectContent>
                       {availableBases.map((base) => (
-                        <SelectItem key={base} value={base}>
-                          {base}
+                        <SelectItem key={base} value={base}>{base}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Step 3: Size */}
+              {selectedModulation && (availableBases.length === 0 || config.base) && (
+                <div className="space-y-2">
+                  <Label>{getStepNumber('size')}. {isCarpet ? 'Medida' : isWood ? 'Dimensões' : 'Tamanho'} *</Label>
+                  <Select value={config.sizeId} onValueChange={handleSizeChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tamanho..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSizes.map((size) => (
+                        <SelectItem key={size.id} value={size.id}>
+                          {isWood ? size.dimensions || size.description : size.description}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -426,80 +374,33 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 3: Size/Dimensions */}
-              {selectedModulation && (availableBases.length === 0 || config.base) && (
+              {/* Step 4 (WOOD): Acabamento */}
+              {shouldShowFinishStep && (
                 <div className="space-y-2">
-                  <Label>{getStepNumber('size')}. {isCarpet ? 'Medida' : 'Tamanho'} *</Label>
-                  <Select
-                    value={config.sizeId}
-                    onValueChange={handleSizeChange}
-                  >
+                  <Label>{getStepNumber('finish')}. Acabamento *</Label>
+                  <Select value={config.finishId} onValueChange={handleFinishChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tamanho..." />
+                      <SelectValue placeholder="Selecione o acabamento..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableSizes.map((size) => {
-                        // Check if this is a CAIXA product
-                        const isCaixa = size.description.toUpperCase().includes('CAIXA:');
-                        
-                        let displayText: string;
-                        
-                        if (isCaixa) {
-                          // For CAIXA products, extract the CAIXA tier from description
-                          // Example: "SONA POL 1,05 m x 0,90 m x 0,71 m CAIXA: FX B"
-                          const caixaMatch = size.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
-                          const caixaTier = caixaMatch ? caixaMatch[1].toUpperCase() : '';
-                          
-                          // Build dimensions string
-                          const dims = [
-                            size.length && `${size.length}`,
-                            size.depth && `${size.depth}`,
-                            size.height && `${size.height}`,
-                          ].filter(Boolean).join(' × ');
-                          
-                          displayText = dims 
-                            ? `${dims} - CAIXA: ${caixaTier}`
-                            : `${size.dimensions || ''} - CAIXA: ${caixaTier}`;
-                        } else {
-                          // For regular products, show dimensions
-                          const dims = [
-                            size.length && `L: ${size.length}`,
-                            size.depth && `P: ${size.depth}`,
-                            size.height && `A: ${size.height}`,
-                          ].filter(Boolean).join(' × ');
-                          
-                          // Extract base variation to display (PE, BASE GIRATORIA)
-                          const descUpper = size.description.toUpperCase();
-                          let baseVariation = '';
-                          if (descUpper.includes('BASE GIRATORIA') || descUpper.includes('GIRATÓRIA') || descUpper.includes('GIRATORIA')) {
-                            baseVariation = 'BASE GIRATÓRIA';
-                          } else if ((descUpper.includes(' PE') || descUpper.endsWith(' PE') || descUpper.includes('PÉ')) && !descUpper.includes('CAIXA')) {
-                            baseVariation = 'PÉ';
-                          }
-                          
-                          const baseDims = dims || size.dimensions || size.description;
-                          displayText = baseVariation ? `${baseDims} - ${baseVariation}` : baseDims;
-                        }
-                        
-                        return (
-                          <SelectItem key={size.id} value={size.id}>
-                            {size.description}
-                          </SelectItem>
-                        );
-                      })}
+                      {availableFinishes.map((finish) => (
+                        <SelectItem key={finish.id} value={finish.id}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{formatCurrency(finish.price)}</span>
+                            <span className="text-xs text-muted-foreground">{finish.finishName}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
 
-              {/* Step 4: Finish/Fabric Tier */}
+              {/* Step 4 (UPHOLSTERED): Fabric Tier */}
               {shouldShowFabricTierStep && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricTier')}. {isTable ? 'Acabamento' : 'Faixa de Tecido'} *</Label>
-                  <Select
-                    value={config.fabricTier}
-                    onValueChange={handleFabricTierChange}
-                  >
+                  <Select value={config.fabricTier} onValueChange={handleFabricTierChange}>
                     <SelectTrigger>
                       <SelectValue placeholder={isTable ? 'Selecione o acabamento...' : 'Selecione a faixa...'} />
                     </SelectTrigger>
@@ -532,11 +433,10 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                 </div>
               )}
 
-              {/* Step 5: Fabric Selection */}
+              {/* Step 5: Fabric Code */}
               {shouldShowFabricCodeStep && (
                 <div className="space-y-2">
                   <Label>{getStepNumber('fabricCode')}. Tecido *</Label>
-
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -546,161 +446,117 @@ export function ProductSelector({ products, onAddItem }: ProductSelectorProps) {
                       className="pl-10"
                     />
                   </div>
-
                   <div className="max-h-40 overflow-y-auto border rounded-md">
                     {availableFabrics.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground text-sm">
-                        Nenhum tecido encontrado
-                      </div>
+                      <div className="p-3 text-center text-muted-foreground text-sm">Nenhum tecido encontrado</div>
                     ) : (
                       <div className="divide-y">
                         {availableFabrics.map((fabric) => (
                           <button
                             key={fabric.code}
                             type="button"
-                            onClick={() => handleFabricSelect(fabric.code)}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition ${
-                              config.fabricCode === fabric.code ? 'bg-primary/10 text-primary font-medium' : ''
-                            }`}
+                            onClick={() => setConfig({ ...config, fabricCode: fabric.code })}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition ${config.fabricCode === fabric.code ? 'bg-primary/10 text-primary font-medium' : ''}`}
                           >
                             <span>{fabric.code}</span>
-                            {fabric.notes && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({fabric.notes})
-                              </span>
-                            )}
+                            {fabric.notes && <span className="ml-2 text-xs text-muted-foreground">({fabric.notes})</span>}
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {config.fabricCode && (
-                    <div className="text-sm text-primary font-medium">
-                      Selecionado: {config.fabricCode}
-                    </div>
-                  )}
+                  {config.fabricCode && <div className="text-sm text-primary font-medium">Selecionado: {config.fabricCode}</div>}
                 </div>
               )}
 
               {/* Item Summary */}
-              {shouldShowItemSummary && (() => {
-                const isCaixaProduct = selectedSize?.description.toUpperCase().includes('CAIXA:');
-                const caixaMatch = selectedSize?.description.match(/CAIXA:\s*(FX\s*\w+|COURO)/i);
-                const caixaTier = caixaMatch ? caixaMatch[1].toUpperCase().replace(/\s+/g, ' ') : '';
-                const cleanDimensions = selectedSize?.dimensions ||
-                  [selectedSize?.length, selectedSize?.depth, selectedSize?.height]
-                    .filter(Boolean)
-                    .join(' × ');
-                const tableTierLabel = isTable
-                  ? TABLE_TIERS.find(t => t.key === effectiveFabricTier)?.label
-                  : null;
+              {shouldShowItemSummary && (
+                <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+                  <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Resumo do Item</h5>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Produto:</span>
+                      <span className="font-medium">{selectedProduct.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{isWood ? 'Tipo:' : 'Modulação:'}</span>
+                      <span className="font-medium">{selectedModulation?.name}</span>
+                    </div>
+                    {config.base && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Base:</span>
+                        <span className="font-medium">{config.base}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{isCarpet ? 'Medida:' : isWood ? 'Dimensões:' : 'Tamanho:'}</span>
+                      <span className="font-medium">
+                        {isWood
+                          ? selectedSize?.dimensions || selectedSize?.description
+                          : isCarpet
+                          ? selectedSize?.description
+                          : selectedSize?.dimensions || selectedSize?.description}
+                      </span>
+                    </div>
 
-                return (
-                  <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
-                    <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                      Resumo do Item
-                    </h5>
-                    <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Produto:</span>
-                        <span className="font-medium">{selectedProduct.name}</span>
+                    {/* Acabamento WOOD */}
+                    {isWood && selectedFinish && (
+                      <div className="mt-2 pt-2 border-t border-dashed">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Acabamento</div>
+                        <div className="font-medium text-primary text-xs">{selectedFinish.finishName}</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Modulação:</span>
-                        <span className="font-medium">{selectedModulation?.name}</span>
+                    )}
+
+                    {/* Acabamento TABLE (não-wood) */}
+                    {isTable && !isWood && (TABLE_TIERS.find(t => t.key === effectiveFabricTier)?.label || builtInFinishLabel) && (
+                      <div className="mt-2 pt-2 border-t border-dashed">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Acabamento</div>
+                        <div className="font-medium text-primary text-xs">
+                          {builtInFinishLabel || TABLE_TIERS.find(t => t.key === effectiveFabricTier)?.label}
+                        </div>
                       </div>
-                      {config.base && (
+                    )}
+
+                    {/* Tecido (sofás/poltronas) */}
+                    {!isTable && !isCarpet && !isWood && (
+                      effectiveFabricTier === 'SEM TEC' ? (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Base:</span>
-                          <span className="font-medium">{config.base}</span>
+                          <span className="text-muted-foreground">Tecido:</span>
+                          <span className="font-medium">Sem tecido</span>
                         </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{isCarpet ? 'Medida:' : 'Tamanho:'}</span>
-                        <span className="font-medium">{isCarpet ? selectedSize?.description : cleanDimensions}</span>
-                      </div>
-
-                      {isTable && (tableTierLabel || builtInFinishLabel) && (
-                        <div className="mt-2 pt-2 border-t border-dashed">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                            Acabamento
-                          </div>
-                          <div className="font-medium text-primary text-xs">
-                            {builtInFinishLabel || tableTierLabel}
-                          </div>
-                        </div>
-                      )}
-
-                      {!isTable && !isCarpet && isCaixaProduct ? (
-                        <div className="mt-2 pt-2 border-t border-dashed">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                            Tecidos
-                          </div>
+                      ) : (
+                        <>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Caixa (estrutura):</span>
-                            <span className="font-medium text-accent-foreground">{caixaTier}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Corpo (assento):</span>
+                            <span className="text-muted-foreground">Faixa de Tecido:</span>
                             <span className="font-medium text-primary">{effectiveFabricTier}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Código do Tecido:</span>
+                            <span className="text-muted-foreground">Tecido:</span>
                             <span className="font-medium">{config.fabricCode}</span>
                           </div>
-                        </div>
-                      ) : !isTable && !isCarpet && (
-                        <>
-                          {effectiveFabricTier === 'SEM TEC' ? (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Tecido:</span>
-                              <span className="font-medium">Sem tecido</span>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Faixa de Tecido:</span>
-                                <span className="font-medium text-primary">{effectiveFabricTier}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Tecido:</span>
-                                <span className="font-medium">{config.fabricCode}</span>
-                              </div>
-                            </>
-                          )}
                         </>
-                      )}
-                    </div>
-                    <div className="pt-2 border-t mt-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Preço unitário:</span>
-                        <span className="text-xl font-bold text-primary">
-                          {formatCurrency(getCurrentPrice())}
-                        </span>
-                      </div>
+                      )
+                    )}
+                  </div>
+                  <div className="pt-2 border-t mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Preço unitário:</span>
+                      <span className="text-xl font-bold text-primary">{formatCurrency(getCurrentPrice())}</span>
                     </div>
                   </div>
-                );
-              })()}
+                </div>
+              )}
 
-              {/* Simple price preview */}
               {shouldShowPricePreview && (
                 <div className="bg-primary/10 p-3 rounded-lg text-center">
                   <span className="text-sm text-muted-foreground">
                     {effectiveFabricTier === 'SEM TEC' ? 'Preço do item sem tecido:' : `Preço da faixa ${effectiveFabricTier}:`}
                   </span>
-                  <span className="text-xl font-bold text-primary ml-2">
-                    {formatCurrency(getCurrentPrice())}
-                  </span>
+                  <span className="text-xl font-bold text-primary ml-2">{formatCurrency(getCurrentPrice())}</span>
                 </div>
               )}
 
-              <Button
-                onClick={handleConfirm}
-                disabled={isConfirmDisabled}
-                className="w-full"
-              >
+              <Button onClick={handleConfirm} disabled={isConfirmDisabled} className="w-full">
                 Confirmar Item
               </Button>
             </div>
