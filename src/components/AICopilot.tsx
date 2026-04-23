@@ -471,7 +471,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                 <p className="text-[9px] text-muted-foreground">⌘+J para abrir · Powered by Claude</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mr-8">
               <Badge variant="outline" className="text-[8px]">
                 {messages.filter((m) => m.role === "user").length} msgs
               </Badge>
