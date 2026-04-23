@@ -253,13 +253,46 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       const anoMatch = msg.match(/\b(202\d)\b/);
       const ano = anoMatch ? parseInt(anoMatch[1]) : null;
 
-      // Captura nome de cliente (CamelCase ou misto): 2-5 palavras iniciadas em maiúscula
-      const clienteMatch = msg.match(
-        /\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*){1,4})\b/i,
-      );
-      const cliente = clienteMatch ? clienteMatch[1].toUpperCase() : null;
+      // Captura nome de cliente após palavras-chave (cliente, para, do, da, pelo, by)
+      const clienteKeywords = ["cliente ", "para ", "pelo cliente ", "pelo ", "da ", "do ", "by "];
+      let cliente: string | null = null;
+      let clienteMatchInfo: string | null = null;
+      for (const kw of clienteKeywords) {
+        const idx = lower.indexOf(kw);
+        if (idx !== -1) {
+          const after = msg.slice(idx + kw.length).trim();
+          const nameMatch = after.match(
+            /^([a-záéíóúâêîôûãõçA-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõçA-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]{2,40}?)(?:\s*[?!.,]|\s+(?:em|no|na|de|do|da|para|com|em\s)|$)/i,
+          );
+          if (nameMatch) {
+            cliente = nameMatch[1].trim().toUpperCase();
+            clienteMatchInfo = `kw="${kw.trim()}" match="${nameMatch[1]}"`;
+            break;
+          }
+          const words = after.split(/\s+/).slice(0, 3).join(" ").replace(/[?!.,]/g, "");
+          if (words.length > 2) {
+            cliente = words.toUpperCase();
+            clienteMatchInfo = `kw="${kw.trim()}" fallback-words="${words}"`;
+            break;
+          }
+        }
+      }
+      // Fallback: regex original (palavras capitalizadas)
+      if (!cliente) {
+        const fallback = msg.match(
+          /\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]*){1,4})\b/,
+        );
+        if (fallback) {
+          cliente = fallback[1].toUpperCase();
+          clienteMatchInfo = `fallback-caps="${fallback[1]}"`;
+        }
+      }
 
-      console.log("[AICopilot] cliente detectado:", cliente, "| ano:", ano);
+      console.log("[AICopilot] mensagem original:", msg);
+      console.log("[AICopilot] lower:", lower);
+      console.log("[AICopilot] clienteMatch info:", clienteMatchInfo);
+      console.log("[AICopilot] cliente extraído:", cliente);
+      console.log("[AICopilot] ano extraído:", ano);
 
       if (cliente && lower.match(/produto|vendido|comprou|faixa|histórico|historico|compra/)) {
         query_type = "client_top_product";
