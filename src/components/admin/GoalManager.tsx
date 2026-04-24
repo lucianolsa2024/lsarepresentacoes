@@ -130,6 +130,18 @@ export function GoalManager() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="min-w-[200px]">
+              <Label>Fábrica</Label>
+              <Select value={supplier} onValueChange={setSupplier}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TOTAL_VALUE}>Meta Total (todas)</SelectItem>
+                  {FACTORY_OPTIONS.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Mês</Label>
               <Input type="month" value={monthStart} onChange={(e) => setMonthStart(e.target.value)} className="w-44" />
@@ -143,7 +155,7 @@ export function GoalManager() {
               {editingKey ? 'Salvar' : 'Adicionar'}
             </Button>
             {editingKey && (
-              <Button variant="ghost" onClick={() => { setEditingKey(null); setGoalValue(''); }}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => { setEditingKey(null); setGoalValue(''); setSupplier(TOTAL_VALUE); }}>Cancelar</Button>
             )}
           </div>
         </CardContent>
