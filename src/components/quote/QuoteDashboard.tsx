@@ -56,49 +56,49 @@ export function QuoteDashboard({ quotes, activities = [], orders = [], onViewAct
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Orçamentos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total de Orçamentos</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalQuotes}</div>
-            <p className="text-xs text-muted-foreground">{quotesThisMonth.length} este mês</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">{totalQuotes}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{quotesThisMonth.length} este mês</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Valor Total</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Soma de todos os orçamentos</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-base sm:text-2xl font-bold truncate">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Soma de todos os orçamentos</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Ticket Médio</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(averageTicket)}</div>
-            <p className="text-xs text-muted-foreground">Por orçamento</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-base sm:text-2xl font-bold truncate">{formatCurrency(averageTicket)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Por orçamento</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total de Itens</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalItems}</div>
-            <p className="text-xs text-muted-foreground">Em todos os orçamentos</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">{totalItems}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Em todos os orçamentos</p>
           </CardContent>
         </Card>
       </div>
@@ -134,22 +134,22 @@ export function QuoteDashboard({ quotes, activities = [], orders = [], onViewAct
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <div className="text-center p-3 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">{orderStats.total}</p>
-              <p className="text-xs text-muted-foreground">Pedidos</p>
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="text-center p-2 sm:p-3 bg-muted rounded-lg">
+              <p className="text-lg sm:text-2xl font-bold">{orderStats.total}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Pedidos</p>
             </div>
-            <div className="text-center p-3 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">{formatCurrency(orderStats.totalValue)}</p>
-              <p className="text-xs text-muted-foreground">Valor Total</p>
+            <div className="text-center p-2 sm:p-3 bg-muted rounded-lg">
+              <p className="text-sm sm:text-2xl font-bold truncate">{formatCurrency(orderStats.totalValue)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Valor Total</p>
             </div>
-            <div className="text-center p-3 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">{orderStats.totalQty}</p>
-              <p className="text-xs text-muted-foreground">Peças</p>
+            <div className="text-center p-2 sm:p-3 bg-muted rounded-lg">
+              <p className="text-lg sm:text-2xl font-bold">{orderStats.totalQty}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Peças</p>
             </div>
-            <div className="text-center p-3 bg-muted rounded-lg">
-              <p className="text-2xl font-bold">{orderStats.uniqueClients}</p>
-              <p className="text-xs text-muted-foreground">Clientes</p>
+            <div className="text-center p-2 sm:p-3 bg-muted rounded-lg">
+              <p className="text-lg sm:text-2xl font-bold">{orderStats.uniqueClients}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Clientes</p>
             </div>
           </div>
         </CardContent>
