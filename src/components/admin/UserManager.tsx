@@ -97,10 +97,16 @@ export function UserManager() {
     let errMsg: string | null = res.data?.error || null;
     if (!errMsg && res.error) {
       try {
-        const ctx = (res.error as any).context;
-        if (ctx?.body) {
-          const parsed = typeof ctx.body === 'string' ? JSON.parse(ctx.body) : ctx.body;
-          errMsg = parsed?.error || null;
+        const ctx: any = (res.error as any).context;
+        if (ctx) {
+          // ctx pode ser Response (tem .text()) ou objeto com body
+          if (typeof ctx.text === 'function') {
+            const txt = await ctx.text();
+            try { errMsg = JSON.parse(txt)?.error || txt; } catch { errMsg = txt; }
+          } else if (ctx.body) {
+            const parsed = typeof ctx.body === 'string' ? JSON.parse(ctx.body) : ctx.body;
+            errMsg = parsed?.error || null;
+          }
         }
       } catch { /* ignore */ }
     }
