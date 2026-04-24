@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
 import { ShowroomImporter } from './ShowroomImporter';
-import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
+import { Package, AlertTriangle, Eye, GraduationCap, DollarSign, Search, X } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
   if (u === 'critico' || u === 'vermelho') return '🔴';
@@ -32,6 +32,9 @@ export function ShowroomTracker() {
   const [filtroRep, setFiltroRep] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('all');
   const [filtroUrgencia, setFiltroUrgencia] = useState('all');
+  const [search, setSearch] = useState('');
+  const [dataIni, setDataIni] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   const [modalExposicao, setModalExposicao] = useState<ShowroomItem | null>(null);
   const [expStatus, setExpStatus] = useState('exposto');
@@ -44,13 +47,30 @@ export function ShowroomTracker() {
   const reps = useMemo(() => [...new Set(items.map(i => i.representante).filter(Boolean))].sort(), [items]);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return items.filter(i => {
       if (filtroRep !== 'all' && i.representante !== filtroRep) return false;
       if (filtroStatus !== 'all' && i.status_exposicao !== filtroStatus) return false;
       if (filtroUrgencia !== 'all' && i.urgencia !== filtroUrgencia) return false;
+      if (dataIni && (!i.dt_faturamento || i.dt_faturamento < dataIni)) return false;
+      if (dataFim && (!i.dt_faturamento || i.dt_faturamento > dataFim)) return false;
+      if (q) {
+        const hay = [
+          i.cliente, i.representante, i.produto, i.cidade, i.nf_numero,
+          i.segmento_cliente, i.status_exposicao, i.status_treinamento,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [items, filtroRep, filtroStatus, filtroUrgencia]);
+  }, [items, filtroRep, filtroStatus, filtroUrgencia, search, dataIni, dataFim]);
+
+  const limparFiltros = () => {
+    setFiltroRep('all'); setFiltroStatus('all'); setFiltroUrgencia('all');
+    setSearch(''); setDataIni(''); setDataFim('');
+  };
+
+  const hasFilters = filtroRep !== 'all' || filtroStatus !== 'all' || filtroUrgencia !== 'all' || !!search || !!dataIni || !!dataFim;
 
   const kpis = useMemo(() => {
     const pendentes = items.filter(i => i.status_exposicao === 'pendente');
@@ -112,7 +132,16 @@ export function ShowroomTracker() {
       </div>
 
       {/* Filters inline */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[220px] max-w-[340px]">
+          <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar cliente, NF, produto, cidade..."
+            className="h-8 text-xs pl-7"
+          />
+        </div>
         <Select value={filtroRep} onValueChange={setFiltroRep}>
           <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
           <SelectContent>
@@ -139,6 +168,17 @@ export function ShowroomTracker() {
             <SelectItem value="ok">🟢 OK</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground">De</span>
+          <Input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} className="h-8 text-xs w-[140px]" />
+          <span className="text-[10px] text-muted-foreground">até</span>
+          <Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-8 text-xs w-[140px]" />
+        </div>
+        {hasFilters && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={limparFiltros}>
+            <X className="h-3 w-3 mr-1" />Limpar
+          </Button>
+        )}
       </div>
 
       {/* Table full width with vertical scroll */}
