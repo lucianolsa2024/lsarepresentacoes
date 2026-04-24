@@ -713,6 +713,15 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   className="min-h-[36px] max-h-[80px] resize-none text-xs"
                   rows={1}
                 />
+                <Button
+                  size="icon"
+                  variant={isListening ? "destructive" : "outline"}
+                  className="h-9 w-9 shrink-0"
+                  onClick={startListening}
+                  disabled={isLoading}
+                >
+                  {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                </Button>
                 <Button size="icon" className="h-9 w-9 shrink-0"
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}>
