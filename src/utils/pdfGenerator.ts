@@ -386,7 +386,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setFont('helvetica', 'normal');
 
   quote.items.forEach((item, index) => {
-    if (y > 230) { doc.addPage(); y = 20; }
+    if (y > 220) { doc.addPage(); y = 20; }
 
     const cacheKey = item.imageUrl || item.productName;
     const productImage = imageCache[cacheKey];
@@ -497,14 +497,26 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   });
 
   y += 5;
-  doc.setDrawColor(180);
-  doc.line(15, y, pageWidth - 15, y);
-  y += 10;
+
+  // Helper de quebra de página: garante 'needed' mm restantes na página
+  const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+  const BOTTOM_MARGIN = 15;
+  const ensureSpace = (needed: number) => {
+    if (y + needed > PAGE_HEIGHT - BOTTOM_MARGIN) {
+      doc.addPage();
+      y = 20;
+    }
+  };
 
   // ===== TOTAIS =====
   const ipiRate = 0.0325;
   const ipiValue = quote.total * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
+
+  ensureSpace(35);
+  doc.setDrawColor(180);
+  doc.line(15, y, pageWidth - 15, y);
+  y += 10;
 
   y += 8;
   doc.setFontSize(9);
@@ -525,6 +537,14 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 16;
 
   // ===== CONDIÇÕES DE PAGAMENTO =====
+  // Estimativa de altura mínima do bloco de pagamento + rodapé
+  const paymentBlockHeight =
+    50 +
+    (quote.payment.method === 'parcelado' ? 10 : 0) +
+    (quote.payment.method === 'entrada_parcelas' ? 15 : 0) +
+    (quote.payment.observations ? 20 : 0);
+  ensureSpace(paymentBlockHeight + 30);
+
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
@@ -590,10 +610,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 5;
 
   if (quote.payment.observations) {
+    const obsLines = doc.splitTextToSize(quote.payment.observations, pageWidth - 30);
+    ensureSpace(8 + obsLines.length * 5);
     y += 3;
     doc.text('Observações:', 15, y);
     y += 5;
-    const obsLines = doc.splitTextToSize(quote.payment.observations, pageWidth - 30);
     doc.text(obsLines, 15, y);
     y += obsLines.length * 5;
   }
@@ -601,6 +622,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 12;
 
   // ===== RODAPÉ =====
+  ensureSpace(20);
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 8;
