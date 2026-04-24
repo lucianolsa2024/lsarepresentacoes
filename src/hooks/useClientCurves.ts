@@ -6,27 +6,35 @@ import type { ClientCurve } from './useClients';
 interface CurveResult {
   clientId: string;
   curve: ClientCurve;
-  revenue6m: number;
-  orders6m: number;
-  score: number;
+  revenue12m: number;
+  orders12m: number;
 }
+
+const CORPORATE_SEGMENTS = ['construtora', 'incorporadora', 'escritório de arquitetura', 'escritorio de arquitetura'];
 
 export function useClientCurves() {
   const [updating, setUpdating] = useState(false);
 
   const calculateAllCurves = async (): Promise<CurveResult[]> => {
-    // Get date 6 months ago
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const startDate = sixMonthsAgo.toISOString().split('T')[0];
+    // Last 12 months
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const startDate = twelveMonthsAgo.toISOString().split('T')[0];
 
-    // Fetch all clients
+    // Fetch all clients with segment
     const { data: clients, error: clientsError } = await supabase
       .from('clients')
-      .select('id');
+      .select('id, segment');
     if (clientsError) throw clientsError;
 
-    // Fetch orders in last 6 months
+    // Exclude corporate clients
+    const eligibleClients = (clients || []).filter((c: any) => {
+      const seg = (c.segment || '').toLowerCase().trim();
+      return !CORPORATE_SEGMENTS.includes(seg);
+    });
+    const eligibleIds = new Set(eligibleClients.map((c: any) => c.id));
+
+    // Fetch orders in last 12 months
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select('client_id, price, quantity')
@@ -34,50 +42,44 @@ export function useClientCurves() {
       .not('client_id', 'is', null);
     if (ordersError) throw ordersError;
 
-    // Aggregate per client
+    // Aggregate revenue per client (only eligible)
     const statsMap: Record<string, { revenue: number; orders: number }> = {};
     (orders || []).forEach((o: any) => {
-      if (!o.client_id) return;
+      if (!o.client_id || !eligibleIds.has(o.client_id)) return;
       if (!statsMap[o.client_id]) statsMap[o.client_id] = { revenue: 0, orders: 0 };
       statsMap[o.client_id].revenue += (o.price || 0) * (o.quantity || 1);
       statsMap[o.client_id].orders += 1;
     });
 
-    const allClientIds = (clients || []).map((c: any) => c.id);
-
-    // Separate active vs inactive
-    const activeClients = allClientIds.filter(id => statsMap[id] && statsMap[id].orders > 0);
-    const inactiveClients = allClientIds.filter(id => !statsMap[id] || statsMap[id].orders === 0);
-
     const results: CurveResult[] = [];
 
-    // Inactive = curve D
-    inactiveClients.forEach(id => {
-      results.push({ clientId: id, curve: 'D', revenue6m: 0, orders6m: 0, score: 0 });
+    // Inactive eligible clients = curve D
+    eligibleClients.forEach((c: any) => {
+      if (!statsMap[c.id] || statsMap[c.id].revenue <= 0) {
+        results.push({ clientId: c.id, curve: 'D', revenue12m: 0, orders12m: 0 });
+      }
     });
 
-    if (activeClients.length === 0) return results;
+    // Active clients sorted by revenue desc
+    const active = Object.entries(statsMap)
+      .filter(([, s]) => s.revenue > 0)
+      .map(([id, s]) => ({ clientId: id, revenue12m: s.revenue, orders12m: s.orders }))
+      .sort((a, b) => b.revenue12m - a.revenue12m);
 
-    // Normalize and score active clients
-    const maxRevenue = Math.max(...activeClients.map(id => statsMap[id].revenue));
-    const maxOrders = Math.max(...activeClients.map(id => statsMap[id].orders));
+    const totalRevenue = active.reduce((sum, a) => sum + a.revenue12m, 0);
 
-    const scored = activeClients.map(id => {
-      const s = statsMap[id];
-      const revNorm = maxRevenue > 0 ? s.revenue / maxRevenue : 0;
-      const ordNorm = maxOrders > 0 ? s.orders / maxOrders : 0;
-      const score = revNorm * 0.6 + ordNorm * 0.4;
-      return { clientId: id, revenue6m: s.revenue, orders6m: s.orders, score };
-    }).sort((a, b) => b.score - a.score);
+    if (totalRevenue === 0) return results;
 
-    // Assign curves by quartile
-    const total = scored.length;
-    scored.forEach((item, idx) => {
-      const percentile = (idx + 1) / total;
+    // Cumulative revenue distribution: A=75%, B=10%, C=10%, D=5%
+    let cumulative = 0;
+    active.forEach(item => {
+      cumulative += item.revenue12m;
+      const pct = cumulative / totalRevenue;
       let curve: ClientCurve;
-      if (percentile <= 0.25) curve = 'A';
-      else if (percentile <= 0.50) curve = 'B';
-      else curve = 'C';
+      if (pct <= 0.75) curve = 'A';
+      else if (pct <= 0.85) curve = 'B';
+      else if (pct <= 0.95) curve = 'C';
+      else curve = 'D';
       results.push({ ...item, curve });
     });
 
