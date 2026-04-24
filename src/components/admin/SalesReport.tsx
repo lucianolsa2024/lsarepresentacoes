@@ -272,7 +272,7 @@ export function SalesReport() {
       {byRep.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Faturamento por Representante</CardTitle>
+            <CardTitle className="text-lg">Vendas por Representante</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -286,7 +286,7 @@ export function SalesReport() {
                   <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
                   <Legend />
-                  <Bar dataKey="revenue" name="Faturamento" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="revenue" name="Vendas" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -297,14 +297,14 @@ export function SalesReport() {
       {/* Tabela por representante */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Resumo por Representante</CardTitle>
+          <CardTitle className="text-lg">Vendas por Representante</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Representante</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
+                <TableHead className="text-right">Vendas</TableHead>
                 <TableHead className="text-right">Volume</TableHead>
                 <TableHead className="text-right">Pedidos</TableHead>
                 <TableHead className="text-right">Ticket Médio</TableHead>
