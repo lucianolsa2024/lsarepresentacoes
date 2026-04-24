@@ -540,6 +540,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
         setTopClients90d([]);
         setMtdBySupplier([]);
         setMtdByClient([]);
+        setFactoryGoals([]);
       } finally {
         setLoading(false);
       }
@@ -556,6 +557,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
     topClients90d,
     mtdBySupplier,
     mtdByClient,
+    factoryGoals,
     loading,
     isAdmin,
   };
