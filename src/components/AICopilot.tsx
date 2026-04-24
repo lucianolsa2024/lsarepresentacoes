@@ -95,6 +95,7 @@ export function AICopilot({
   opportunities = [],
   orders = [],
 }: AICopilotProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
