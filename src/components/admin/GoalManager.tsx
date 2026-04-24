@@ -19,7 +19,11 @@ interface Goal {
   owner_email: string;
   month_start: string;
   goal_value: number;
+  supplier: string | null;
 }
+
+const FACTORY_OPTIONS = ['SOHOME', 'SOHOME WOOD', 'TAPETE SAO CARLOS'] as const;
+const TOTAL_VALUE = '__total__';
 
 export function GoalManager() {
   const [reps, setReps] = useState<Rep[]>([]);
