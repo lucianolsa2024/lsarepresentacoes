@@ -523,9 +523,6 @@ export function RepHomeDashboard() {
                             {emailToName[c.owner_email] || c.owner_email}
                           </p>
                         )}
-                        <p className="text-[10px] text-muted-foreground">
-                          Fat. 12m: {fmtShort(c.revenue_12m)} · {fmtInt(c.orders_12m)} ped.
-                        </p>
                       </div>
                       <div className="shrink-0 ml-2">
                         <Badge
@@ -545,9 +542,6 @@ export function RepHomeDashboard() {
                         <TableHead>Cliente</TableHead>
                         {isAdmin && <TableHead>Representante</TableHead>}
                         <TableHead className="text-right">Dias s/ compra</TableHead>
-                        <TableHead className="text-right">Fat. 12m</TableHead>
-                        <TableHead className="text-right">Pedidos</TableHead>
-                        <TableHead className="text-right">Ticket</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -572,9 +566,6 @@ export function RepHomeDashboard() {
                               {c.days_since_last_purchase}d
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">{fmt(c.revenue_12m)}</TableCell>
-                          <TableCell className="text-right">{fmtInt(c.orders_12m)}</TableCell>
-                          <TableCell className="text-right">{fmt(c.ticket_avg_12m)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
