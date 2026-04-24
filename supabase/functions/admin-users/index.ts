@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
         email: u.email,
         name: u.user_metadata?.name || u.user_metadata?.full_name || '',
         created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at || null,
       }));
       return new Response(JSON.stringify({ users }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
