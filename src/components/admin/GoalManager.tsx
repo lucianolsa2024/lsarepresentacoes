@@ -60,21 +60,16 @@ export function GoalManager() {
 
     const supplierValue = supplier === TOTAL_VALUE ? null : supplier;
 
-    // Upsert manual: deleta existente + insere
-    await supabase
+    // Upsert manual: deleta existente da combinação (owner, mês, fábrica) + insere
+    let delQuery = supabase
       .from('rep_goals')
       .delete()
       .eq('owner_email', selectedEmail)
-      .eq('month_start', ms)
-      .is('supplier', supplierValue as any);
-    if (supplierValue) {
-      await supabase
-        .from('rep_goals')
-        .delete()
-        .eq('owner_email', selectedEmail)
-        .eq('month_start', ms)
-        .eq('supplier', supplierValue);
-    }
+      .eq('month_start', ms);
+    delQuery = supplierValue
+      ? delQuery.eq('supplier', supplierValue)
+      : delQuery.is('supplier', null);
+    await delQuery;
 
     const { error } = await supabase.from('rep_goals').insert({
       owner_email: selectedEmail,

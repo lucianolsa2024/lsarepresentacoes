@@ -2211,18 +2211,21 @@ export type Database = {
       rep_goals: {
         Row: {
           goal_value: number
+          id: string
           month_start: string
           owner_email: string
           supplier: string | null
         }
         Insert: {
           goal_value: number
+          id?: string
           month_start: string
           owner_email: string
           supplier?: string | null
         }
         Update: {
           goal_value?: number
+          id?: string
           month_start?: string
           owner_email?: string
           supplier?: string | null
