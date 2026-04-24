@@ -110,6 +110,7 @@ export function RepHomeDashboard() {
     topClients90d,
     mtdBySupplier,
     mtdByClient,
+    factoryGoals,
     loading,
     isAdmin,
   } = useRepDashboard(selectedMonth, selectedRep === 'all' ? undefined : selectedRep);
