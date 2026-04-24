@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLeft, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 
@@ -94,6 +95,7 @@ export function AICopilot({
   opportunities = [],
   orders = [],
 }: AICopilotProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -182,6 +184,7 @@ export function AICopilot({
             ],
             context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
             analytics_data: analyticsData,
+            user_email: user?.email,
           }),
         });
 
@@ -530,6 +533,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           messages: fullConversation,
           context: getContext(),
           analytics_data: analyticsData,
+          user_email: user?.email,
         }),
       });
 
