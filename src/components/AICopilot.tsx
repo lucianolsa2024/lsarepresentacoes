@@ -14,15 +14,23 @@ type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 type Session = {
   id: string;
   date: string; // ISO
+  preview?: string;
   messages: Msg[];
 };
 
-const SESSIONS_KEY = "copilot_sessions";
-const MAX_SESSIONS = 20;
+const SESSION_KEY = "copilot_current_session";
+const HISTORY_KEY = "copilot_history";
+const MAX_HISTORY = 30;
 
-function loadSessions(): Session[] {
+function newSessionId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function loadHistory(): Session[] {
   try {
-    const raw = localStorage.getItem(SESSIONS_KEY);
+    const raw = localStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -31,27 +39,24 @@ function loadSessions(): Session[] {
   }
 }
 
-function saveSessions(sessions: Session[]) {
+function saveHistory(sessions: Session[]) {
   try {
-    const trimmed = sessions.slice(0, MAX_SESSIONS);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_HISTORY)));
   } catch {
     // ignore storage errors
   }
 }
 
-function archiveCurrentSession(messages: Msg[]) {
-  if (messages.length === 0) return;
-  const session: Session = {
-    id:
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    date: new Date().toISOString(),
-    messages,
-  };
-  const existing = loadSessions();
-  saveSessions([session, ...existing]);
+function loadCurrentSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.messages)) return null;
+    return parsed as Session;
+  } catch {
+    return null;
+  }
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
@@ -103,133 +108,155 @@ export function AICopilot({
   const [userScrolled, setUserScrolled] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
+  const [sessions, setSessions] = useState<Session[]>(() => loadHistory());
   const [readOnly, setReadOnly] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => newSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Ao abrir o Copilot, sempre inicia chat novo (não carrega histórico)
+  // Autosave: a cada mensagem nova, persiste a sessão atual em SESSION_KEY
   useEffect(() => {
-    if (open) {
-      setMessages([]);
-      setShowHistory(false);
-      setReadOnly(false);
+    if (readOnly) return; // não sobrescreve enquanto lê histórico
+    if (messages.length === 0) return;
+    const session: Session = {
+      id: currentSessionId,
+      date: new Date().toISOString(),
+      preview: messages.find((m) => m.role === "user")?.content?.slice(0, 60) || "",
+      messages,
+    };
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // ignore
     }
-  }, [open]);
+  }, [messages, currentSessionId, readOnly]);
 
-  // Ao abrir o Copilot sem mensagens, gera sugestões proativas (curva A inativos)
-  useEffect(() => {
-    if (!open || messagesRef.current.length > 0) return;
-
-    let cancelled = false;
-
-    const loadProactiveSuggestions = async () => {
-      setIsLoading(true);
-      let assistantSoFar = "";
-      const upsertAssistant = (chunk: string) => {
-        if (cancelled) return;
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return prev.map((m, i) =>
-              i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
-            );
-          }
-          return [
-            ...prev,
-            { role: "assistant", content: assistantSoFar, timestamp: Date.now() },
-          ];
-        });
-      };
-
-      try {
-        // 1. Buscar clientes curva A inativos
-        let analyticsData: any = null;
-        try {
-          const analyticsRes = await fetch(ANALYTICS_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${BEARER}`,
-            },
-            body: JSON.stringify({
-              query_type: "inactive_curve_a",
-              params: { days: 60, limit: 5 },
-            }),
-          });
-          analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
-        } catch (e) {
-          console.error("[AICopilot] proativo - erro analytics:", e);
+  // Função reutilizável para gerar sugestões proativas
+  const loadProactiveSuggestions = useCallback(async (cancelledRef: { value: boolean }) => {
+    setIsLoading(true);
+    let assistantSoFar = "";
+    const upsertAssistant = (chunk: string) => {
+      if (cancelledRef.value) return;
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
+          );
         }
+        return [
+          ...prev,
+          { role: "assistant", content: assistantSoFar, timestamp: Date.now() },
+        ];
+      });
+    };
 
-        if (cancelled) return;
-
-        // 2. Pedir análise proativa ao Claude (streaming)
-        const resp = await fetch(CHAT_URL, {
+    try {
+      let analyticsData: any = null;
+      try {
+        const analyticsRes = await fetch(ANALYTICS_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${BEARER}`,
           },
           body: JSON.stringify({
-            messages: [
-              {
-                role: "user",
-                content:
-                  "Analise os clientes curva A inativos e sugira as 3 ações mais urgentes. Para cada um sugira criar uma atividade de visita ou ligação. Seja direto e use emojis.",
-              },
-            ],
-            context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
-            analytics_data: analyticsData,
-            user_email: user?.email,
+            query_type: "inactive_curve_a",
+            params: { days: 60, limit: 5 },
           }),
         });
+        analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
+      } catch (e) {
+        console.error("[AICopilot] proativo - erro analytics:", e);
+      }
 
-        if (!resp.ok || !resp.body) {
-          upsertAssistant("Não consegui carregar sugestões agora. Pergunte algo abaixo.");
-          return;
-        }
+      if (cancelledRef.value) return;
 
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${BEARER}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content:
+                "Analise os clientes curva A inativos e sugira as 3 ações mais urgentes. Para cada um sugira criar uma atividade de visita ou ligação. Seja direto e use emojis.",
+            },
+          ],
+          context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
+          analytics_data: analyticsData,
+          user_email: user?.email,
+        }),
+      });
 
-        while (true) {
-          if (cancelled) break;
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let newlineIndex: number;
-          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-            let line = buffer.slice(0, newlineIndex);
-            buffer = buffer.slice(newlineIndex + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") break;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) upsertAssistant(content);
-            } catch {
-              break;
-            }
+      if (!resp.ok || !resp.body) {
+        upsertAssistant("Não consegui carregar sugestões agora. Pergunte algo abaixo.");
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        if (cancelledRef.value) break;
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) upsertAssistant(content);
+          } catch {
+            break;
           }
         }
-      } catch (e) {
-        console.error("[AICopilot] Erro sugestões proativas:", e);
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
-    };
+    } catch (e) {
+      console.error("[AICopilot] Erro sugestões proativas:", e);
+    } finally {
+      if (!cancelledRef.value) setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
 
-    loadProactiveSuggestions();
+  // Ao abrir o Copilot: restaura sessão atual se existir, senão dispara proativo
+  useEffect(() => {
+    if (!open) return;
+    setShowHistory(false);
+    setReadOnly(false);
+
+    const cancelledRef = { value: false };
+    const saved = loadCurrentSession();
+    if (saved && saved.messages.length > 0) {
+      setMessages(saved.messages);
+      setCurrentSessionId(saved.id);
+      return () => {
+        cancelledRef.value = true;
+      };
+    }
+
+    // Sem sessão salva — novo chat + proativo
+    setMessages([]);
+    setCurrentSessionId(newSessionId());
+    loadProactiveSuggestions(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.value = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -238,16 +265,40 @@ export function AICopilot({
     setMessages([]);
     setReadOnly(false);
     setShowHistory(false);
+    setCurrentSessionId(newSessionId());
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // ignore
+    }
   }, []);
 
+  // Lixeira: arquiva sessão atual em HISTORY_KEY e inicia novo chat
   const archiveAndClear = useCallback(() => {
-    const current = messagesRef.current;
-    if (current.length > 0) {
-      archiveCurrentSession(current);
-      setSessions(loadSessions());
+    try {
+      const current = loadCurrentSession();
+      if (current && current.messages.length > 0) {
+        const history = loadHistory();
+        history.unshift(current);
+        saveHistory(history);
+        setSessions(loadHistory());
+      }
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+      console.error("[AICopilot] erro ao arquivar sessão:", e);
     }
     setMessages([]);
     setReadOnly(false);
+    setCurrentSessionId(newSessionId());
+  }, []);
+
+  const clearAllHistory = useCallback(() => {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {
+      // ignore
+    }
+    setSessions([]);
   }, []);
 
   const openSession = useCallback((session: Session) => {
@@ -706,10 +757,12 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                       minute: "2-digit",
                     });
                     const firstUserMsg = s.messages.find((m) => m.role === "user");
-                    const preview = firstUserMsg
-                      ? firstUserMsg.content.slice(0, 80) +
-                        (firstUserMsg.content.length > 80 ? "…" : "")
-                      : "(sem mensagens)";
+                    const preview =
+                      s.preview ||
+                      (firstUserMsg
+                        ? firstUserMsg.content.slice(0, 80) +
+                          (firstUserMsg.content.length > 80 ? "…" : "")
+                        : "(sem mensagens)");
                     return (
                       <button
                         key={s.id}
@@ -730,6 +783,23 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   })
                 )}
               </div>
+              {sessions.length > 0 && (
+                <div className="border-t px-3 py-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-[10px] gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (confirm("Apagar todo o histórico salvo? Esta ação não pode ser desfeita.")) {
+                        clearAllHistory();
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Apagar histórico
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
           <>
