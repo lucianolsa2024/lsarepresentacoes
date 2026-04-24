@@ -710,20 +710,8 @@ const Index = () => {
                           ownerEmail: user?.email || undefined,
                         });
 
-                        // Auto-create follow-up D+5
-                        const followUpDate = new Date();
-                        followUpDate.setDate(followUpDate.getDate() + 5);
-                        const label = getQuoteLabel(quote);
-                        await addActivity({
-                          activity_category: 'crm',
-                          type: 'followup',
-                          title: `Follow-up ${label}`,
-                          description: `Lembrete automático de follow-up: ${label}. Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-                          due_date: followUpDate.toISOString().split('T')[0],
-                          priority: 'media',
-                          client_id: clientId || undefined,
-                          quote_id: quote.id,
-                        });
+                        // Auto-create or update follow-up D+5 — only 1 per quote chain
+                        await upsertFollowUpForQuote(quote, clientId || null);
 
                         syncQuoteToRDStation(quote);
                         toast.success(`Orçamento importado com ${quoteItems.length} itens — Total: ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
