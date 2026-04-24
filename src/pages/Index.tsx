@@ -402,10 +402,10 @@ const Index = () => {
               )}
               <TabsTrigger
                 value="service-orders"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Wrench className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Ordens de Serviço</span>
+                <Wrench className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Ordens</span>
               </TabsTrigger>
               <TabsTrigger
                 value="operations"
