@@ -484,6 +484,17 @@ const Index = () => {
                     />
                   </div>
                 ) : null}
+                {isAdmin && !fichaClienteId && !showMapaCarteira && !showRoteiro && (
+                  <div className="mt-6">
+                    <DashboardExecutivo
+                      onNavigateToCarteira={(filters) => {
+                        setMapaCarteiraFilters(filters);
+                        setShowMapaCarteira(true);
+                      }}
+                      onNavigateToRoteiro={() => setShowRoteiro(true)}
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               {/* COMERCIAL - Sub-tabs */}
