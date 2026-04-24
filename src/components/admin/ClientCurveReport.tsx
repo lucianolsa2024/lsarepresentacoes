@@ -65,20 +65,20 @@ export function ClientCurveReport() {
       .pop();
     setLastUpdate(updated || null);
 
-    // Fetch 12-month order stats for top-10 (volume-based)
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    // Fetch 90-day order stats for top-10 (revenue R$)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const { data: orders } = await supabase
       .from('orders')
-      .select('client_id, quantity')
-      .gte('issue_date', twelveMonthsAgo.toISOString().split('T')[0])
+      .select('client_id, price, quantity')
+      .gte('issue_date', ninetyDaysAgo.toISOString().split('T')[0])
       .not('client_id', 'is', null);
 
-    const stats: Record<string, { volume: number; orders: number }> = {};
+    const stats: Record<string, { revenue: number; orders: number }> = {};
     (orders || []).forEach((o: any) => {
       if (!o.client_id) return;
-      if (!stats[o.client_id]) stats[o.client_id] = { volume: 0, orders: 0 };
-      stats[o.client_id].volume += Number(o.quantity) || 0;
+      if (!stats[o.client_id]) stats[o.client_id] = { revenue: 0, orders: 0 };
+      stats[o.client_id].revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1);
       stats[o.client_id].orders += 1;
     });
     setOrderStats(stats);
