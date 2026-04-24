@@ -610,10 +610,11 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 5;
 
   if (quote.payment.observations) {
+    const obsLines = doc.splitTextToSize(quote.payment.observations, pageWidth - 30);
+    ensureSpace(8 + obsLines.length * 5);
     y += 3;
     doc.text('Observações:', 15, y);
     y += 5;
-    const obsLines = doc.splitTextToSize(quote.payment.observations, pageWidth - 30);
     doc.text(obsLines, 15, y);
     y += obsLines.length * 5;
   }
@@ -621,6 +622,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 12;
 
   // ===== RODAPÉ =====
+  ensureSpace(20);
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 8;
