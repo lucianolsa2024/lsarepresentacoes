@@ -191,7 +191,7 @@ export function UserManager() {
         <DialogContent>
           <DialogHeader><DialogTitle>Resetar Senha</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Usuário: <strong>{resetUser?.email}</strong></p>
-          <div><Label>Nova Senha</Label><Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /></div>
+          <div><Label>Nova Senha</Label><Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder={PASSWORD_HINT} /><p className="text-xs text-muted-foreground mt-1">{PASSWORD_HINT}</p></div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResetUser(null)}>Cancelar</Button>
             <Button onClick={handleReset} disabled={resetting}>
