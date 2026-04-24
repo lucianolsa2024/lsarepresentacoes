@@ -44,28 +44,34 @@ export function ClientCurveReport() {
     setLoading(true);
 
     const [{ data: clientsData }, { data: repsData }] = await Promise.all([
-      supabase.from('clients').select('id, company, owner_email, curve, curve_updated_at'),
+      supabase.from('clients').select('id, company, owner_email, curve, curve_updated_at, segment'),
       supabase.from('representatives_map' as any).select('representative_name, email').eq('active', true),
     ]);
 
-    setClients(clientsData || []);
+    // Exclude corporate clients from the report
+    const nonCorporate = (clientsData || []).filter((c: any) => {
+      const seg = (c.segment || '').toLowerCase().trim();
+      return !CORPORATE_SEGMENTS.includes(seg);
+    });
+
+    setClients(nonCorporate);
     setReps((repsData as any[] || []).map((r: any) => ({ name: r.representative_name, email: r.email })));
 
     // Find last update time
-    const updated = (clientsData || [])
+    const updated = nonCorporate
       .map((c: any) => c.curve_updated_at)
       .filter(Boolean)
       .sort()
       .pop();
     setLastUpdate(updated || null);
 
-    // Fetch 6-month order stats for top-10
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Fetch 12-month order stats for top-10
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const { data: orders } = await supabase
       .from('orders')
       .select('client_id, price, quantity')
-      .gte('issue_date', sixMonthsAgo.toISOString().split('T')[0])
+      .gte('issue_date', twelveMonthsAgo.toISOString().split('T')[0])
       .not('client_id', 'is', null);
 
     const stats: Record<string, { revenue: number; orders: number }> = {};
