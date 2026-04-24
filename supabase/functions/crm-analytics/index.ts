@@ -436,6 +436,57 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "client_showroom": {
+        if (!params.cliente) {
+          return json({ error: "params.cliente é obrigatório" }, 400);
+        }
+        const cliente = String(params.cliente).trim();
+
+        // Buscar todos itens de showroom do cliente
+        const showroomRows = await fetchAll(supabase, (from, to) =>
+          supabase
+            .from("showroom_tracking")
+            .select("nf_numero, dt_faturamento, cliente, produto, cidade, representante, quantidade, valor, status_exposicao, status_treinamento, data_confirmacao, observacao, segmento_cliente")
+            .ilike("cliente", `%${cliente}%`)
+            .order("dt_faturamento", { ascending: false })
+            .range(from, to)
+        );
+
+        if (showroomRows.length === 0) {
+          return json({
+            query_type,
+            cliente,
+            count: 0,
+            data: { expostos: [], pendentes: [], nao_expostos: [], substituidos: [] },
+            message: "Nenhum produto de showroom encontrado para este cliente",
+          });
+        }
+
+        const expostos = showroomRows.filter(r => r.status_exposicao === "exposto");
+        const pendentes = showroomRows.filter(r => r.status_exposicao === "pendente" || r.status_exposicao === null);
+        const nao_expostos = showroomRows.filter(r => r.status_exposicao === "nao_exposto");
+        const substituidos = showroomRows.filter(r => r.status_exposicao === "substituido");
+
+        return json({
+          query_type,
+          cliente,
+          count: showroomRows.length,
+          totals: {
+            total: showroomRows.length,
+            expostos: expostos.length,
+            pendentes: pendentes.length,
+            nao_expostos: nao_expostos.length,
+            substituidos: substituidos.length,
+          },
+          data: {
+            expostos: expostos.map(r => ({ produto: r.produto, dt_faturamento: r.dt_faturamento, valor: r.valor, quantidade: r.quantidade, treinamento: r.status_treinamento })),
+            pendentes: pendentes.map(r => ({ produto: r.produto, dt_faturamento: r.dt_faturamento, valor: r.valor, quantidade: r.quantidade, observacao: r.observacao })),
+            nao_expostos: nao_expostos.map(r => ({ produto: r.produto, dt_faturamento: r.dt_faturamento, valor: r.valor, quantidade: r.quantidade, observacao: r.observacao })),
+            substituidos: substituidos.map(r => ({ produto: r.produto, dt_faturamento: r.dt_faturamento, valor: r.valor, observacao: r.observacao })),
+          },
+        });
+      }
+
       default:
         return json({ error: `query_type inválido: ${query_type}` }, 400);
     }

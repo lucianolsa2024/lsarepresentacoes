@@ -68,7 +68,7 @@ const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
   "Quais oportunidades estão paradas no funil?",
   "Resuma as atividades pendentes desta semana",
-  "Rascunhe um email de follow-up para cliente inativo",
+  "Quais produtos da minha carteira ainda não foram expostos no showroom?",
   "Quais produtos têm maior volume de orçamentos?",
 ];
 
@@ -238,32 +238,30 @@ export function AICopilot({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
-  // Ao abrir o Copilot: restaura sessão atual se existir, senão dispara proativo
+  // Ao abrir o Copilot: restaura sessão atual se existir, senão deixa tela inicial com sugestões
   useEffect(() => {
     if (!open) return;
     setShowHistory(false);
     setReadOnly(false);
 
-    const cancelledRef = { value: false };
     const saved = loadCurrentSession();
     if (saved && saved.messages.length > 0) {
       setMessages(saved.messages);
       setCurrentSessionId(saved.id);
-      return () => {
-        cancelledRef.value = true;
-      };
+      return;
     }
 
-    // Sem sessão salva — novo chat + proativo
+    // Sem sessão salva — apenas inicia novo chat (NÃO dispara proativo automático)
     setMessages([]);
     setCurrentSessionId(newSessionId());
-    loadProactiveSuggestions(cancelledRef);
-
-    return () => {
-      cancelledRef.value = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Disparar análise proativa SOB DEMANDA (clique do usuário)
+  const triggerProactiveSuggestions = useCallback(() => {
+    const cancelledRef = { value: false };
+    loadProactiveSuggestions(cancelledRef);
+  }, [loadProactiveSuggestions]);
 
   const startNewChat = useCallback(() => {
     setMessages([]);
@@ -521,7 +519,7 @@ ${productList.join('\n') || 'Nenhum'}
             messages: [
               {
                 role: "user",
-                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
+                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent "client_showroom" quando o usuário perguntar sobre showroom/exposição/produtos expostos de um cliente específico (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs"). Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
               },
             ],
           }),
@@ -547,6 +545,12 @@ ${productList.join('\n') || 'Nenhum'}
           query_type = null; // sem cliente não há como consultar
         } else {
           params = { cliente, ano: ano || new Date().getFullYear() };
+        }
+      } else if (query_type === "client_showroom") {
+        if (!cliente) {
+          query_type = null;
+        } else {
+          params = { cliente };
         }
       } else if (query_type === "brand_comparison") {
         params = { months: 6 };
@@ -834,9 +838,31 @@ ${productList.join('\n') || 'Nenhum'}
             >
               <div className="py-3 space-y-3">
                 {messages.length === 0 && (
-                  <div className="text-center py-6">
-                    <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
+                  <div className="text-center py-6 space-y-4">
+                    <div>
+                      <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
+                    </div>
+
+                    {/* Caixa clicável: análise proativa sob demanda */}
+                    <button
+                      onClick={triggerProactiveSuggestions}
+                      disabled={isLoading}
+                      className="mx-auto w-full max-w-sm flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors px-3 py-2.5 text-left disabled:opacity-50"
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 mt-0.5">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground leading-tight">
+                          Gerar análise proativa
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                          Clientes curva A inativos, ações urgentes e sugestões de visita.
+                        </p>
+                      </div>
+                    </button>
+
                     <div className="flex flex-wrap gap-1.5 justify-center">
                       {SUGGESTIONS.map((s) => (
                         <button key={s} onClick={() => sendMessage(s)}
