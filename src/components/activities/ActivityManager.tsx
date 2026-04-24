@@ -17,7 +17,8 @@ import { BulkActionBar } from './BulkActionBar';
 import { StoreChecklistData } from '@/types/storeChecklist';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare, Handshake } from 'lucide-react';
+import { Plus, List, LayoutGrid, BarChart3, CalendarDays, Loader2, ClipboardCheck, CheckSquare, Handshake, SlidersHorizontal } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { CalendarSubscription } from './CalendarSubscription';
 import { toast } from 'sonner';
 import {
@@ -416,25 +417,63 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
         />
       )}
 
-      {/* Filters */}
+      {/* Filters: drawer no mobile, inline no desktop */}
       {view !== 'report' && view !== 'calendar' && view !== 'checklist_report' && (
-        <ActivityFilters
-          search={search}
-          onSearchChange={setSearch}
-          categoryFilter={categoryFilter}
-          onCategoryFilterChange={setCategoryFilter}
-          typeFilter={typeFilter}
-          onTypeFilterChange={setTypeFilter}
-          priorityFilter={priorityFilter}
-          onPriorityFilterChange={setPriorityFilter}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          onClearFilters={handleClearFilters}
-          repFilter={repFilter}
-          onRepFilterChange={setRepFilter}
-          representatives={activeReps}
-          showRepFilter={!!isAdmin}
-        />
+        <>
+          <div className="md:hidden flex justify-end">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Filtros de Atividades</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  <ActivityFilters
+                    search={search}
+                    onSearchChange={setSearch}
+                    categoryFilter={categoryFilter}
+                    onCategoryFilterChange={setCategoryFilter}
+                    typeFilter={typeFilter}
+                    onTypeFilterChange={setTypeFilter}
+                    priorityFilter={priorityFilter}
+                    onPriorityFilterChange={setPriorityFilter}
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
+                    onClearFilters={handleClearFilters}
+                    repFilter={repFilter}
+                    onRepFilterChange={setRepFilter}
+                    representatives={activeReps}
+                    showRepFilter={!!isAdmin}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="hidden md:block">
+            <ActivityFilters
+              search={search}
+              onSearchChange={setSearch}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              typeFilter={typeFilter}
+              onTypeFilterChange={setTypeFilter}
+              priorityFilter={priorityFilter}
+              onPriorityFilterChange={setPriorityFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              onClearFilters={handleClearFilters}
+              repFilter={repFilter}
+              onRepFilterChange={setRepFilter}
+              representatives={activeReps}
+              showRepFilter={!!isAdmin}
+            />
+          </div>
+        </>
       )}
 
       {/* Content */}
