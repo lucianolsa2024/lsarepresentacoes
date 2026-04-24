@@ -136,6 +136,7 @@ export function UserManager() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Criado em</TableHead>
+                  <TableHead>Último acesso</TableHead>
                   <TableHead className="w-32" />
                 </TableRow>
               </TableHeader>
@@ -146,6 +147,11 @@ export function UserManager() {
                     <TableCell><Badge variant="outline">{u.email}</Badge></TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {u.last_sign_in_at
+                        ? new Date(u.last_sign_in_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                        : <span className="text-muted-foreground/60">nunca</span>}
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm" onClick={() => setResetUser(u)}>
