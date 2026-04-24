@@ -546,6 +546,12 @@ ${productList.join('\n') || 'Nenhum'}
         } else {
           params = { cliente, ano: ano || new Date().getFullYear() };
         }
+      } else if (query_type === "client_showroom") {
+        if (!cliente) {
+          query_type = null;
+        } else {
+          params = { cliente };
+        }
       } else if (query_type === "brand_comparison") {
         params = { months: 6 };
       } else if (query_type === "top_clients") {
