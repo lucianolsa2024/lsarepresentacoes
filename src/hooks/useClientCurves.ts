@@ -6,8 +6,8 @@ import type { ClientCurve } from './useClients';
 interface CurveResult {
   clientId: string;
   curve: ClientCurve;
-  volume12m: number;
-  orders12m: number;
+  revenue90d: number;
+  orders90d: number;
 }
 
 const CORPORATE_SEGMENTS = ['construtora', 'incorporadora', 'escritório de arquitetura', 'escritorio de arquitetura'];
@@ -16,10 +16,10 @@ export function useClientCurves() {
   const [updating, setUpdating] = useState(false);
 
   const calculateAllCurves = async (): Promise<CurveResult[]> => {
-    // Last 12 months
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-    const startDate = twelveMonthsAgo.toISOString().split('T')[0];
+    // Last 90 days
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const startDate = ninetyDaysAgo.toISOString().split('T')[0];
 
     // Fetch all clients with segment
     const { data: clients, error: clientsError } = await supabase
@@ -34,20 +34,20 @@ export function useClientCurves() {
     });
     const eligibleIds = new Set(eligibleClients.map((c: any) => c.id));
 
-    // Fetch orders in last 12 months
+    // Fetch orders in last 90 days
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('client_id, quantity')
+      .select('client_id, price, quantity')
       .gte('issue_date', startDate)
       .not('client_id', 'is', null);
     if (ordersError) throw ordersError;
 
-    // Aggregate volume (quantity) per client (only eligible)
-    const statsMap: Record<string, { volume: number; orders: number }> = {};
+    // Aggregate revenue (R$) per client (only eligible)
+    const statsMap: Record<string, { revenue: number; orders: number }> = {};
     (orders || []).forEach((o: any) => {
       if (!o.client_id || !eligibleIds.has(o.client_id)) return;
-      if (!statsMap[o.client_id]) statsMap[o.client_id] = { volume: 0, orders: 0 };
-      statsMap[o.client_id].volume += Number(o.quantity) || 0;
+      if (!statsMap[o.client_id]) statsMap[o.client_id] = { revenue: 0, orders: 0 };
+      statsMap[o.client_id].revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1);
       statsMap[o.client_id].orders += 1;
     });
 
@@ -55,26 +55,26 @@ export function useClientCurves() {
 
     // Inactive eligible clients = curve D
     eligibleClients.forEach((c: any) => {
-      if (!statsMap[c.id] || statsMap[c.id].volume <= 0) {
-        results.push({ clientId: c.id, curve: 'D', volume12m: 0, orders12m: 0 });
+      if (!statsMap[c.id] || statsMap[c.id].revenue <= 0) {
+        results.push({ clientId: c.id, curve: 'D', revenue90d: 0, orders90d: 0 });
       }
     });
 
-    // Active clients sorted by volume desc
+    // Active clients sorted by revenue desc
     const active = Object.entries(statsMap)
-      .filter(([, s]) => s.volume > 0)
-      .map(([id, s]) => ({ clientId: id, volume12m: s.volume, orders12m: s.orders }))
-      .sort((a, b) => b.volume12m - a.volume12m);
+      .filter(([, s]) => s.revenue > 0)
+      .map(([id, s]) => ({ clientId: id, revenue90d: s.revenue, orders90d: s.orders }))
+      .sort((a, b) => b.revenue90d - a.revenue90d);
 
-    const totalVolume = active.reduce((sum, a) => sum + a.volume12m, 0);
+    const totalRevenue = active.reduce((sum, a) => sum + a.revenue90d, 0);
 
-    if (totalVolume === 0) return results;
+    if (totalRevenue === 0) return results;
 
-    // Cumulative volume distribution: A=75%, B=10%, C=10%, D=5%
+    // Cumulative revenue distribution: A=75%, B=10%, C=10%, D=5%
     let cumulative = 0;
     active.forEach(item => {
-      cumulative += item.volume12m;
-      const pct = cumulative / totalVolume;
+      cumulative += item.revenue90d;
+      const pct = cumulative / totalRevenue;
       let curve: ClientCurve;
       if (pct <= 0.75) curve = 'A';
       else if (pct <= 0.85) curve = 'B';
