@@ -114,10 +114,10 @@ export function ClientCurveReport() {
       .filter((c: any) => c.curve === 'A')
       .map((c: any) => ({
         ...c,
-        volume: orderStats[c.id]?.volume || 0,
+        revenue: orderStats[c.id]?.revenue || 0,
         orders: orderStats[c.id]?.orders || 0,
       }))
-      .sort((a: any, b: any) => b.volume - a.volume)
+      .sort((a: any, b: any) => b.revenue - a.revenue)
       .slice(0, 10);
   }, [filtered, orderStats]);
 
