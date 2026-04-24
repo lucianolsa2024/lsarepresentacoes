@@ -276,6 +276,7 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
   const [topClients90d, setTopClients90d] = useState<TopClient90d[]>([]);
   const [mtdBySupplier, setMtdBySupplier] = useState<MtdBySupplier[]>([]);
   const [mtdByClient, setMtdByClient] = useState<MtdByClient[]>([]);
+  const [factoryGoals, setFactoryGoals] = useState<FactoryGoal[]>([]);
   const [loading, setLoading] = useState(true);
 
   const monthStart = selectedMonth ?? toMonthStart(new Date());
