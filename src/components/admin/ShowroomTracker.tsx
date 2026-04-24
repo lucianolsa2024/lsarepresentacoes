@@ -141,8 +141,8 @@ export function ShowroomTracker() {
         </Select>
       </div>
 
-      {/* Table full width */}
-      <div className="overflow-auto">
+      {/* Table full width with vertical scroll */}
+      <div className="overflow-auto max-h-[calc(100vh-280px)] border rounded-md">
         <Table>
           <TableHeader>
             <TableRow className="text-xs">
