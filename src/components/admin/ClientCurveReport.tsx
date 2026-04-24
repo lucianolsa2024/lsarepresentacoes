@@ -227,7 +227,7 @@ export function ClientCurveReport() {
       {/* Top 10 Curve A */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Top 10 – Curva A (por volume 12 meses)</CardTitle>
+          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 90 dias)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -235,8 +235,8 @@ export function ClientCurveReport() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead className="text-right">Volume 12M</TableHead>
-                <TableHead className="text-right">Pedidos 12M</TableHead>
+                <TableHead className="text-right">Faturamento 90d</TableHead>
+                <TableHead className="text-right">Pedidos 90d</TableHead>
                 <TableHead>Curva</TableHead>
               </TableRow>
             </TableHeader>
@@ -252,7 +252,7 @@ export function ClientCurveReport() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{i + 1}</TableCell>
                     <TableCell className="font-medium">{c.company}</TableCell>
-                    <TableCell className="text-right">{c.volume.toLocaleString('pt-BR')}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(c.revenue)}</TableCell>
                     <TableCell className="text-right">{c.orders}</TableCell>
                     <TableCell>{getCurveBadge('A')}</TableCell>
                   </TableRow>
