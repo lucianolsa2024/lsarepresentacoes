@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useShowroomTracking, ShowroomItem } from '@/hooks/useShowroomTracking';
 import { ShowroomImporter } from './ShowroomImporter';
-import { Package, AlertTriangle, Eye, GraduationCap, DollarSign } from 'lucide-react';
+import { Package, AlertTriangle, Eye, GraduationCap, DollarSign, Search, X } from 'lucide-react';
 
 const urgenciaIcon = (u: string) => {
   if (u === 'critico' || u === 'vermelho') return '🔴';
@@ -32,6 +32,9 @@ export function ShowroomTracker() {
   const [filtroRep, setFiltroRep] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('all');
   const [filtroUrgencia, setFiltroUrgencia] = useState('all');
+  const [search, setSearch] = useState('');
+  const [dataIni, setDataIni] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   const [modalExposicao, setModalExposicao] = useState<ShowroomItem | null>(null);
   const [expStatus, setExpStatus] = useState('exposto');
@@ -44,13 +47,30 @@ export function ShowroomTracker() {
   const reps = useMemo(() => [...new Set(items.map(i => i.representante).filter(Boolean))].sort(), [items]);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return items.filter(i => {
       if (filtroRep !== 'all' && i.representante !== filtroRep) return false;
       if (filtroStatus !== 'all' && i.status_exposicao !== filtroStatus) return false;
       if (filtroUrgencia !== 'all' && i.urgencia !== filtroUrgencia) return false;
+      if (dataIni && (!i.dt_faturamento || i.dt_faturamento < dataIni)) return false;
+      if (dataFim && (!i.dt_faturamento || i.dt_faturamento > dataFim)) return false;
+      if (q) {
+        const hay = [
+          i.cliente, i.representante, i.produto, i.cidade, i.nf_numero,
+          i.segmento_cliente, i.status_exposicao, i.status_treinamento,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [items, filtroRep, filtroStatus, filtroUrgencia]);
+  }, [items, filtroRep, filtroStatus, filtroUrgencia, search, dataIni, dataFim]);
+
+  const limparFiltros = () => {
+    setFiltroRep('all'); setFiltroStatus('all'); setFiltroUrgencia('all');
+    setSearch(''); setDataIni(''); setDataFim('');
+  };
+
+  const hasFilters = filtroRep !== 'all' || filtroStatus !== 'all' || filtroUrgencia !== 'all' || !!search || !!dataIni || !!dataFim;
 
   const kpis = useMemo(() => {
     const pendentes = items.filter(i => i.status_exposicao === 'pendente');
