@@ -533,6 +533,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
           messages: fullConversation,
           context: getContext(),
           analytics_data: analyticsData,
+          user_email: user?.email,
         }),
       });
 
