@@ -497,14 +497,26 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   });
 
   y += 5;
-  doc.setDrawColor(180);
-  doc.line(15, y, pageWidth - 15, y);
-  y += 10;
+
+  // Helper de quebra de página: garante 'needed' mm restantes na página
+  const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+  const BOTTOM_MARGIN = 15;
+  const ensureSpace = (needed: number) => {
+    if (y + needed > PAGE_HEIGHT - BOTTOM_MARGIN) {
+      doc.addPage();
+      y = 20;
+    }
+  };
 
   // ===== TOTAIS =====
   const ipiRate = 0.0325;
   const ipiValue = quote.total * ipiRate;
   const totalWithIpi = quote.total + ipiValue;
+
+  ensureSpace(35);
+  doc.setDrawColor(180);
+  doc.line(15, y, pageWidth - 15, y);
+  y += 10;
 
   y += 8;
   doc.setFontSize(9);
@@ -525,6 +537,14 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   y += 16;
 
   // ===== CONDIÇÕES DE PAGAMENTO =====
+  // Estimativa de altura mínima do bloco de pagamento + rodapé
+  const paymentBlockHeight =
+    50 +
+    (quote.payment.method === 'parcelado' ? 10 : 0) +
+    (quote.payment.method === 'entrada_parcelas' ? 15 : 0) +
+    (quote.payment.observations ? 20 : 0);
+  ensureSpace(paymentBlockHeight + 30);
+
   doc.setDrawColor(180);
   doc.line(15, y, pageWidth - 15, y);
   y += 10;
