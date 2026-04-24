@@ -184,6 +184,7 @@ export function AICopilot({
             ],
             context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
             analytics_data: analyticsData,
+            user_email: user?.email,
           }),
         });
 
