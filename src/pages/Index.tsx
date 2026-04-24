@@ -847,9 +847,9 @@ const Index = () => {
                 />
               </TabsContent>
 
-              {isAdmin && (
+              {showReportsTab && (
                 <TabsContent value="admin" className="mt-0">
-                  <AdminPanel />
+                  <AdminPanel isAdmin={isAdmin} />
                 </TabsContent>
               )}
               {showFinanceiroTab && (
