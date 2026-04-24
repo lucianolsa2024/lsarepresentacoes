@@ -443,17 +443,6 @@ const Index = () => {
                     onBack={() => setFichaClienteId(null)}
                   />
                 )}
-                {isAdmin && !fichaClienteId && !showMapaCarteira && !showRoteiro && (
-                  <div className="mb-6">
-                    <DashboardExecutivo
-                      onNavigateToCarteira={(filters) => {
-                        setMapaCarteiraFilters(filters);
-                        setShowMapaCarteira(true);
-                      }}
-                      onNavigateToRoteiro={() => setShowRoteiro(true)}
-                    />
-                  </div>
-                )}
                 {isAdmin && !fichaClienteId && showMapaCarteira && !showRoteiro && (
                   <MapaCarteira
                     initialFilters={mapaCarteiraFilters}
@@ -467,20 +456,20 @@ const Index = () => {
                     onViewClient={(clientId) => setFichaClienteId(clientId)}
                   />
                 )}
-                {isRep === true && (
+                {isRep === true && !fichaClienteId && !showMapaCarteira && !showRoteiro && (
                   <div className="mb-6 space-y-6">
                     <RepHomeDashboard />
                     <MyOkrGoals />
                   </div>
                 )}
-                {isRep === true ? (
+                {isRep === true && !fichaClienteId && !showMapaCarteira && !showRoteiro ? (
                   <QuoteDashboard 
                     quotes={quotes} 
                     activities={activities}
                     orders={orders}
                     onViewActivities={() => setActiveTab('activities')}
                   />
-                ) : !isAdmin ? (
+                ) : !isAdmin && !isRep ? (
                   /* Backoffice users: show only their activities widget */
                   <div className="space-y-6">
                     <ActivityWidget
