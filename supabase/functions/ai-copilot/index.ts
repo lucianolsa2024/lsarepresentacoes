@@ -189,6 +189,34 @@ ${analytics_data
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({ role: m.role, content: m.content }));
 
+    const tools = [
+      {
+        name: "create_activity",
+        description:
+          "Cria uma atividade/tarefa CRM no sistema para um cliente. Use quando o usuário pedir explicitamente para criar uma visita, ligação, follow-up, reunião, email ou tarefa, OU quando você identificar proativamente que um cliente precisa de atenção e quiser agendar uma ação concreta. Sempre confirme com clareza o cliente, tipo e data antes de criar.",
+        input_schema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Título da atividade (ex: 'Visita de retomada — Loja XYZ')" },
+            type: {
+              type: "string",
+              enum: ["visita", "ligacao", "followup", "reuniao", "email"],
+              description: "Tipo da atividade",
+            },
+            due_date: { type: "string", description: "Data no formato YYYY-MM-DD" },
+            client_name: { type: "string", description: "Nome (Nome Fantasia ou empresa) do cliente" },
+            description: { type: "string", description: "Descrição/observações da atividade" },
+            priority: {
+              type: "string",
+              enum: ["alta", "media", "baixa"],
+              description: "Prioridade (default: media)",
+            },
+          },
+          required: ["title", "type", "due_date", "client_name"],
+        },
+      },
+    ];
+
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -201,6 +229,7 @@ ${analytics_data
         max_tokens: 4096,
         system: systemPrompt,
         messages: anthropicMessages,
+        tools,
         stream: true,
       }),
     });
