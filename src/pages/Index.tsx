@@ -363,80 +363,80 @@ const Index = () => {
             <TabsList className={`hidden md:grid w-full ${tabsCountClass} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <LayoutDashboard className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Dashboard</span>
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Dashboard</span>
               </TabsTrigger>
               {isRep !== false && (
               <TabsTrigger
                 value="comercial"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Briefcase className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Comercial</span>
+                <Briefcase className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Comercial</span>
               </TabsTrigger>
               )}
               <TabsTrigger
                 value="activities"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <ClipboardList className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Atividades</span>
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Atividades</span>
               </TabsTrigger>
               <TabsTrigger
                 value="funnels"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <TrendingUp className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Funis</span>
+                <TrendingUp className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Funis</span>
               </TabsTrigger>
               {isAdmin && (
               <TabsTrigger
                 value="automations"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Zap className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Automações</span>
+                <Zap className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Automações</span>
               </TabsTrigger>
               )}
               <TabsTrigger
                 value="service-orders"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Wrench className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Ordens de Serviço</span>
+                <Wrench className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Ordens</span>
               </TabsTrigger>
               <TabsTrigger
                 value="operations"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Settings className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Operação</span>
+                <Settings className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Operação</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Package className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Produtos</span>
+                <Package className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Produtos</span>
               </TabsTrigger>
               {showReportsTab && (
               <TabsTrigger
                 value="admin"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <ShieldCheck className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{isAdmin ? 'Admin' : 'Relatórios'}</span>
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">{isAdmin ? 'Admin' : 'Relatórios'}</span>
               </TabsTrigger>
               )}
               {showFinanceiroTab && (
               <TabsTrigger
                 value="financeiro"
-                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
               >
-                <Landmark className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Financeiro</span>
+                <Landmark className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">Financeiro</span>
               </TabsTrigger>
               )}
             </TabsList>
