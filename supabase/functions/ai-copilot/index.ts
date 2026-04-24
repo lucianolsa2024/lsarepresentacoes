@@ -78,10 +78,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { messages, context, analytics_data } = body as {
+    const { messages, context, analytics_data, user_email } = body as {
       messages: InMessage[];
       context?: string;
       analytics_data?: unknown;
+      user_email?: string;
     };
 
     // context é uma string longa já formatada pelo frontend (AICopilot.tsx)
