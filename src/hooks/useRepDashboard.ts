@@ -207,6 +207,64 @@ async function fetchMonthFromSalesBase(
   return { sold, bySupplier, byClient };
 }
 
+/**
+ * Busca metas (total + por fábrica) do mês.
+ * - Quando email é null/undefined → soma metas de TODOS os representantes (admin sem filtro).
+ * - Quando email informado → metas daquele representante.
+ * Linhas com supplier IS NULL representam a meta total do rep.
+ */
+async function fetchGoals(
+  monthStart: string,
+  email?: string | null,
+): Promise<{ totalGoal: number; byFactory: Map<string, number> }> {
+  let query = supabase
+    .from('rep_goals')
+    .select('owner_email, supplier, goal_value')
+    .eq('month_start', monthStart);
+
+  if (email) query = query.eq('owner_email', email);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  let totalGoal = 0;
+  const byFactory = new Map<string, number>();
+  for (const row of data ?? []) {
+    const v = Number((row as any).goal_value) || 0;
+    const sup = ((row as any).supplier ?? '').toString().trim().toUpperCase();
+    if (!sup) {
+      totalGoal += v;
+    } else {
+      byFactory.set(sup, (byFactory.get(sup) ?? 0) + v);
+    }
+  }
+  return { totalGoal, byFactory };
+}
+
+/** Constrói lista de FactoryGoal a partir das metas + vendas por fornecedor. */
+function buildFactoryGoals(
+  byFactory: Map<string, number>,
+  bySupplier: MtdBySupplier[],
+): FactoryGoal[] {
+  const supplierRevenue = new Map<string, number>();
+  for (const s of bySupplier) {
+    supplierRevenue.set((s.supplier ?? '').toUpperCase(), s.revenue_mtd ?? 0);
+  }
+  const keys = new Set<string>([...byFactory.keys(), ...FACTORY_GOAL_SUPPLIERS]);
+  return Array.from(keys).map((sup) => {
+    const goal_value = byFactory.get(sup) ?? 0;
+    const sold = supplierRevenue.get(sup) ?? 0;
+    const achieved_pct = goal_value > 0 ? sold / goal_value : null;
+    return {
+      supplier: sup,
+      goal_value,
+      sold,
+      achieved_pct,
+      remaining: Math.max(goal_value - sold, 0),
+    };
+  });
+}
+
 export function useRepDashboard(selectedMonth?: string, filterEmail?: string): UseRepDashboardResult {
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
