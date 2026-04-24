@@ -238,32 +238,30 @@ export function AICopilot({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
-  // Ao abrir o Copilot: restaura sessão atual se existir, senão dispara proativo
+  // Ao abrir o Copilot: restaura sessão atual se existir, senão deixa tela inicial com sugestões
   useEffect(() => {
     if (!open) return;
     setShowHistory(false);
     setReadOnly(false);
 
-    const cancelledRef = { value: false };
     const saved = loadCurrentSession();
     if (saved && saved.messages.length > 0) {
       setMessages(saved.messages);
       setCurrentSessionId(saved.id);
-      return () => {
-        cancelledRef.value = true;
-      };
+      return;
     }
 
-    // Sem sessão salva — novo chat + proativo
+    // Sem sessão salva — apenas inicia novo chat (NÃO dispara proativo automático)
     setMessages([]);
     setCurrentSessionId(newSessionId());
-    loadProactiveSuggestions(cancelledRef);
-
-    return () => {
-      cancelledRef.value = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Disparar análise proativa SOB DEMANDA (clique do usuário)
+  const triggerProactiveSuggestions = useCallback(() => {
+    const cancelledRef = { value: false };
+    loadProactiveSuggestions(cancelledRef);
+  }, [loadProactiveSuggestions]);
 
   const startNewChat = useCallback(() => {
     setMessages([]);
