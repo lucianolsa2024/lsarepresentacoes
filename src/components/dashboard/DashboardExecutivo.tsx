@@ -5,9 +5,6 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Users, Target, BarChart3, ShieldAlert, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExecutiveDashboard } from '@/hooks/useExecutiveDashboard';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart,
-} from 'recharts';
 
 const fmtBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -254,141 +251,48 @@ export function DashboardExecutivo({ onNavigateToCarteira, onNavigateToRoteiro }
         </Card>
       </div>
 
-      {/* Sell-out Mensal Chart */}
+      {/* Painel de Alertas */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Sell-out Mensal (últimos 12 meses)</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-red-500" />
+            Painel de Alertas
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                <Tooltip
-                  formatter={(value: number) => [fmtBRL(value), 'Sell-out']}
-                  labelStyle={{ fontWeight: 600 }}
-                />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Sell-out" />
-              </ComposedChart>
-            </ResponsiveContainer>
+        <CardContent className="max-h-[400px] overflow-y-auto">
+          {alertas.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta</p>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Sem dados disponíveis</p>
+            <div className="space-y-2">
+              {alertas.map((a, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={
+                          a.nivel_risco === 'critico'
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : a.nivel_risco === 'risco'
+                            ? 'bg-orange-50 text-orange-700 border-orange-200'
+                            : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                        }
+                      >
+                        {a.nivel_risco === 'critico' ? 'Crítico' : a.nivel_risco === 'risco' ? 'Risco' : 'Atenção'}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">{a.segmento}</Badge>
+                    </div>
+                    <p className="font-medium text-sm mt-1 truncate">{a.client_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {a.dias_sem_sellout} dias sem sell-out · {fmtBRL(a.sellout_historico)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Alertas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-red-500" />
-              Painel de Alertas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="max-h-[400px] overflow-y-auto">
-            {alertas.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta</p>
-            ) : (
-              <div className="space-y-2">
-                {alertas.map((a, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={
-                            a.nivel_risco === 'critico'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : a.nivel_risco === 'risco'
-                              ? 'bg-orange-50 text-orange-700 border-orange-200'
-                              : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                          }
-                        >
-                          {a.nivel_risco === 'critico' ? 'Crítico' : a.nivel_risco === 'risco' ? 'Risco' : 'Atenção'}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">{a.segmento}</Badge>
-                      </div>
-                      <p className="font-medium text-sm mt-1 truncate">{a.client_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.dias_sem_sellout} dias sem sell-out · {fmtBRL(a.sellout_historico)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Positivação por Segmento */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Positivação por Segmento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 font-medium">Segmento</th>
-                    <th className="text-center py-2 font-medium">Clientes</th>
-                    <th className="text-center py-2 font-medium">30 dias</th>
-                    <th className="text-center py-2 font-medium">60 dias</th>
-                    <th className="text-center py-2 font-medium">90 dias</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positivacaoPorSegmento.map((row) => (
-                    <tr key={row.segmento} className="border-b last:border-0">
-                      <td className="py-3">
-                        <Badge variant="outline" className="font-semibold">{row.segmento}</Badge>
-                      </td>
-                      <td className="text-center py-3">{row.total}</td>
-                      <td className="text-center py-3">
-                        <span className={row.taxa30 >= 70 ? 'text-green-600' : row.taxa30 >= 50 ? 'text-yellow-600' : 'text-red-600'}>
-                          {fmtPct(row.taxa30)}
-                        </span>
-                      </td>
-                      <td className="text-center py-3">
-                        <span className={row.taxa60 >= 80 ? 'text-green-600' : row.taxa60 >= 60 ? 'text-yellow-600' : 'text-red-600'}>
-                          {fmtPct(row.taxa60)}
-                        </span>
-                      </td>
-                      <td className="text-center py-3">
-                        <span className={row.taxa90 >= 90 ? 'text-green-600' : row.taxa90 >= 70 ? 'text-yellow-600' : 'text-red-600'}>
-                          {fmtPct(row.taxa90)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Positivação mensal trend */}
-            {positivacaoMensal.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Evolução mensal de clientes com sell-out</p>
-                <ResponsiveContainer width="100%" height={150}>
-                  <ComposedChart data={positivacaoMensal.slice(-6).map((r) => {
-                    const [, m] = r.mes.split('-');
-                    const mesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                    return { label: mesNomes[parseInt(m, 10) - 1], total: Number(r.clientes_com_sellout) || 0 };
-                  })}>
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name="Com sell-out" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
