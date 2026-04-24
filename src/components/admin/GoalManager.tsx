@@ -174,21 +174,23 @@ export function GoalManager() {
                 <TableRow>
                   <TableHead>Representante</TableHead>
                   <TableHead>Mês</TableHead>
+                  <TableHead>Fábrica</TableHead>
                   <TableHead className="text-right">Meta</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {goals.map((g) => (
-                  <TableRow key={`${g.owner_email}_${g.month_start}`}>
+                  <TableRow key={`${g.owner_email}_${g.month_start}_${g.supplier ?? 'total'}`}>
                     <TableCell>{repName(g.owner_email)}</TableCell>
                     <TableCell>{g.month_start.slice(0, 7)}</TableCell>
+                    <TableCell>{g.supplier ?? <span className="text-muted-foreground italic">Total</span>}</TableCell>
                     <TableCell className="text-right">{formatCurrency(g.goal_value)}</TableCell>
                     <TableCell className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(g)}>
                         <Save className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(g.owner_email, g.month_start)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(g)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
