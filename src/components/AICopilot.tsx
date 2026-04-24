@@ -99,6 +99,7 @@ export function AICopilot({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
   const [readOnly, setReadOnly] = useState(false);
