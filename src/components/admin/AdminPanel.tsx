@@ -10,7 +10,8 @@ import { CommissionManager } from './CommissionManager';
 import { MixAnalysis } from './MixAnalysis';
 import { SellOutTracker } from './SellOutTracker';
 import { ShowroomTracker } from './ShowroomTracker';
-import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart, Eye } from 'lucide-react';
+import { AnalysisPanel } from './AnalysisPanel';
+import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart, Eye, LineChart } from 'lucide-react';
 
 export function AdminPanel() {
   return (
@@ -60,6 +61,10 @@ export function AdminPanel() {
           <Eye className="h-4 w-4 mr-2" />
           Showroom
         </TabsTrigger>
+        <TabsTrigger value="analises">
+          <LineChart className="h-4 w-4 mr-2" />
+          Análises
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="sales-report" className="mt-0">
@@ -94,6 +99,9 @@ export function AdminPanel() {
       </TabsContent>
       <TabsContent value="showroom" className="mt-0">
         <ShowroomTracker />
+      </TabsContent>
+      <TabsContent value="analises" className="mt-0">
+        <AnalysisPanel />
       </TabsContent>
     </Tabs>
   );
