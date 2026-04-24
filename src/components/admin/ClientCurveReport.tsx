@@ -38,7 +38,7 @@ export function ClientCurveReport() {
   const { updateAllCurves, calculating } = useClientCurves();
 
   // Fetch data for top-10 revenue (need orders join)
-  const [orderStats, setOrderStats] = useState<Record<string, { revenue: number; orders: number }>>({});
+  const [orderStats, setOrderStats] = useState<Record<string, { volume: number; orders: number }>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -65,20 +65,20 @@ export function ClientCurveReport() {
       .pop();
     setLastUpdate(updated || null);
 
-    // Fetch 12-month order stats for top-10
+    // Fetch 12-month order stats for top-10 (volume-based)
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const { data: orders } = await supabase
       .from('orders')
-      .select('client_id, price, quantity')
+      .select('client_id, quantity')
       .gte('issue_date', twelveMonthsAgo.toISOString().split('T')[0])
       .not('client_id', 'is', null);
 
-    const stats: Record<string, { revenue: number; orders: number }> = {};
+    const stats: Record<string, { volume: number; orders: number }> = {};
     (orders || []).forEach((o: any) => {
       if (!o.client_id) return;
-      if (!stats[o.client_id]) stats[o.client_id] = { revenue: 0, orders: 0 };
-      stats[o.client_id].revenue += (o.price || 0) * (o.quantity || 1);
+      if (!stats[o.client_id]) stats[o.client_id] = { volume: 0, orders: 0 };
+      stats[o.client_id].volume += Number(o.quantity) || 0;
       stats[o.client_id].orders += 1;
     });
     setOrderStats(stats);
@@ -114,10 +114,10 @@ export function ClientCurveReport() {
       .filter((c: any) => c.curve === 'A')
       .map((c: any) => ({
         ...c,
-        revenue: orderStats[c.id]?.revenue || 0,
+        volume: orderStats[c.id]?.volume || 0,
         orders: orderStats[c.id]?.orders || 0,
       }))
-      .sort((a: any, b: any) => b.revenue - a.revenue)
+      .sort((a: any, b: any) => b.volume - a.volume)
       .slice(0, 10);
   }, [filtered, orderStats]);
 
@@ -227,7 +227,7 @@ export function ClientCurveReport() {
       {/* Top 10 Curve A */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 12 meses)</CardTitle>
+          <CardTitle className="text-lg">Top 10 – Curva A (por volume 12 meses)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -235,7 +235,7 @@ export function ClientCurveReport() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead className="text-right">Faturamento 12M</TableHead>
+                <TableHead className="text-right">Volume 12M</TableHead>
                 <TableHead className="text-right">Pedidos 12M</TableHead>
                 <TableHead>Curva</TableHead>
               </TableRow>
@@ -252,7 +252,7 @@ export function ClientCurveReport() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{i + 1}</TableCell>
                     <TableCell className="font-medium">{c.company}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(c.revenue)}</TableCell>
+                    <TableCell className="text-right">{c.volume.toLocaleString('pt-BR')}</TableCell>
                     <TableCell className="text-right">{c.orders}</TableCell>
                     <TableCell>{getCurveBadge('A')}</TableCell>
                   </TableRow>
