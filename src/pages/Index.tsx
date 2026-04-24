@@ -19,6 +19,7 @@ import { useActivities } from '@/hooks/useActivities';
 import { useOrders } from '@/hooks/useOrders';
 import { useSalesOpportunities } from '@/hooks/useSalesOpportunities';
 import { getQuoteLabel } from '@/utils/quoteLabel';
+import { upsertFollowUpForQuote } from '@/utils/upsertFollowUp';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
