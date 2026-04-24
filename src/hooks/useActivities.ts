@@ -131,21 +131,6 @@ export function useActivities() {
 
       const activitiesData = [...(activeData || []), ...(completedData || [])];
 
-      // 🔍 DIAGNÓSTICO TEMPORÁRIO — atividades futuras
-      const today = new Date().toISOString().split('T')[0];
-      const ativasFuturas = (activeData || []).filter(a => a.due_date >= today);
-      const kaza = (activeData || []).find(a => a.id === 'feb41595-4f4f-4317-8191-85745c478736');
-      console.log('[useActivities] DIAG', {
-        totalActive: activeData?.length ?? 0,
-        totalCompleted: completedData?.length ?? 0,
-        ativasHojeOuFuturo: ativasFuturas.length,
-        hojeISO: today,
-        kazaPresente: !!kaza,
-        kaza,
-      });
-
-      // errors already handled above
-
       const clientIds = [...new Set((activitiesData || []).map(a => a.client_id).filter(Boolean))];
       let clientsMap: Record<string, DbClient> = {};
       
