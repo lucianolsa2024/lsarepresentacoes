@@ -18,11 +18,13 @@ const CURVE_COLORS: Record<ClientCurve, string> = {
 };
 
 const CURVE_LABELS: Record<ClientCurve, string> = {
-  A: 'Curva A – Top 25%',
-  B: 'Curva B – 25-50%',
-  C: 'Curva C – Abaixo 50%',
-  D: 'Curva D – Inativos',
+  A: 'Curva A – 75% do faturamento',
+  B: 'Curva B – 10% do faturamento',
+  C: 'Curva C – 10% do faturamento',
+  D: 'Curva D – 5% + inativos',
 };
+
+const CORPORATE_SEGMENTS = ['construtora', 'incorporadora', 'escritório de arquitetura', 'escritorio de arquitetura'];
 
 const formatCurrency = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -42,28 +44,34 @@ export function ClientCurveReport() {
     setLoading(true);
 
     const [{ data: clientsData }, { data: repsData }] = await Promise.all([
-      supabase.from('clients').select('id, company, owner_email, curve, curve_updated_at'),
+      supabase.from('clients').select('id, company, owner_email, curve, curve_updated_at, segment'),
       supabase.from('representatives_map' as any).select('representative_name, email').eq('active', true),
     ]);
 
-    setClients(clientsData || []);
+    // Exclude corporate clients from the report
+    const nonCorporate = (clientsData || []).filter((c: any) => {
+      const seg = (c.segment || '').toLowerCase().trim();
+      return !CORPORATE_SEGMENTS.includes(seg);
+    });
+
+    setClients(nonCorporate);
     setReps((repsData as any[] || []).map((r: any) => ({ name: r.representative_name, email: r.email })));
 
     // Find last update time
-    const updated = (clientsData || [])
+    const updated = nonCorporate
       .map((c: any) => c.curve_updated_at)
       .filter(Boolean)
       .sort()
       .pop();
     setLastUpdate(updated || null);
 
-    // Fetch 6-month order stats for top-10
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Fetch 12-month order stats for top-10
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const { data: orders } = await supabase
       .from('orders')
       .select('client_id, price, quantity')
-      .gte('issue_date', sixMonthsAgo.toISOString().split('T')[0])
+      .gte('issue_date', twelveMonthsAgo.toISOString().split('T')[0])
       .not('client_id', 'is', null);
 
     const stats: Record<string, { revenue: number; orders: number }> = {};
@@ -219,7 +227,7 @@ export function ClientCurveReport() {
       {/* Top 10 Curve A */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 6 meses)</CardTitle>
+          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 12 meses)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -227,8 +235,8 @@ export function ClientCurveReport() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead className="text-right">Faturamento 6M</TableHead>
-                <TableHead className="text-right">Pedidos 6M</TableHead>
+                <TableHead className="text-right">Faturamento 12M</TableHead>
+                <TableHead className="text-right">Pedidos 12M</TableHead>
                 <TableHead>Curva</TableHead>
               </TableRow>
             </TableHeader>
