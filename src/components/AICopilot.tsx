@@ -519,7 +519,7 @@ ${productList.join('\n') || 'Nenhum'}
             messages: [
               {
                 role: "user",
-                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
+                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent "client_showroom" quando o usuário perguntar sobre showroom/exposição/produtos expostos de um cliente específico (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs"). Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
               },
             ],
           }),
