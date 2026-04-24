@@ -117,6 +117,120 @@ export function AICopilot({
     }
   }, [open]);
 
+  // Ao abrir o Copilot sem mensagens, gera sugestões proativas (curva A inativos)
+  useEffect(() => {
+    if (!open || messagesRef.current.length > 0) return;
+
+    let cancelled = false;
+
+    const loadProactiveSuggestions = async () => {
+      setIsLoading(true);
+      let assistantSoFar = "";
+      const upsertAssistant = (chunk: string) => {
+        if (cancelled) return;
+        assistantSoFar += chunk;
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return prev.map((m, i) =>
+              i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
+            );
+          }
+          return [
+            ...prev,
+            { role: "assistant", content: assistantSoFar, timestamp: Date.now() },
+          ];
+        });
+      };
+
+      try {
+        // 1. Buscar clientes curva A inativos
+        let analyticsData: any = null;
+        try {
+          const analyticsRes = await fetch(ANALYTICS_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${BEARER}`,
+            },
+            body: JSON.stringify({
+              query_type: "inactive_curve_a",
+              params: { days: 60, limit: 5 },
+            }),
+          });
+          analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
+        } catch (e) {
+          console.error("[AICopilot] proativo - erro analytics:", e);
+        }
+
+        if (cancelled) return;
+
+        // 2. Pedir análise proativa ao Claude (streaming)
+        const resp = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${BEARER}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: "user",
+                content:
+                  "Analise os clientes curva A inativos e sugira as 3 ações mais urgentes. Para cada um sugira criar uma atividade de visita ou ligação. Seja direto e use emojis.",
+              },
+            ],
+            context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
+            analytics_data: analyticsData,
+          }),
+        });
+
+        if (!resp.ok || !resp.body) {
+          upsertAssistant("Não consegui carregar sugestões agora. Pergunte algo abaixo.");
+          return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          if (cancelled) break;
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) upsertAssistant(content);
+            } catch {
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[AICopilot] Erro sugestões proativas:", e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadProactiveSuggestions();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const startNewChat = useCallback(() => {
     setMessages([]);
     setReadOnly(false);
