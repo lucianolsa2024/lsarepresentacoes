@@ -62,7 +62,7 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onUpd
               return (
                 <div
                   key={item.id}
-                  className="bg-muted/30 border rounded-lg p-4"
+                  className="bg-muted/30 border rounded-lg p-3 sm:p-4"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex gap-3 flex-1">
@@ -120,7 +120,7 @@ export function QuoteCart({ items, onUpdateQuantity, onUpdateObservations, onUpd
                   </div>
 
                   {/* Item discount/surcharge */}
-                  <div className="mb-3 flex items-center gap-2">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                       Desc/Acrés. Item:
                     </label>

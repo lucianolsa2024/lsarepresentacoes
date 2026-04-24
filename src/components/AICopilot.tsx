@@ -665,7 +665,7 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg h-[85vh] max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-lg w-[calc(100%-1rem)] mx-2 h-[90vh] md:h-[80vh] max-h-[90vh] md:max-h-[80vh] flex flex-col p-0 gap-0">
           <DialogTitle className="sr-only">AI Copilot LSA</DialogTitle>
           <DialogDescription className="sr-only">
             Assistente de inteligência artificial para análise comercial
