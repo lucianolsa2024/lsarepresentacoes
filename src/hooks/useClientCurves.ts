@@ -6,7 +6,7 @@ import type { ClientCurve } from './useClients';
 interface CurveResult {
   clientId: string;
   curve: ClientCurve;
-  revenue12m: number;
+  volume12m: number;
   orders12m: number;
 }
 
@@ -37,17 +37,17 @@ export function useClientCurves() {
     // Fetch orders in last 12 months
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('client_id, price, quantity')
+      .select('client_id, quantity')
       .gte('issue_date', startDate)
       .not('client_id', 'is', null);
     if (ordersError) throw ordersError;
 
-    // Aggregate revenue per client (only eligible)
-    const statsMap: Record<string, { revenue: number; orders: number }> = {};
+    // Aggregate volume (quantity) per client (only eligible)
+    const statsMap: Record<string, { volume: number; orders: number }> = {};
     (orders || []).forEach((o: any) => {
       if (!o.client_id || !eligibleIds.has(o.client_id)) return;
-      if (!statsMap[o.client_id]) statsMap[o.client_id] = { revenue: 0, orders: 0 };
-      statsMap[o.client_id].revenue += (o.price || 0) * (o.quantity || 1);
+      if (!statsMap[o.client_id]) statsMap[o.client_id] = { volume: 0, orders: 0 };
+      statsMap[o.client_id].volume += Number(o.quantity) || 0;
       statsMap[o.client_id].orders += 1;
     });
 
@@ -55,26 +55,26 @@ export function useClientCurves() {
 
     // Inactive eligible clients = curve D
     eligibleClients.forEach((c: any) => {
-      if (!statsMap[c.id] || statsMap[c.id].revenue <= 0) {
-        results.push({ clientId: c.id, curve: 'D', revenue12m: 0, orders12m: 0 });
+      if (!statsMap[c.id] || statsMap[c.id].volume <= 0) {
+        results.push({ clientId: c.id, curve: 'D', volume12m: 0, orders12m: 0 });
       }
     });
 
-    // Active clients sorted by revenue desc
+    // Active clients sorted by volume desc
     const active = Object.entries(statsMap)
-      .filter(([, s]) => s.revenue > 0)
-      .map(([id, s]) => ({ clientId: id, revenue12m: s.revenue, orders12m: s.orders }))
-      .sort((a, b) => b.revenue12m - a.revenue12m);
+      .filter(([, s]) => s.volume > 0)
+      .map(([id, s]) => ({ clientId: id, volume12m: s.volume, orders12m: s.orders }))
+      .sort((a, b) => b.volume12m - a.volume12m);
 
-    const totalRevenue = active.reduce((sum, a) => sum + a.revenue12m, 0);
+    const totalVolume = active.reduce((sum, a) => sum + a.volume12m, 0);
 
-    if (totalRevenue === 0) return results;
+    if (totalVolume === 0) return results;
 
-    // Cumulative revenue distribution: A=75%, B=10%, C=10%, D=5%
+    // Cumulative volume distribution: A=75%, B=10%, C=10%, D=5%
     let cumulative = 0;
     active.forEach(item => {
-      cumulative += item.revenue12m;
-      const pct = cumulative / totalRevenue;
+      cumulative += item.volume12m;
+      const pct = cumulative / totalVolume;
       let curve: ClientCurve;
       if (pct <= 0.75) curve = 'A';
       else if (pct <= 0.85) curve = 'B';
