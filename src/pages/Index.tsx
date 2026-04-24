@@ -531,38 +531,40 @@ const Index = () => {
               {/* COMERCIAL - Sub-tabs */}
               <TabsContent value="comercial" className="mt-0">
                 <Tabs value={comercialTab} onValueChange={setComercialTab}>
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="quote">
-                      <FileText className="h-4 w-4 mr-2" />
-                      {editingQuoteId ? 'Editar Orçamento' : 'Novo Orçamento'}
-                    </TabsTrigger>
-                    <TabsTrigger value="history">
-                      <History className="h-4 w-4 mr-2" />
-                      Histórico
-                    </TabsTrigger>
-                    <TabsTrigger value="clients">
-                      <Users className="h-4 w-4 mr-2" />
-                      Clientes
-                    </TabsTrigger>
-                    <TabsTrigger value="routes">
-                      <Map className="h-4 w-4 mr-2" />
-                      Rotas
-                    </TabsTrigger>
-                    <TabsTrigger value="import-excel">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Importar Excel
-                    </TabsTrigger>
-                    <TabsTrigger value="import-pdf">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Importar PDF
-                    </TabsTrigger>
-                    <TabsTrigger value="consulta-precos" asChild>
-                      <Link to="/comercial/consulta-precos">
-                        <Calculator className="h-4 w-4 mr-2" />
-                        Consulta de Preços
-                      </Link>
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="mb-4 -mx-4 sm:mx-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ overscrollBehaviorX: 'contain' }}>
+                    <TabsList className="inline-flex w-max px-4 sm:px-0">
+                      <TabsTrigger value="quote" className="whitespace-nowrap">
+                        <FileText className="h-4 w-4 mr-2" />
+                        {editingQuoteId ? 'Editar Orçamento' : 'Novo Orçamento'}
+                      </TabsTrigger>
+                      <TabsTrigger value="history" className="whitespace-nowrap">
+                        <History className="h-4 w-4 mr-2" />
+                        Histórico
+                      </TabsTrigger>
+                      <TabsTrigger value="clients" className="whitespace-nowrap">
+                        <Users className="h-4 w-4 mr-2" />
+                        Clientes
+                      </TabsTrigger>
+                      <TabsTrigger value="routes" className="whitespace-nowrap">
+                        <Map className="h-4 w-4 mr-2" />
+                        Rotas
+                      </TabsTrigger>
+                      <TabsTrigger value="import-excel" className="whitespace-nowrap">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importar Excel
+                      </TabsTrigger>
+                      <TabsTrigger value="import-pdf" className="whitespace-nowrap">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Importar PDF
+                      </TabsTrigger>
+                      <TabsTrigger value="consulta-precos" asChild className="whitespace-nowrap">
+                        <Link to="/comercial/consulta-precos">
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Consulta de Preços
+                        </Link>
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
 
                   <TabsContent value="quote" className="mt-0">
                     {editingQuoteId && (
