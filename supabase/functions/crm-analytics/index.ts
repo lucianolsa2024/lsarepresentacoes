@@ -411,6 +411,31 @@ Deno.serve(async (req) => {
         return json({ query_type, cliente: params.cliente, ano, data: top });
       }
 
+      case "inactive_curve_a": {
+        const days = params.days || 60;
+        const limit = params.limit || 5;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const cutoffStr = cutoff.toISOString().split("T")[0];
+
+        const { data, error } = await supabase
+          .from("clients")
+          .select("id, company, trade_name, curve, last_purchase_date, owner_email, phone")
+          .eq("curve", "A")
+          .lt("last_purchase_date", cutoffStr)
+          .order("last_purchase_date", { ascending: true })
+          .limit(limit);
+
+        if (error) throw error;
+
+        return json({
+          query_type,
+          cutoff_date: cutoffStr,
+          days,
+          inactive_clients: data || [],
+        });
+      }
+
       default:
         return json({ error: `query_type inválido: ${query_type}` }, 400);
     }
