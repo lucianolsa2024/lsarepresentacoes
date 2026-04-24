@@ -369,8 +369,8 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
             .order('revenue_mtd', { ascending: false })
             .limit(10);
 
-          const [monthRes, compareRes, yoyCurrRes, yoyPrevRes, inactiveRes, topClientsRes, supplierMtdRes, clientMtdRes, corpRes] =
-            await Promise.all([monthQuery, compareQuery, yoyCurrQuery, yoyPrevQuery, inactiveQuery, topClientsQuery, supplierMtdQuery, clientMtdQuery, corpQuery]);
+          const [monthRes, compareRes, yoyCurrRes, yoyPrevRes, inactiveRes, topClientsRes, supplierMtdRes, clientMtdRes, corpRes, goalsRes] =
+            await Promise.all([monthQuery, compareQuery, yoyCurrQuery, yoyPrevQuery, inactiveQuery, topClientsQuery, supplierMtdQuery, clientMtdQuery, corpQuery, fetchGoals(monthStart, email)]);
 
           if (monthRes.error) throw monthRes.error;
           if (compareRes.error) throw compareRes.error;
@@ -394,7 +394,23 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           const revPrev = (yoyPrevRes.data ?? []).reduce((s, r) => s + (Number(r.line_revenue) || 0), 0);
           const yoyPct = revPrev > 0 ? ((revCurr - revPrev) / revPrev) * 100 : null;
 
-          setMonthData((monthRow as RepMonthDashboard) ?? null);
+          const supplierData = (supplierMtdRes.data as MtdBySupplier[] | null) ?? [];
+
+          // Override goal_value with sum from rep_goals (handles factory goals + total).
+          // Total goal = explicit total (supplier IS NULL) OR, if absent, sum of factory goals.
+          const factorySum = Array.from(goalsRes.byFactory.values()).reduce((s, v) => s + v, 0);
+          const effectiveGoal = goalsRes.totalGoal > 0 ? goalsRes.totalGoal : factorySum;
+          const sold = monthRow?.sold_month ?? 0;
+          const adjustedMonthRow: RepMonthDashboard | null = monthRow
+            ? {
+                ...(monthRow as RepMonthDashboard),
+                goal_value: effectiveGoal,
+                goal_achieved_pct: effectiveGoal > 0 ? sold / effectiveGoal : null,
+                remaining_to_goal: Math.max(effectiveGoal - sold, 0),
+              }
+            : null;
+
+          setMonthData(adjustedMonthRow);
           setCompare90d((compareRow as Rep90dCompare) ?? null);
           setMtdYoy({
             owner_email: email,
@@ -405,8 +421,9 @@ export function useRepDashboard(selectedMonth?: string, filterEmail?: string): U
           });
           setInactiveClients(filteredInactive);
           setTopClients90d((topClientsRes.data as TopClient90d[] | null) ?? []);
-          setMtdBySupplier((supplierMtdRes.data as MtdBySupplier[] | null) ?? []);
+          setMtdBySupplier(supplierData);
           setMtdByClient((clientMtdRes.data as MtdByClient[] | null) ?? []);
+          setFactoryGoals(buildFactoryGoals(goalsRes.byFactory, supplierData));
         } else {
           // Historical month and/or admin all-reps: query v_sales_base directly
           const goalQuery = supabase
