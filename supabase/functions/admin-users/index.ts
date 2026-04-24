@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
         email: u.email,
         name: u.user_metadata?.name || u.user_metadata?.full_name || '',
         created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at || null,
       }));
       return new Response(JSON.stringify({ users }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -96,8 +97,9 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch (err) {
-    console.error('Admin operation failed');
-    return new Response(JSON.stringify({ error: 'Erro interno' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (err: any) {
+    console.error('Admin operation failed:', err?.message || err);
+    const msg = err?.message || 'Erro interno';
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
