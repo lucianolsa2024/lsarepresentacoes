@@ -108,133 +108,155 @@ export function AICopilot({
   const [userScrolled, setUserScrolled] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
+  const [sessions, setSessions] = useState<Session[]>(() => loadHistory());
   const [readOnly, setReadOnly] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => newSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<Msg[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Ao abrir o Copilot, sempre inicia chat novo (não carrega histórico)
+  // Autosave: a cada mensagem nova, persiste a sessão atual em SESSION_KEY
   useEffect(() => {
-    if (open) {
-      setMessages([]);
-      setShowHistory(false);
-      setReadOnly(false);
+    if (readOnly) return; // não sobrescreve enquanto lê histórico
+    if (messages.length === 0) return;
+    const session: Session = {
+      id: currentSessionId,
+      date: new Date().toISOString(),
+      preview: messages.find((m) => m.role === "user")?.content?.slice(0, 60) || "",
+      messages,
+    };
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // ignore
     }
-  }, [open]);
+  }, [messages, currentSessionId, readOnly]);
 
-  // Ao abrir o Copilot sem mensagens, gera sugestões proativas (curva A inativos)
-  useEffect(() => {
-    if (!open || messagesRef.current.length > 0) return;
-
-    let cancelled = false;
-
-    const loadProactiveSuggestions = async () => {
-      setIsLoading(true);
-      let assistantSoFar = "";
-      const upsertAssistant = (chunk: string) => {
-        if (cancelled) return;
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return prev.map((m, i) =>
-              i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
-            );
-          }
-          return [
-            ...prev,
-            { role: "assistant", content: assistantSoFar, timestamp: Date.now() },
-          ];
-        });
-      };
-
-      try {
-        // 1. Buscar clientes curva A inativos
-        let analyticsData: any = null;
-        try {
-          const analyticsRes = await fetch(ANALYTICS_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${BEARER}`,
-            },
-            body: JSON.stringify({
-              query_type: "inactive_curve_a",
-              params: { days: 60, limit: 5 },
-            }),
-          });
-          analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
-        } catch (e) {
-          console.error("[AICopilot] proativo - erro analytics:", e);
+  // Função reutilizável para gerar sugestões proativas
+  const loadProactiveSuggestions = useCallback(async (cancelledRef: { value: boolean }) => {
+    setIsLoading(true);
+    let assistantSoFar = "";
+    const upsertAssistant = (chunk: string) => {
+      if (cancelledRef.value) return;
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
+          );
         }
+        return [
+          ...prev,
+          { role: "assistant", content: assistantSoFar, timestamp: Date.now() },
+        ];
+      });
+    };
 
-        if (cancelled) return;
-
-        // 2. Pedir análise proativa ao Claude (streaming)
-        const resp = await fetch(CHAT_URL, {
+    try {
+      let analyticsData: any = null;
+      try {
+        const analyticsRes = await fetch(ANALYTICS_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${BEARER}`,
           },
           body: JSON.stringify({
-            messages: [
-              {
-                role: "user",
-                content:
-                  "Analise os clientes curva A inativos e sugira as 3 ações mais urgentes. Para cada um sugira criar uma atividade de visita ou ligação. Seja direto e use emojis.",
-              },
-            ],
-            context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
-            analytics_data: analyticsData,
-            user_email: user?.email,
+            query_type: "inactive_curve_a",
+            params: { days: 60, limit: 5 },
           }),
         });
+        analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
+      } catch (e) {
+        console.error("[AICopilot] proativo - erro analytics:", e);
+      }
 
-        if (!resp.ok || !resp.body) {
-          upsertAssistant("Não consegui carregar sugestões agora. Pergunte algo abaixo.");
-          return;
-        }
+      if (cancelledRef.value) return;
 
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${BEARER}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content:
+                "Analise os clientes curva A inativos e sugira as 3 ações mais urgentes. Para cada um sugira criar uma atividade de visita ou ligação. Seja direto e use emojis.",
+            },
+          ],
+          context: `${getContext()}\n\nUsuário acabou de abrir o Copilot — gerar análise proativa.`,
+          analytics_data: analyticsData,
+          user_email: user?.email,
+        }),
+      });
 
-        while (true) {
-          if (cancelled) break;
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let newlineIndex: number;
-          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-            let line = buffer.slice(0, newlineIndex);
-            buffer = buffer.slice(newlineIndex + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") break;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) upsertAssistant(content);
-            } catch {
-              break;
-            }
+      if (!resp.ok || !resp.body) {
+        upsertAssistant("Não consegui carregar sugestões agora. Pergunte algo abaixo.");
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        if (cancelledRef.value) break;
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) upsertAssistant(content);
+          } catch {
+            break;
           }
         }
-      } catch (e) {
-        console.error("[AICopilot] Erro sugestões proativas:", e);
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
-    };
+    } catch (e) {
+      console.error("[AICopilot] Erro sugestões proativas:", e);
+    } finally {
+      if (!cancelledRef.value) setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
 
-    loadProactiveSuggestions();
+  // Ao abrir o Copilot: restaura sessão atual se existir, senão dispara proativo
+  useEffect(() => {
+    if (!open) return;
+    setShowHistory(false);
+    setReadOnly(false);
+
+    const cancelledRef = { value: false };
+    const saved = loadCurrentSession();
+    if (saved && saved.messages.length > 0) {
+      setMessages(saved.messages);
+      setCurrentSessionId(saved.id);
+      return () => {
+        cancelledRef.value = true;
+      };
+    }
+
+    // Sem sessão salva — novo chat + proativo
+    setMessages([]);
+    setCurrentSessionId(newSessionId());
+    loadProactiveSuggestions(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.value = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -243,16 +265,40 @@ export function AICopilot({
     setMessages([]);
     setReadOnly(false);
     setShowHistory(false);
+    setCurrentSessionId(newSessionId());
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // ignore
+    }
   }, []);
 
+  // Lixeira: arquiva sessão atual em HISTORY_KEY e inicia novo chat
   const archiveAndClear = useCallback(() => {
-    const current = messagesRef.current;
-    if (current.length > 0) {
-      archiveCurrentSession(current);
-      setSessions(loadSessions());
+    try {
+      const current = loadCurrentSession();
+      if (current && current.messages.length > 0) {
+        const history = loadHistory();
+        history.unshift(current);
+        saveHistory(history);
+        setSessions(loadHistory());
+      }
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+      console.error("[AICopilot] erro ao arquivar sessão:", e);
     }
     setMessages([]);
     setReadOnly(false);
+    setCurrentSessionId(newSessionId());
+  }, []);
+
+  const clearAllHistory = useCallback(() => {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {
+      // ignore
+    }
+    setSessions([]);
   }, []);
 
   const openSession = useCallback((session: Session) => {
