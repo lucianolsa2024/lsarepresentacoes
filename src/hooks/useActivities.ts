@@ -94,16 +94,25 @@ export function useActivities() {
     try {
       setLoading(true);
       
-      // Fetch active activities (not completed/cancelled) - avoids hitting the 1000 row default limit
-      const { data: activeData, error: activeError } = await supabase
-        .from('activities')
-        .select('*')
-        .not('status', 'in', '("concluida","cancelada","realizada")')
-        .order('due_date', { ascending: true })
-        .order('due_time', { ascending: true, nullsFirst: false })
-        .limit(5000);
+      // Fetch active activities (not completed/cancelled) — paginate to bypass PostgREST 1000-row default cap
+      const activeAll: any[] = [];
+      const PAGE = 1000;
+      for (let from = 0; from < 10000; from += PAGE) {
+        const to = from + PAGE - 1;
+        const { data: pageData, error: pageError } = await supabase
+          .from('activities')
+          .select('*')
+          .not('status', 'in', '("concluida","cancelada","realizada")')
+          .order('due_date', { ascending: true })
+          .order('due_time', { ascending: true, nullsFirst: false })
+          .range(from, to);
 
-      if (activeError) throw activeError;
+        if (pageError) throw pageError;
+        if (!pageData || pageData.length === 0) break;
+        activeAll.push(...pageData);
+        if (pageData.length < PAGE) break;
+      }
+      const activeData = activeAll;
 
       // Fetch recently completed activities (last 30 days) for display when filter is set
       const thirtyDaysAgo = new Date();
@@ -121,6 +130,19 @@ export function useActivities() {
       if (completedError) throw completedError;
 
       const activitiesData = [...(activeData || []), ...(completedData || [])];
+
+      // 🔍 DIAGNÓSTICO TEMPORÁRIO — atividades futuras
+      const today = new Date().toISOString().split('T')[0];
+      const ativasFuturas = (activeData || []).filter(a => a.due_date >= today);
+      const kaza = (activeData || []).find(a => a.id === 'feb41595-4f4f-4317-8191-85745c478736');
+      console.log('[useActivities] DIAG', {
+        totalActive: activeData?.length ?? 0,
+        totalCompleted: completedData?.length ?? 0,
+        ativasHojeOuFuturo: ativasFuturas.length,
+        hojeISO: today,
+        kazaPresente: !!kaza,
+        kaza,
+      });
 
       // errors already handled above
 
