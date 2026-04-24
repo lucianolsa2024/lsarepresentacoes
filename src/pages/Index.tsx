@@ -52,7 +52,9 @@ import { canAccessFinanceiroLSA } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AICopilot } from '@/components/AICopilot';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark, Zap } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark, Zap, Calculator } from 'lucide-react';
+import { PriceConsultation } from '@/components/PriceConsultation';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Order, OrderFormData } from '@/types/order';
 import {
@@ -553,6 +555,12 @@ const Index = () => {
                     <TabsTrigger value="import-pdf">
                       <FileText className="h-4 w-4 mr-2" />
                       Importar PDF
+                    </TabsTrigger>
+                    <TabsTrigger value="consulta-precos" asChild>
+                      <Link to="/comercial/consulta-precos">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Consulta de Preços
+                      </Link>
                     </TabsTrigger>
                   </TabsList>
 
