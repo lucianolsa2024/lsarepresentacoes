@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLeft } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, User, Trash2, ArrowDown, History, ArrowLeft, Mic, MicOff } from "lucide-react";
+import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 
@@ -98,6 +99,7 @@ export function AICopilot({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<Session[]>(() => loadSessions());
   const [readOnly, setReadOnly] = useState(false);
@@ -453,6 +455,28 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
     setIsLoading(false);
   };
 
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Seu navegador não suporta reconhecimento de voz');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      setTimeout(() => sendMessage(transcript), 300);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.start();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -689,6 +713,15 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   className="min-h-[36px] max-h-[80px] resize-none text-xs"
                   rows={1}
                 />
+                <Button
+                  size="icon"
+                  variant={isListening ? "destructive" : "outline"}
+                  className="h-9 w-9 shrink-0"
+                  onClick={startListening}
+                  disabled={isLoading}
+                >
+                  {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                </Button>
                 <Button size="icon" className="h-9 w-9 shrink-0"
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}>
