@@ -249,10 +249,12 @@ function aggregateBySupplierNormalized(rows: MtdBySupplier[]): MtdBySupplier[] {
     const existing = map.get(sup);
     if (existing) {
       existing.revenue_mtd = (existing.revenue_mtd ?? 0) + (r.revenue_mtd ?? 0);
-      existing.qty_mtd = (existing.qty_mtd ?? 0) + (r.qty_mtd ?? 0);
+      existing.volume_mtd = (existing.volume_mtd ?? 0) + (r.volume_mtd ?? 0);
+      existing.orders_mtd = (existing.orders_mtd ?? 0) + (r.orders_mtd ?? 0);
     } else {
       map.set(sup, { ...r, supplier: sup });
     }
+
   }
   return Array.from(map.values());
 }
