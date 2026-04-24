@@ -5,9 +5,6 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Users, Target, BarChart3, ShieldAlert, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useExecutiveDashboard } from '@/hooks/useExecutiveDashboard';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart,
-} from 'recharts';
 
 const fmtBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
