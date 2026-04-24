@@ -31,6 +31,7 @@ export function GoalManager() {
   const [loading, setLoading] = useState(true);
 
   const [selectedEmail, setSelectedEmail] = useState('');
+  const [supplier, setSupplier] = useState<string>(TOTAL_VALUE);
   const [monthStart, setMonthStart] = useState(format(new Date(), 'yyyy-MM'));
   const [goalValue, setGoalValue] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function GoalManager() {
       supabase.from('rep_goals').select('*').order('month_start', { ascending: false }),
     ]);
     if (repsRes.data) setReps(repsRes.data);
-    if (goalsRes.data) setGoals(goalsRes.data);
+    if (goalsRes.data) setGoals(goalsRes.data as Goal[]);
     setLoading(false);
   }, []);
 
@@ -57,19 +58,42 @@ export function GoalManager() {
     const gv = parseFloat(goalValue);
     if (isNaN(gv) || gv <= 0) { toast.error('Valor inválido'); return; }
 
-    const { error } = await supabase.from('rep_goals').upsert(
-      { owner_email: selectedEmail, month_start: ms, goal_value: gv },
-      { onConflict: 'owner_email,month_start' }
-    );
+    const supplierValue = supplier === TOTAL_VALUE ? null : supplier;
+
+    // Upsert manual: deleta existente + insere
+    await supabase
+      .from('rep_goals')
+      .delete()
+      .eq('owner_email', selectedEmail)
+      .eq('month_start', ms)
+      .is('supplier', supplierValue as any);
+    if (supplierValue) {
+      await supabase
+        .from('rep_goals')
+        .delete()
+        .eq('owner_email', selectedEmail)
+        .eq('month_start', ms)
+        .eq('supplier', supplierValue);
+    }
+
+    const { error } = await supabase.from('rep_goals').insert({
+      owner_email: selectedEmail,
+      month_start: ms,
+      goal_value: gv,
+      supplier: supplierValue,
+    });
     if (error) { toast.error('Erro ao salvar meta'); console.error(error); return; }
     toast.success('Meta salva');
     setEditingKey(null);
     setGoalValue('');
+    setSupplier(TOTAL_VALUE);
     fetchData();
   };
 
-  const handleDelete = async (email: string, month: string) => {
-    const { error } = await supabase.from('rep_goals').delete().eq('owner_email', email).eq('month_start', month);
+  const handleDelete = async (g: Goal) => {
+    let q = supabase.from('rep_goals').delete().eq('owner_email', g.owner_email).eq('month_start', g.month_start);
+    q = g.supplier ? q.eq('supplier', g.supplier) : q.is('supplier', null);
+    const { error } = await q;
     if (error) { toast.error('Erro ao excluir'); return; }
     toast.success('Meta excluída');
     fetchData();
@@ -77,9 +101,10 @@ export function GoalManager() {
 
   const handleEdit = (g: Goal) => {
     setSelectedEmail(g.owner_email);
+    setSupplier(g.supplier ?? TOTAL_VALUE);
     setMonthStart(g.month_start.slice(0, 7));
     setGoalValue(String(g.goal_value));
-    setEditingKey(`${g.owner_email}_${g.month_start}`);
+    setEditingKey(`${g.owner_email}_${g.month_start}_${g.supplier ?? 'total'}`);
   };
 
   const repName = (email: string) => reps.find((r) => r.email === email)?.representative_name || email;
