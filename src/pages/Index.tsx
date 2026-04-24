@@ -462,7 +462,7 @@ const Index = () => {
                     <MyOkrGoals />
                   </div>
                 )}
-                {isRep === true && !fichaClienteId && !showMapaCarteira && !showRoteiro ? (
+                {(isRep === true || isAdmin) && !fichaClienteId && !showMapaCarteira && !showRoteiro ? (
                   <QuoteDashboard 
                     quotes={quotes} 
                     activities={activities}
