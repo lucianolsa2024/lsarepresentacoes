@@ -757,10 +757,12 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                       minute: "2-digit",
                     });
                     const firstUserMsg = s.messages.find((m) => m.role === "user");
-                    const preview = firstUserMsg
-                      ? firstUserMsg.content.slice(0, 80) +
-                        (firstUserMsg.content.length > 80 ? "…" : "")
-                      : "(sem mensagens)";
+                    const preview =
+                      s.preview ||
+                      (firstUserMsg
+                        ? firstUserMsg.content.slice(0, 80) +
+                          (firstUserMsg.content.length > 80 ? "…" : "")
+                        : "(sem mensagens)");
                     return (
                       <button
                         key={s.id}
@@ -781,6 +783,23 @@ ${recentOrders.length > 0 ? recentOrders.join('\n') : 'Nenhum pedido recente'}
                   })
                 )}
               </div>
+              {sessions.length > 0 && (
+                <div className="border-t px-3 py-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-[10px] gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (confirm("Apagar todo o histórico salvo? Esta ação não pode ser desfeita.")) {
+                        clearAllHistory();
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Apagar histórico
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
           <>
