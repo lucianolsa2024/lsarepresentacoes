@@ -363,7 +363,7 @@ const Index = () => {
             <TabsList className={`hidden md:grid w-full ${tabsCountClass} h-auto p-0 bg-muted rounded-none`}>
               <TabsTrigger
                 value="dashboard"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <LayoutDashboard className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -371,7 +371,7 @@ const Index = () => {
               {isRep !== false && (
               <TabsTrigger
                 value="comercial"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Briefcase className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Comercial</span>
@@ -379,14 +379,14 @@ const Index = () => {
               )}
               <TabsTrigger
                 value="activities"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <ClipboardList className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Atividades</span>
               </TabsTrigger>
               <TabsTrigger
                 value="funnels"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <TrendingUp className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Funis</span>
@@ -394,7 +394,7 @@ const Index = () => {
               {isAdmin && (
               <TabsTrigger
                 value="automations"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Zap className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Automações</span>
@@ -402,21 +402,21 @@ const Index = () => {
               )}
               <TabsTrigger
                 value="service-orders"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Wrench className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Ordens de Serviço</span>
               </TabsTrigger>
               <TabsTrigger
                 value="operations"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Settings className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Operação</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Package className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
@@ -424,7 +424,7 @@ const Index = () => {
               {isAdmin && (
               <TabsTrigger
                 value="admin"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <ShieldCheck className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Admin</span>
@@ -433,7 +433,7 @@ const Index = () => {
               {showFinanceiroTab && (
               <TabsTrigger
                 value="financeiro"
-                className="py-3 sm:py-4 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
+                className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <Landmark className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Financeiro</span>
