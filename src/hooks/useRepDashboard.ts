@@ -241,13 +241,30 @@ async function fetchGoals(
   return { totalGoal, byFactory };
 }
 
+/** Agrega vendas por fornecedor já normalizando aliases (CENTURY/PONTO VIRGULA → SOHOME). */
+function aggregateBySupplierNormalized(rows: MtdBySupplier[]): MtdBySupplier[] {
+  const map = new Map<string, MtdBySupplier>();
+  for (const r of rows) {
+    const sup = normalizeSupplier(r.supplier) || 'SEM FORNECEDOR';
+    const existing = map.get(sup);
+    if (existing) {
+      existing.revenue_mtd = (existing.revenue_mtd ?? 0) + (r.revenue_mtd ?? 0);
+      existing.qty_mtd = (existing.qty_mtd ?? 0) + (r.qty_mtd ?? 0);
+    } else {
+      map.set(sup, { ...r, supplier: sup });
+    }
+  }
+  return Array.from(map.values());
+}
+
 /** Constrói lista de FactoryGoal a partir das metas + vendas por fornecedor. */
 function buildFactoryGoals(
   byFactory: Map<string, number>,
   bySupplier: MtdBySupplier[],
 ): FactoryGoal[] {
+  const normalized = aggregateBySupplierNormalized(bySupplier);
   const supplierRevenue = new Map<string, number>();
-  for (const s of bySupplier) {
+  for (const s of normalized) {
     supplierRevenue.set((s.supplier ?? '').toUpperCase(), s.revenue_mtd ?? 0);
   }
   const keys = new Set<string>([...byFactory.keys(), ...FACTORY_GOAL_SUPPLIERS]);
@@ -264,6 +281,7 @@ function buildFactoryGoals(
     };
   });
 }
+
 
 export function useRepDashboard(selectedMonth?: string, filterEmail?: string): UseRepDashboardResult {
   const { user } = useAuth();
