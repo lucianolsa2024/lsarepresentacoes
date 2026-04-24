@@ -916,13 +916,15 @@ const Index = () => {
         isAdmin={isAdmin}
       />
     <AICopilot
-  activeTab={activeTab}
-  clients={clients}
-  activities={activities}
-  quotes={quotes}
-  opportunities={opportunities}
-  orders={orders}
-/>
+      activeTab={activeTab}
+      clients={clients}
+      activities={activities}
+      quotes={quotes}
+      opportunities={opportunities}
+      orders={orders}
+      products={products}
+      userEmail={user?.email}
+    />
     </div>
   );
 };
