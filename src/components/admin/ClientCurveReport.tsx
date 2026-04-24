@@ -38,7 +38,7 @@ export function ClientCurveReport() {
   const { updateAllCurves, calculating } = useClientCurves();
 
   // Fetch data for top-10 revenue (need orders join)
-  const [orderStats, setOrderStats] = useState<Record<string, { revenue: number; orders: number }>>({});
+  const [orderStats, setOrderStats] = useState<Record<string, { volume: number; orders: number }>>({});
 
   const fetchData = async () => {
     setLoading(true);
