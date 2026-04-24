@@ -257,12 +257,85 @@ ${analytics_data
       async start(controller) {
         let buffer = "";
         let currentEvent = "";
+        // Tool use accumulators (keyed by content block index)
+        const toolBlocks = new Map<
+          number,
+          { name: string; id: string; jsonBuffer: string }
+        >();
 
         const emit = (text: string) => {
           const payload = JSON.stringify({
             choices: [{ delta: { content: text } }],
           });
           controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+        };
+
+        const executeCreateActivity = async (input: any) => {
+          try {
+            const { createClient } = await import(
+              "https://esm.sh/@supabase/supabase-js@2"
+            );
+            const supabase = createClient(
+              Deno.env.get("SUPABASE_URL")!,
+              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            );
+
+            // Buscar client_id pelo nome (Nome Fantasia / company / trade_name)
+            let clientId: string | null = null;
+            let clientCompany: string | null = null;
+            const name = String(input.client_name || "").trim();
+            if (name) {
+              const { data: byTrade } = await supabase
+                .from("clients")
+                .select("id, company, trade_name")
+                .ilike("trade_name", `%${name}%`)
+                .limit(1);
+              if (byTrade && byTrade.length > 0) {
+                clientId = byTrade[0].id;
+                clientCompany = byTrade[0].trade_name || byTrade[0].company;
+              } else {
+                const { data: byCompany } = await supabase
+                  .from("clients")
+                  .select("id, company, trade_name")
+                  .ilike("company", `%${name}%`)
+                  .limit(1);
+                if (byCompany && byCompany.length > 0) {
+                  clientId = byCompany[0].id;
+                  clientCompany = byCompany[0].trade_name || byCompany[0].company;
+                }
+              }
+            }
+
+            const { error: insertErr } = await supabase.from("activities").insert({
+              title: input.title,
+              type: input.type,
+              due_date: input.due_date,
+              description: input.description || "",
+              priority: input.priority || "media",
+              client_id: clientId,
+              client_name: clientCompany || input.client_name,
+              activity_category: "crm",
+              status: "pendente",
+              assigned_to_email: user_email || null,
+            });
+
+            if (insertErr) {
+              console.error("[ai-copilot] erro insert activity:", insertErr);
+              emit(
+                `\n\n⚠️ Não consegui criar a atividade: ${insertErr.message}`,
+              );
+              return;
+            }
+
+            const clientLabel = clientCompany || input.client_name;
+            const matchNote = clientId ? "" : " _(cliente não encontrado na base — atividade criada sem vínculo)_";
+            emit(
+              `\n\n✅ Atividade criada: **${input.title}** — ${clientLabel} em ${input.due_date}${matchNote}`,
+            );
+          } catch (e) {
+            console.error("[ai-copilot] executeCreateActivity error:", e);
+            emit(`\n\n⚠️ Erro ao criar atividade: ${e instanceof Error ? e.message : "desconhecido"}`);
+          }
         };
 
         try {
@@ -288,7 +361,19 @@ ${analytics_data
 
               try {
                 const evt = JSON.parse(dataStr);
-                // Anthropic streaming: content_block_delta carries text
+
+                // Início de bloco: pode ser text ou tool_use
+                if (evt.type === "content_block_start" && evt.content_block) {
+                  if (evt.content_block.type === "tool_use") {
+                    toolBlocks.set(evt.index ?? 0, {
+                      name: evt.content_block.name,
+                      id: evt.content_block.id,
+                      jsonBuffer: "",
+                    });
+                  }
+                }
+
+                // Delta de texto normal
                 if (
                   (currentEvent === "content_block_delta" || evt.type === "content_block_delta") &&
                   evt.delta?.type === "text_delta" &&
@@ -296,6 +381,35 @@ ${analytics_data
                 ) {
                   emit(evt.delta.text);
                 }
+
+                // Delta de input JSON da tool
+                if (
+                  evt.type === "content_block_delta" &&
+                  evt.delta?.type === "input_json_delta" &&
+                  typeof evt.delta.partial_json === "string"
+                ) {
+                  const block = toolBlocks.get(evt.index ?? 0);
+                  if (block) block.jsonBuffer += evt.delta.partial_json;
+                }
+
+                // Fim de bloco: se for tool_use completa, executa
+                if (evt.type === "content_block_stop") {
+                  const block = toolBlocks.get(evt.index ?? 0);
+                  if (block) {
+                    let parsedInput: any = {};
+                    try {
+                      parsedInput = block.jsonBuffer ? JSON.parse(block.jsonBuffer) : {};
+                    } catch (e) {
+                      console.error("[ai-copilot] tool input parse error:", e, block.jsonBuffer);
+                    }
+                    console.log("[ai-copilot] executando tool:", block.name, parsedInput);
+                    if (block.name === "create_activity") {
+                      await executeCreateActivity(parsedInput);
+                    }
+                    toolBlocks.delete(evt.index ?? 0);
+                  }
+                }
+
                 if (evt.type === "message_stop" || currentEvent === "message_stop") {
                   controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
                 }
