@@ -57,7 +57,7 @@ function CorporateOpportunityCard({
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <div className="bg-card border rounded-lg p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(opp)}>
+    <div className="bg-card border rounded-lg p-2 sm:p-3 space-y-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(opp)}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           {client && (
@@ -396,13 +396,13 @@ export function SalesFunnelManager() {
 
       {/* Kanban - horizontally scrollable on mobile */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="overflow-x-auto -mx-2 px-2 pb-2">
-        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(160px, 1fr))`, minWidth: `${activeStages.length * 170}px` }}>
+        <div className="overflow-x-auto -mx-2 px-2 pb-2 [overscroll-behavior-x:contain]">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${activeStages.length}, minmax(280px, 1fr))`, minWidth: `${activeStages.length * 290}px` }}>
           {activeStages.map(stage => {
             const stageOpps = stageGroups[stage.key] || [];
             const stageValue = stageOpps.reduce((s, o) => s + o.value, 0);
             return (
-              <div key={stage.key} className="min-w-[180px]">
+              <div key={stage.key} className="min-w-[280px]">
                 <div className={`rounded-t-lg p-2 border ${STAGE_COLORS[stage.key] || 'bg-muted'}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold">{stage.label}</span>
