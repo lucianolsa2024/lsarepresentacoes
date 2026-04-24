@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NpsForm from "./pages/NpsForm";
 import NotFound from "./pages/NotFound";
+import PriceConsultationPage from "./pages/PriceConsultationPage";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/nps/:token" element={<NpsForm />} />
+            <Route path="/comercial/consulta-precos" element={<PriceConsultationPage />} />
             <Route
               path="/"
               element={
