@@ -306,11 +306,8 @@ export function RepHomeDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* MTD por Fornecedor + MTD por Cliente */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2 px-3 sm:px-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Factory className="h-5 w-5 text-primary" />
@@ -349,7 +346,10 @@ export function RepHomeDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Top Clientes do Mês */}
+      <div className="grid gap-4 sm:gap-6">
         <Card>
           <CardHeader className="pb-2 px-3 sm:px-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
