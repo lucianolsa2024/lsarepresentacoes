@@ -838,9 +838,31 @@ ${productList.join('\n') || 'Nenhum'}
             >
               <div className="py-3 space-y-3">
                 {messages.length === 0 && (
-                  <div className="text-center py-6">
-                    <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
+                  <div className="text-center py-6 space-y-4">
+                    <div>
+                      <Sparkles className="h-8 w-8 text-primary/30 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-muted-foreground mb-3">Como posso ajudar?</p>
+                    </div>
+
+                    {/* Caixa clicável: análise proativa sob demanda */}
+                    <button
+                      onClick={triggerProactiveSuggestions}
+                      disabled={isLoading}
+                      className="mx-auto w-full max-w-sm flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors px-3 py-2.5 text-left disabled:opacity-50"
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 mt-0.5">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground leading-tight">
+                          Gerar análise proativa
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                          Clientes curva A inativos, ações urgentes e sugestões de visita.
+                        </p>
+                      </div>
+                    </button>
+
                     <div className="flex flex-wrap gap-1.5 justify-center">
                       {SUGGESTIONS.map((s) => (
                         <button key={s} onClick={() => sendMessage(s)}
