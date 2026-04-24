@@ -239,39 +239,7 @@ const Index = () => {
     syncQuoteToRDStation(quote);
 
     // Auto-create or update follow-up activity D+5 — only 1 per quote chain
-    const rootQuoteId = quote.parentQuoteId || quote.id;
-    const allChainIds = quotes
-      .filter(q => q.id === rootQuoteId || q.parentQuoteId === rootQuoteId)
-      .map(q => q.id);
-    // Also include the current new quote id
-    allChainIds.push(quote.id);
-    const existingFollowUp = activities.find(
-      (a) => a.quote_id && allChainIds.includes(a.quote_id) && a.type === 'followup' && a.status !== 'concluida' && a.status !== 'cancelada'
-    );
-    const clientLabel = quote.client.company || quote.client.name;
-    if (existingFollowUp) {
-      // Update existing follow-up to point to latest version
-      const label = getQuoteLabel(quote);
-      await updateActivity(existingFollowUp.id, {
-        quote_id: quote.id,
-        title: `Follow-up ${label}`,
-        description: `Lembrete automático de follow-up: ${label}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      });
-    } else {
-      const followUpDate = new Date();
-      followUpDate.setDate(followUpDate.getDate() + 5);
-      const label = getQuoteLabel(quote);
-      await addActivity({
-        activity_category: 'crm',
-        type: 'followup',
-        title: `Follow-up ${label}`,
-        description: `Lembrete automático de follow-up: ${label}. Total: R$ ${quote.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        due_date: followUpDate.toISOString().split('T')[0],
-        priority: 'media',
-        client_id: selectedClientId || undefined,
-        quote_id: quote.id,
-      });
-    }
+    await upsertFollowUpForQuote(quote, selectedClientId);
 
     if (clearAfterSave) {
       handleReset();
