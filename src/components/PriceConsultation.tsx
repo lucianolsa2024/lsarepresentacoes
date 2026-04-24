@@ -481,11 +481,11 @@ export function PriceConsultation({ products }: PriceConsultationProps) {
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Desconto</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
                         -{(discountRate * 100).toFixed(1)}%
                       </span>
                     </div>
-                    <span className="font-medium text-success">-{fmt(discountValue)}</span>
+                    <span className="font-medium text-primary">-{fmt(discountValue)}</span>
                   </div>
                 )}
                 {markupValue > 0 && (
@@ -529,7 +529,7 @@ export function PriceConsultation({ products }: PriceConsultationProps) {
                       <div className="text-right shrink-0">
                         <p className="font-bold">{fmt(totalFinal)}</p>
                         <p className="text-xs text-muted-foreground">{fmt(unitFinal)}/un</p>
-                        {isCheapest && <p className="text-xs text-success font-semibold">✓ Menor preço</p>}
+                        {isCheapest && <p className="text-xs text-primary font-semibold">✓ Menor preço</p>}
                       </div>
                     </div>
                   );
