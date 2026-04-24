@@ -82,6 +82,14 @@ export interface MtdByClient {
   ticket_mtd: number | null;
 }
 
+export interface FactoryGoal {
+  supplier: string;
+  goal_value: number;
+  sold: number;
+  achieved_pct: number | null;
+  remaining: number;
+}
+
 interface UseRepDashboardResult {
   monthData: RepMonthDashboard | null;
   compare90d: Rep90dCompare | null;
@@ -90,9 +98,13 @@ interface UseRepDashboardResult {
   topClients90d: TopClient90d[];
   mtdBySupplier: MtdBySupplier[];
   mtdByClient: MtdByClient[];
+  factoryGoals: FactoryGoal[];
   loading: boolean;
   isAdmin: boolean | null;
 }
+
+/** Fábricas oficiais com metas */
+export const FACTORY_GOAL_SUPPLIERS = ['SOHOME', 'SOHOME WOOD', 'TAPETE SAO CARLOS'] as const;
 
 /** Helper: first day of month as YYYY-MM-DD */
 function toMonthStart(date: Date): string {
