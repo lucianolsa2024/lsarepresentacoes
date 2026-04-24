@@ -2213,16 +2213,19 @@ export type Database = {
           goal_value: number
           month_start: string
           owner_email: string
+          supplier: string | null
         }
         Insert: {
           goal_value: number
           month_start: string
           owner_email: string
+          supplier?: string | null
         }
         Update: {
           goal_value?: number
           month_start?: string
           owner_email?: string
+          supplier?: string | null
         }
         Relationships: []
       }

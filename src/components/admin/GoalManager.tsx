@@ -19,7 +19,11 @@ interface Goal {
   owner_email: string;
   month_start: string;
   goal_value: number;
+  supplier: string | null;
 }
+
+const FACTORY_OPTIONS = ['SOHOME', 'SOHOME WOOD', 'TAPETE SAO CARLOS'] as const;
+const TOTAL_VALUE = '__total__';
 
 export function GoalManager() {
   const [reps, setReps] = useState<Rep[]>([]);
@@ -27,6 +31,7 @@ export function GoalManager() {
   const [loading, setLoading] = useState(true);
 
   const [selectedEmail, setSelectedEmail] = useState('');
+  const [supplier, setSupplier] = useState<string>(TOTAL_VALUE);
   const [monthStart, setMonthStart] = useState(format(new Date(), 'yyyy-MM'));
   const [goalValue, setGoalValue] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -38,7 +43,7 @@ export function GoalManager() {
       supabase.from('rep_goals').select('*').order('month_start', { ascending: false }),
     ]);
     if (repsRes.data) setReps(repsRes.data);
-    if (goalsRes.data) setGoals(goalsRes.data);
+    if (goalsRes.data) setGoals(goalsRes.data as Goal[]);
     setLoading(false);
   }, []);
 
@@ -53,19 +58,42 @@ export function GoalManager() {
     const gv = parseFloat(goalValue);
     if (isNaN(gv) || gv <= 0) { toast.error('Valor inválido'); return; }
 
-    const { error } = await supabase.from('rep_goals').upsert(
-      { owner_email: selectedEmail, month_start: ms, goal_value: gv },
-      { onConflict: 'owner_email,month_start' }
-    );
+    const supplierValue = supplier === TOTAL_VALUE ? null : supplier;
+
+    // Upsert manual: deleta existente + insere
+    await supabase
+      .from('rep_goals')
+      .delete()
+      .eq('owner_email', selectedEmail)
+      .eq('month_start', ms)
+      .is('supplier', supplierValue as any);
+    if (supplierValue) {
+      await supabase
+        .from('rep_goals')
+        .delete()
+        .eq('owner_email', selectedEmail)
+        .eq('month_start', ms)
+        .eq('supplier', supplierValue);
+    }
+
+    const { error } = await supabase.from('rep_goals').insert({
+      owner_email: selectedEmail,
+      month_start: ms,
+      goal_value: gv,
+      supplier: supplierValue,
+    });
     if (error) { toast.error('Erro ao salvar meta'); console.error(error); return; }
     toast.success('Meta salva');
     setEditingKey(null);
     setGoalValue('');
+    setSupplier(TOTAL_VALUE);
     fetchData();
   };
 
-  const handleDelete = async (email: string, month: string) => {
-    const { error } = await supabase.from('rep_goals').delete().eq('owner_email', email).eq('month_start', month);
+  const handleDelete = async (g: Goal) => {
+    let q = supabase.from('rep_goals').delete().eq('owner_email', g.owner_email).eq('month_start', g.month_start);
+    q = g.supplier ? q.eq('supplier', g.supplier) : q.is('supplier', null);
+    const { error } = await q;
     if (error) { toast.error('Erro ao excluir'); return; }
     toast.success('Meta excluída');
     fetchData();
@@ -73,9 +101,10 @@ export function GoalManager() {
 
   const handleEdit = (g: Goal) => {
     setSelectedEmail(g.owner_email);
+    setSupplier(g.supplier ?? TOTAL_VALUE);
     setMonthStart(g.month_start.slice(0, 7));
     setGoalValue(String(g.goal_value));
-    setEditingKey(`${g.owner_email}_${g.month_start}`);
+    setEditingKey(`${g.owner_email}_${g.month_start}_${g.supplier ?? 'total'}`);
   };
 
   const repName = (email: string) => reps.find((r) => r.email === email)?.representative_name || email;
@@ -101,6 +130,18 @@ export function GoalManager() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="min-w-[200px]">
+              <Label>Fábrica</Label>
+              <Select value={supplier} onValueChange={setSupplier}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TOTAL_VALUE}>Meta Total (todas)</SelectItem>
+                  {FACTORY_OPTIONS.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Mês</Label>
               <Input type="month" value={monthStart} onChange={(e) => setMonthStart(e.target.value)} className="w-44" />
@@ -114,7 +155,7 @@ export function GoalManager() {
               {editingKey ? 'Salvar' : 'Adicionar'}
             </Button>
             {editingKey && (
-              <Button variant="ghost" onClick={() => { setEditingKey(null); setGoalValue(''); }}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => { setEditingKey(null); setGoalValue(''); setSupplier(TOTAL_VALUE); }}>Cancelar</Button>
             )}
           </div>
         </CardContent>
@@ -133,21 +174,23 @@ export function GoalManager() {
                 <TableRow>
                   <TableHead>Representante</TableHead>
                   <TableHead>Mês</TableHead>
+                  <TableHead>Fábrica</TableHead>
                   <TableHead className="text-right">Meta</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {goals.map((g) => (
-                  <TableRow key={`${g.owner_email}_${g.month_start}`}>
+                  <TableRow key={`${g.owner_email}_${g.month_start}_${g.supplier ?? 'total'}`}>
                     <TableCell>{repName(g.owner_email)}</TableCell>
                     <TableCell>{g.month_start.slice(0, 7)}</TableCell>
+                    <TableCell>{g.supplier ?? <span className="text-muted-foreground italic">Total</span>}</TableCell>
                     <TableCell className="text-right">{formatCurrency(g.goal_value)}</TableCell>
                     <TableCell className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(g)}>
                         <Save className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(g.owner_email, g.month_start)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(g)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

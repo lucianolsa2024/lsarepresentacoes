@@ -110,6 +110,7 @@ export function RepHomeDashboard() {
     topClients90d,
     mtdBySupplier,
     mtdByClient,
+    factoryGoals,
     loading,
     isAdmin,
   } = useRepDashboard(selectedMonth, selectedRep === 'all' ? undefined : selectedRep);
@@ -236,6 +237,49 @@ export function RepHomeDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Metas por Fábrica */}
+        {factoryGoals.length > 0 && (
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Factory className="h-5 w-5" />
+                Meta por Fábrica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {factoryGoals.map((fg) => {
+                  const pct = Math.min((fg.achieved_pct ?? 0) * 100, 100);
+                  return (
+                    <div key={fg.supplier} className="rounded-lg border bg-card p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">{fg.supplier}</p>
+                        <Badge variant={fg.goal_value === 0 ? 'outline' : pct >= 100 ? 'default' : 'secondary'} className="text-[10px]">
+                          {fg.goal_value === 0 ? 'Sem meta' : `${pct.toFixed(0)}%`}
+                        </Badge>
+                      </div>
+                      <div className="flex items-end justify-between text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Vendido</p>
+                          <p className="text-base font-bold">{fmtShort(fg.sold)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground">Meta</p>
+                          <p className="text-sm font-semibold">{fmtShort(fg.goal_value)}</p>
+                        </div>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                      <p className="text-[10px] text-muted-foreground">
+                        {fg.goal_value > 0 ? `Faltam ${fmtShort(fg.remaining)}` : 'Cadastre uma meta no painel admin'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="pb-2 px-3 sm:px-6">
