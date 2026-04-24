@@ -421,13 +421,13 @@ const Index = () => {
                 <Package className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Produtos</span>
               </TabsTrigger>
-              {isAdmin && (
+              {showReportsTab && (
               <TabsTrigger
                 value="admin"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] sm:text-xs whitespace-nowrap"
               >
                 <ShieldCheck className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Admin</span>
+                <span className="hidden sm:inline">{isAdmin ? 'Admin' : 'Relatórios'}</span>
               </TabsTrigger>
               )}
               {showFinanceiroTab && (
