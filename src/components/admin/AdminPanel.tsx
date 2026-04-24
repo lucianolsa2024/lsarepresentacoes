@@ -13,72 +13,98 @@ import { ShowroomTracker } from './ShowroomTracker';
 import { AnalysisPanel } from './AnalysisPanel';
 import { BarChart3, Target, Users, UserCheck, TrendingUp, Store, Crosshair, Percent, Grid3X3, ShoppingCart, Eye, LineChart } from 'lucide-react';
 
-export function AdminPanel() {
+interface AdminPanelProps {
+  isAdmin?: boolean;
+}
+
+export function AdminPanel({ isAdmin = true }: AdminPanelProps) {
+  const defaultTab = isAdmin ? 'sales-report' : 'positivacao';
+
   return (
-    <Tabs defaultValue="sales-report">
-      <TabsList className="mb-4 w-full justify-start overflow-x-auto flex-nowrap">
-         <TabsTrigger value="sales-report">
-          <BarChart3 className="h-4 w-4 mr-2" />
-          Relatório de Vendas
-        </TabsTrigger>
-        <TabsTrigger value="goals">
-          <Target className="h-4 w-4 mr-2" />
-          Metas
-        </TabsTrigger>
-        <TabsTrigger value="okrs">
-          <Crosshair className="h-4 w-4 mr-2" />
-          OKRs
-        </TabsTrigger>
-        <TabsTrigger value="users">
-          <Users className="h-4 w-4 mr-2" />
-          Usuários
-        </TabsTrigger>
-        <TabsTrigger value="positivacao">
-          <UserCheck className="h-4 w-4 mr-2" />
+    <Tabs defaultValue={defaultTab}>
+      <TabsList className="mb-4 w-full justify-start overflow-x-auto flex-nowrap h-auto">
+        {isAdmin && (
+          <TabsTrigger value="sales-report" className="text-xs">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Relatório de Vendas
+          </TabsTrigger>
+        )}
+        {isAdmin && (
+          <TabsTrigger value="goals" className="text-xs">
+            <Target className="h-3.5 w-3.5 mr-1.5" />
+            Metas
+          </TabsTrigger>
+        )}
+        {isAdmin && (
+          <TabsTrigger value="okrs" className="text-xs">
+            <Crosshair className="h-3.5 w-3.5 mr-1.5" />
+            OKRs
+          </TabsTrigger>
+        )}
+        {isAdmin && (
+          <TabsTrigger value="users" className="text-xs">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            Usuários
+          </TabsTrigger>
+        )}
+        <TabsTrigger value="positivacao" className="text-xs">
+          <UserCheck className="h-3.5 w-3.5 mr-1.5" />
           Positivação
         </TabsTrigger>
-        <TabsTrigger value="share-loja">
-          <Store className="h-4 w-4 mr-2" />
+        <TabsTrigger value="share-loja" className="text-xs">
+          <Store className="h-3.5 w-3.5 mr-1.5" />
           Share de Loja
         </TabsTrigger>
-        <TabsTrigger value="curva">
-          <TrendingUp className="h-4 w-4 mr-2" />
+        <TabsTrigger value="curva" className="text-xs">
+          <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
           Curva de Clientes
         </TabsTrigger>
-        <TabsTrigger value="comissionamento">
-          <Percent className="h-4 w-4 mr-2" />
-          Comissionamento
-        </TabsTrigger>
-        <TabsTrigger value="mix-analysis">
-          <Grid3X3 className="h-4 w-4 mr-2" />
+        {isAdmin && (
+          <TabsTrigger value="comissionamento" className="text-xs">
+            <Percent className="h-3.5 w-3.5 mr-1.5" />
+            Comissionamento
+          </TabsTrigger>
+        )}
+        <TabsTrigger value="mix-analysis" className="text-xs">
+          <Grid3X3 className="h-3.5 w-3.5 mr-1.5" />
           Análise de Mix
         </TabsTrigger>
-        <TabsTrigger value="sell-out">
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Sell-out
-        </TabsTrigger>
-        <TabsTrigger value="showroom">
-          <Eye className="h-4 w-4 mr-2" />
+        {isAdmin && (
+          <TabsTrigger value="sell-out" className="text-xs">
+            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+            Sell-out
+          </TabsTrigger>
+        )}
+        <TabsTrigger value="showroom" className="text-xs">
+          <Eye className="h-3.5 w-3.5 mr-1.5" />
           Showroom
         </TabsTrigger>
-        <TabsTrigger value="analises">
-          <LineChart className="h-4 w-4 mr-2" />
+        <TabsTrigger value="analises" className="text-xs">
+          <LineChart className="h-3.5 w-3.5 mr-1.5" />
           Análises
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="sales-report" className="mt-0">
-        <SalesReport />
-      </TabsContent>
-      <TabsContent value="goals" className="mt-0">
-        <GoalManager />
-      </TabsContent>
-      <TabsContent value="okrs" className="mt-0">
-        <OkrManager />
-      </TabsContent>
-      <TabsContent value="users" className="mt-0">
-        <UserManager />
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="sales-report" className="mt-0">
+          <SalesReport />
+        </TabsContent>
+      )}
+      {isAdmin && (
+        <TabsContent value="goals" className="mt-0">
+          <GoalManager />
+        </TabsContent>
+      )}
+      {isAdmin && (
+        <TabsContent value="okrs" className="mt-0">
+          <OkrManager />
+        </TabsContent>
+      )}
+      {isAdmin && (
+        <TabsContent value="users" className="mt-0">
+          <UserManager />
+        </TabsContent>
+      )}
       <TabsContent value="positivacao" className="mt-0">
         <PositivacaoReport />
       </TabsContent>
@@ -88,15 +114,19 @@ export function AdminPanel() {
       <TabsContent value="curva" className="mt-0">
         <ClientCurveReport />
       </TabsContent>
-      <TabsContent value="comissionamento" className="mt-0">
-        <CommissionManager />
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="comissionamento" className="mt-0">
+          <CommissionManager />
+        </TabsContent>
+      )}
       <TabsContent value="mix-analysis" className="mt-0">
         <MixAnalysis />
       </TabsContent>
-      <TabsContent value="sell-out" className="mt-0">
-        <SellOutTracker />
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="sell-out" className="mt-0">
+          <SellOutTracker />
+        </TabsContent>
+      )}
       <TabsContent value="showroom" className="mt-0">
         <ShowroomTracker />
       </TabsContent>
