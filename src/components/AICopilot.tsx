@@ -68,7 +68,7 @@ const SUGGESTIONS = [
   "Quais clientes estão sem compra há mais de 60 dias?",
   "Quais oportunidades estão paradas no funil?",
   "Resuma as atividades pendentes desta semana",
-  "Rascunhe um email de follow-up para cliente inativo",
+  "Quais produtos da minha carteira ainda não foram expostos no showroom?",
   "Quais produtos têm maior volume de orçamentos?",
 ];
 
