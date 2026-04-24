@@ -18,11 +18,13 @@ const CURVE_COLORS: Record<ClientCurve, string> = {
 };
 
 const CURVE_LABELS: Record<ClientCurve, string> = {
-  A: 'Curva A – Top 25%',
-  B: 'Curva B – 25-50%',
-  C: 'Curva C – Abaixo 50%',
-  D: 'Curva D – Inativos',
+  A: 'Curva A – 75% do faturamento',
+  B: 'Curva B – 10% do faturamento',
+  C: 'Curva C – 10% do faturamento',
+  D: 'Curva D – 5% + inativos',
 };
+
+const CORPORATE_SEGMENTS = ['construtora', 'incorporadora', 'escritório de arquitetura', 'escritorio de arquitetura'];
 
 const formatCurrency = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
