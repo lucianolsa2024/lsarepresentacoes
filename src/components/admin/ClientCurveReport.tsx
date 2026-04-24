@@ -227,7 +227,7 @@ export function ClientCurveReport() {
       {/* Top 10 Curve A */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 6 meses)</CardTitle>
+          <CardTitle className="text-lg">Top 10 – Curva A (por faturamento 12 meses)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -235,8 +235,8 @@ export function ClientCurveReport() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead className="text-right">Faturamento 6M</TableHead>
-                <TableHead className="text-right">Pedidos 6M</TableHead>
+                <TableHead className="text-right">Faturamento 12M</TableHead>
+                <TableHead className="text-right">Pedidos 12M</TableHead>
                 <TableHead>Curva</TableHead>
               </TableRow>
             </TableHeader>
