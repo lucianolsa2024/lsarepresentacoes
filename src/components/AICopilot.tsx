@@ -14,15 +14,23 @@ type Msg = { role: "user" | "assistant"; content: string; timestamp?: number };
 type Session = {
   id: string;
   date: string; // ISO
+  preview?: string;
   messages: Msg[];
 };
 
-const SESSIONS_KEY = "copilot_sessions";
-const MAX_SESSIONS = 20;
+const SESSION_KEY = "copilot_current_session";
+const HISTORY_KEY = "copilot_history";
+const MAX_HISTORY = 30;
 
-function loadSessions(): Session[] {
+function newSessionId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function loadHistory(): Session[] {
   try {
-    const raw = localStorage.getItem(SESSIONS_KEY);
+    const raw = localStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -31,27 +39,24 @@ function loadSessions(): Session[] {
   }
 }
 
-function saveSessions(sessions: Session[]) {
+function saveHistory(sessions: Session[]) {
   try {
-    const trimmed = sessions.slice(0, MAX_SESSIONS);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_HISTORY)));
   } catch {
     // ignore storage errors
   }
 }
 
-function archiveCurrentSession(messages: Msg[]) {
-  if (messages.length === 0) return;
-  const session: Session = {
-    id:
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    date: new Date().toISOString(),
-    messages,
-  };
-  const existing = loadSessions();
-  saveSessions([session, ...existing]);
+function loadCurrentSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.messages)) return null;
+    return parsed as Session;
+  } catch {
+    return null;
+  }
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-copilot`;
