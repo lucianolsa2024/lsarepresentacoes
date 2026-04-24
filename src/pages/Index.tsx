@@ -321,13 +321,19 @@ const Index = () => {
   const subtotal = calculateSubtotal();
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
   const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
+  // Reps see "Relatórios" (subset of admin panel); admins see "Admin" (full panel)
+  const showReportsTab = isRep === true || isAdmin;
   const tabsCountClass = (() => {
-    const base = isRep === false ? 6 : 7;
-    const total = base + (isAdmin ? 2 : 0) + (showFinanceiroTab ? 1 : 0);
+    // base tabs always visible: dashboard, activities, funnels, service-orders, operations, products = 6
+    let total = 6;
+    if (isRep !== false) total += 1; // comercial
+    if (isAdmin) total += 1; // automations
+    if (showReportsTab) total += 1; // admin/relatórios
+    if (showFinanceiroTab) total += 1; // financeiro
     const map: Record<number, string> = {
-      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9', 10: 'grid-cols-10',
+      6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8', 9: 'grid-cols-9', 10: 'grid-cols-10', 11: 'grid-cols-11',
     };
-    return map[total] || 'grid-cols-7';
+    return map[total] || 'grid-cols-9';
   })();
 
   return (
