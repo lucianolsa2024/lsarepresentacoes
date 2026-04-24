@@ -144,7 +144,7 @@ export function ShowroomTracker() {
       {/* Table full width with vertical scroll */}
       <div className="overflow-auto max-h-[calc(100vh-280px)] border rounded-md">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow className="text-xs">
               <TableHead className="w-8 px-2">Urg</TableHead>
               <TableHead className="px-2">NF</TableHead>
