@@ -98,8 +98,27 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err: any) {
-    console.error('Admin operation failed:', err?.message || err);
-    const msg = err?.message || 'Erro interno';
-    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const rawMsg = err?.message || String(err) || 'Erro interno';
+    console.error('Admin operation failed:', rawMsg);
+
+    // Traduz mensagens comuns do GoTrue para PT-BR
+    let msg = rawMsg;
+    const lower = rawMsg.toLowerCase();
+    let status = 500;
+    if (lower.includes('weak') || lower.includes('known to be')) {
+      msg = 'Senha muito comum ou vazada em incidentes de segurança. Escolha uma senha mais forte (ex.: combine letras, números e símbolos não óbvios).';
+      status = 422;
+    } else if (lower.includes('password') && lower.includes('short')) {
+      msg = 'Senha muito curta. Use no mínimo 8 caracteres.';
+      status = 422;
+    } else if (lower.includes('user not found')) {
+      msg = 'Usuário não encontrado.';
+      status = 404;
+    } else if (lower.includes('email') && lower.includes('exists')) {
+      msg = 'Já existe um usuário com este email.';
+      status = 409;
+    }
+
+    return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
