@@ -386,7 +386,7 @@ export async function generateQuotePDF(quote: Quote): Promise<void> {
   doc.setFont('helvetica', 'normal');
 
   quote.items.forEach((item, index) => {
-    if (y > 230) { doc.addPage(); y = 20; }
+    if (y > 220) { doc.addPage(); y = 20; }
 
     const cacheKey = item.imageUrl || item.productName;
     const productImage = imageCache[cacheKey];
