@@ -519,7 +519,7 @@ ${productList.join('\n') || 'Nenhum'}
             messages: [
               {
                 role: "user",
-                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual. Use intent "client_showroom" quando o usuário perguntar sobre showroom/exposição/produtos expostos de um cliente específico (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs"). Use intent null se for conversa geral sem pedido analítico. Cliente deve ser SEMPRE em MAIÚSCULAS.`,
+                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|"client_checklists"|"checklist_comparison"|"checklist_detail"|"read_document"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual.\n\nRegras de intent:\n- "client_showroom": showroom/exposição/produtos expostos de um cliente (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs").\n- "client_checklists": "checklist", "lista de verificação", "visita" + cliente (ex.: "checklists da Loja XYZ", "últimas visitas do cliente").\n- "checklist_comparison": "comparar checklists", "última visita vs anterior", "evoluiu" (ex.: "como evoluiu o cliente entre as últimas visitas").\n- "checklist_detail": "resumir checklist", "o que tem no checklist", "detalhes da visita".\n- "read_document": "ler pedido", "analisar pdf", "resumir documento".\n- intent null para conversa geral sem pedido analítico.\n\nCliente deve ser SEMPRE em MAIÚSCULAS.`,
               },
             ],
           }),
@@ -560,6 +560,24 @@ ${productList.join('\n') || 'Nenhum'}
         params = { days: 90 };
       } else if (query_type === "monthly_comparison") {
         params = { months: 6 };
+      } else if (query_type === "client_checklists" || query_type === "checklist_comparison") {
+        if (!cliente) {
+          query_type = null;
+        } else {
+          params = { cliente, limit: 10 };
+        }
+      } else if (query_type === "checklist_detail") {
+        // Sem activity_id explícito não dá pra consultar — degrada para listar
+        if (cliente) {
+          query_type = "client_checklists";
+          params = { cliente, limit: 5 };
+        } else {
+          query_type = null;
+        }
+      } else if (query_type === "read_document") {
+        // Tratado pela tool read_document no backend (Claude decide bucket/path).
+        // Não chamar crm-analytics.
+        query_type = null;
       }
 
       console.log("[AICopilot] query_type final:", query_type, "| params:", JSON.stringify(params));
