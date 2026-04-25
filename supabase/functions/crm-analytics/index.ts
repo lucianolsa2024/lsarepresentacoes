@@ -487,6 +487,65 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "client_checklists": {
+        if (!params.cliente) {
+          return json({ error: "params.cliente é obrigatório" }, 400);
+        }
+        const { data: activities, error } = await supabase
+          .from("activities")
+          .select(`
+            id, title, due_date, completed_at, status, client_name, client_id,
+            activity_checklist_items(id, label, checked, sort_order)
+          `)
+          .ilike("client_name", `%${params.cliente}%`)
+          .order("due_date", { ascending: false })
+          .limit(params.limit || 10);
+        if (error) return json({ error: error.message }, 500);
+        const withChecklist = (activities || []).filter(
+          (a: any) => Array.isArray(a.activity_checklist_items) && a.activity_checklist_items.length > 0,
+        );
+        return json({ query_type, cliente: params.cliente, count: withChecklist.length, checklists: withChecklist });
+      }
+
+      case "checklist_detail": {
+        if (!params.activity_id) {
+          return json({ error: "params.activity_id é obrigatório" }, 400);
+        }
+        const { data, error } = await supabase
+          .from("activities")
+          .select(`
+            id, title, due_date, completed_at, status, client_name,
+            description, result, completed_notes,
+            activity_checklist_items(id, label, checked, sort_order)
+          `)
+          .eq("id", params.activity_id)
+          .single();
+        if (error) return json({ error: error.message }, 500);
+        return json({ query_type, checklist: data });
+      }
+
+      case "checklist_comparison": {
+        if (!params.cliente) {
+          return json({ error: "params.cliente é obrigatório" }, 400);
+        }
+        const { data, error } = await supabase
+          .from("activities")
+          .select(`
+            id, title, due_date, completed_at, status, client_name,
+            description, result, completed_notes,
+            activity_checklist_items(id, label, checked, sort_order)
+          `)
+          .ilike("client_name", `%${params.cliente}%`)
+          .order("due_date", { ascending: false })
+          .limit(10);
+        if (error) return json({ error: error.message }, 500);
+        const withChecklist = (data || []).filter(
+          (a: any) => Array.isArray(a.activity_checklist_items) && a.activity_checklist_items.length > 0,
+        );
+        const [recent, previous] = withChecklist;
+        return json({ query_type, cliente: params.cliente, comparison: { recent: recent || null, previous: previous || null } });
+      }
+
       default:
         return json({ error: `query_type inválido: ${query_type}` }, 400);
     }
