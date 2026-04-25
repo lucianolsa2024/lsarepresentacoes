@@ -223,6 +223,22 @@ ${analytics_data
           required: ["title", "type", "due_date", "client_name"],
         },
       },
+      {
+        name: "read_document",
+        description:
+          "Lê e extrai o conteúdo de um PDF armazenado no sistema (pedidos, orçamentos, checklists). Use quando o usuário pedir para analisar, resumir ou consultar um documento específico. Após chamar, você receberá o conteúdo do documento para responder ao usuário.",
+        input_schema: {
+          type: "object",
+          properties: {
+            bucket: {
+              type: "string",
+              description: "Nome do bucket de storage. Valores válidos: 'pedidos', 'checklist-photos', 'service-order-files', 'finance-documents', 'assistance-attachments'.",
+            },
+            path: { type: "string", description: "Caminho/nome do arquivo dentro do bucket" },
+          },
+          required: ["bucket", "path"],
+        },
+      },
     ];
 
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
