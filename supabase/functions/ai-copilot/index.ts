@@ -526,6 +526,8 @@ ${analytics_data
                     console.log("[ai-copilot] executando tool:", block.name, parsedInput);
                     if (block.name === "create_activity") {
                       await executeCreateActivity(parsedInput);
+                    } else if (block.name === "read_document") {
+                      await executeReadDocument(parsedInput);
                     }
                     toolBlocks.delete(evt.index ?? 0);
                   }
