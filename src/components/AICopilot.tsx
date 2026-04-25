@@ -560,6 +560,24 @@ ${productList.join('\n') || 'Nenhum'}
         params = { days: 90 };
       } else if (query_type === "monthly_comparison") {
         params = { months: 6 };
+      } else if (query_type === "client_checklists" || query_type === "checklist_comparison") {
+        if (!cliente) {
+          query_type = null;
+        } else {
+          params = { cliente, limit: 10 };
+        }
+      } else if (query_type === "checklist_detail") {
+        // Sem activity_id explícito não dá pra consultar — degrada para listar
+        if (cliente) {
+          query_type = "client_checklists";
+          params = { cliente, limit: 5 };
+        } else {
+          query_type = null;
+        }
+      } else if (query_type === "read_document") {
+        // Tratado pela tool read_document no backend (Claude decide bucket/path).
+        // Não chamar crm-analytics.
+        query_type = null;
       }
 
       console.log("[AICopilot] query_type final:", query_type, "| params:", JSON.stringify(params));
