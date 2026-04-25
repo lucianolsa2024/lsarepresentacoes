@@ -362,6 +362,103 @@ ${analytics_data
           }
         };
 
+        const executeReadDocument = async (input: any) => {
+          try {
+            const bucket = String(input.bucket || "").trim();
+            const path = String(input.path || "").trim();
+            if (!bucket || !path) {
+              emit(`\n\n⚠️ read_document: bucket e path são obrigatórios.`);
+              return;
+            }
+            const { createClient } = await import(
+              "https://esm.sh/@supabase/supabase-js@2"
+            );
+            const supabase = createClient(
+              Deno.env.get("SUPABASE_URL")!,
+              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            );
+
+            const { data: blob, error: dlErr } = await supabase.storage
+              .from(bucket)
+              .download(path);
+            if (dlErr || !blob) {
+              console.error("[ai-copilot] read_document download error:", dlErr);
+              emit(`\n\n⚠️ Não consegui baixar o documento (${bucket}/${path}): ${dlErr?.message || "arquivo não encontrado"}`);
+              return;
+            }
+
+            const arrayBuffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            // Convert to base64 in chunks to avoid call stack issues
+            let binary = "";
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+              binary += String.fromCharCode.apply(
+                null,
+                Array.from(bytes.subarray(i, i + chunkSize)),
+              );
+            }
+            const base64 = btoa(binary);
+
+            // Detect media type — assume PDF; fallback if path indicates image
+            const lower = path.toLowerCase();
+            let mediaType = "application/pdf";
+            let blockType: "document" | "image" = "document";
+            if (lower.endsWith(".png")) { mediaType = "image/png"; blockType = "image"; }
+            else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) { mediaType = "image/jpeg"; blockType = "image"; }
+            else if (lower.endsWith(".webp")) { mediaType = "image/webp"; blockType = "image"; }
+
+            // Follow-up call (non-streaming) with the document attached
+            const followResp = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-6",
+                max_tokens: 2048,
+                system:
+                  "Você é o AI Copilot da LSA. Analise o documento anexado (pedido, orçamento ou checklist) e responda de forma clara, em português brasileiro, destacando informações úteis ao representante (cliente, produtos, valores, datas, observações).",
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: blockType,
+                        source: { type: "base64", media_type: mediaType, data: base64 },
+                      },
+                      {
+                        type: "text",
+                        text: `Resuma e analise este documento (${bucket}/${path}).`,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            });
+
+            if (!followResp.ok) {
+              const errText = await followResp.text().catch(() => "");
+              console.error("[ai-copilot] read_document follow-up error:", followResp.status, errText);
+              emit(`\n\n⚠️ Erro ao analisar o documento (${followResp.status}).`);
+              return;
+            }
+            const followJson = await followResp.json();
+            const text = Array.isArray(followJson.content)
+              ? followJson.content
+                  .filter((c: any) => c.type === "text")
+                  .map((c: any) => c.text)
+                  .join("\n")
+              : "";
+            emit(`\n\n📄 **Análise do documento** (${path}):\n\n${text || "_(sem conteúdo extraído)_"}`);
+          } catch (e) {
+            console.error("[ai-copilot] executeReadDocument error:", e);
+            emit(`\n\n⚠️ Erro ao ler documento: ${e instanceof Error ? e.message : "desconhecido"}`);
+          }
+        };
+
         try {
           while (true) {
             const { done, value } = await reader.read();
