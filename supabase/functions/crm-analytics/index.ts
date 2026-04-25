@@ -21,6 +21,7 @@ interface Params {
   limit?: number;
   days?: number;
   ano?: number;
+  activity_id?: string;
 }
 
 const PAGE = 1000;
