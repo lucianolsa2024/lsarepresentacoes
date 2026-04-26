@@ -494,18 +494,38 @@ Deno.serve(async (req) => {
         }
         const { data: activities, error } = await supabase
           .from("activities")
-          .select(`
-            id, title, due_date, completed_at, status, client_name, client_id,
-            activity_checklist_items(id, label, checked, sort_order)
-          `)
+          .select("id, title, due_date, completed_at, status, client_name, client_id, description, result, completed_notes, type")
+          .eq("type", "checklist_loja")
           .ilike("client_name", `%${params.cliente}%`)
           .order("due_date", { ascending: false })
           .limit(params.limit || 10);
         if (error) return json({ error: error.message }, 500);
-        const withChecklist = (activities || []).filter(
-          (a: any) => Array.isArray(a.activity_checklist_items) && a.activity_checklist_items.length > 0,
-        );
-        return json({ query_type, cliente: params.cliente, count: withChecklist.length, checklists: withChecklist });
+
+        const parseChecklist = (desc: string | null) => {
+          if (!desc) return null;
+          try {
+            return JSON.parse(desc);
+          } catch {
+            return null;
+          }
+        };
+
+        const checklists = (activities || [])
+          .map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            due_date: a.due_date,
+            completed_at: a.completed_at,
+            status: a.status,
+            client_name: a.client_name,
+            client_id: a.client_id,
+            result: a.result,
+            completed_notes: a.completed_notes,
+            checklist_data: parseChecklist(a.description),
+          }))
+          .filter((a: any) => a.checklist_data !== null);
+
+        return json({ query_type, cliente: params.cliente, count: checklists.length, checklists });
       }
 
       case "checklist_detail": {
@@ -514,15 +534,20 @@ Deno.serve(async (req) => {
         }
         const { data, error } = await supabase
           .from("activities")
-          .select(`
-            id, title, due_date, completed_at, status, client_name,
-            description, result, completed_notes,
-            activity_checklist_items(id, label, checked, sort_order)
-          `)
+          .select("id, title, due_date, completed_at, status, client_name, description, result, completed_notes, type")
           .eq("id", params.activity_id)
           .single();
         if (error) return json({ error: error.message }, 500);
-        return json({ query_type, checklist: data });
+
+        let checklist_data: any = null;
+        if (data?.description) {
+          try {
+            checklist_data = JSON.parse(data.description);
+          } catch {
+            checklist_data = null;
+          }
+        }
+        return json({ query_type, checklist: { ...data, checklist_data } });
       }
 
       case "checklist_comparison": {
@@ -531,18 +556,36 @@ Deno.serve(async (req) => {
         }
         const { data, error } = await supabase
           .from("activities")
-          .select(`
-            id, title, due_date, completed_at, status, client_name,
-            description, result, completed_notes,
-            activity_checklist_items(id, label, checked, sort_order)
-          `)
+          .select("id, title, due_date, completed_at, status, client_name, description, result, completed_notes, type")
+          .eq("type", "checklist_loja")
           .ilike("client_name", `%${params.cliente}%`)
           .order("due_date", { ascending: false })
           .limit(10);
         if (error) return json({ error: error.message }, 500);
-        const withChecklist = (data || []).filter(
-          (a: any) => Array.isArray(a.activity_checklist_items) && a.activity_checklist_items.length > 0,
-        );
+
+        const parseChecklist = (desc: string | null) => {
+          if (!desc) return null;
+          try {
+            return JSON.parse(desc);
+          } catch {
+            return null;
+          }
+        };
+
+        const withChecklist = (data || [])
+          .map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            due_date: a.due_date,
+            completed_at: a.completed_at,
+            status: a.status,
+            client_name: a.client_name,
+            result: a.result,
+            completed_notes: a.completed_notes,
+            checklist_data: parseChecklist(a.description),
+          }))
+          .filter((a: any) => a.checklist_data !== null);
+
         const [recent, previous] = withChecklist;
         return json({ query_type, cliente: params.cliente, comparison: { recent: recent || null, previous: previous || null } });
       }
