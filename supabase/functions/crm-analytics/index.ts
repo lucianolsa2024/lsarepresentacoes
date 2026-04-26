@@ -492,40 +492,42 @@ Deno.serve(async (req) => {
         if (!params.cliente) {
           return json({ error: "params.cliente é obrigatório" }, 400);
         }
-        const { data: activities, error } = await supabase
+        const { data, error } = await supabase
           .from("activities")
-          .select("id, title, due_date, completed_at, status, client_name, client_id, description, result, completed_notes, type")
+          .select("id, client_name, client_id, due_date, description, result, completed_notes, status")
           .eq("type", "checklist_loja")
           .ilike("client_name", `%${params.cliente}%`)
           .order("due_date", { ascending: false })
           .limit(params.limit || 10);
         if (error) return json({ error: error.message }, 500);
 
-        const parseChecklist = (desc: string | null) => {
-          if (!desc) return null;
-          try {
-            return JSON.parse(desc);
-          } catch {
-            return null;
-          }
-        };
-
-        const checklists = (activities || [])
-          .map((a: any) => ({
+        const checklists = (data || []).map((a: any) => {
+          let parsed: any = {};
+          try { parsed = JSON.parse(a.description || "{}"); } catch { /* noop */ }
+          const total = (parsed.qtdProdutosNossos || 0) + (parsed.qtdProdutosConcorrentes || 0);
+          const share = total > 0 ? Math.round((parsed.qtdProdutosNossos / total) * 100) : null;
+          return {
             id: a.id,
-            title: a.title,
-            due_date: a.due_date,
-            completed_at: a.completed_at,
+            cliente: parsed.cliente || a.client_name,
+            data_visita: parsed.dataVisita || a.due_date,
             status: a.status,
-            client_name: a.client_name,
-            client_id: a.client_id,
-            result: a.result,
-            completed_notes: a.completed_notes,
-            checklist_data: parseChecklist(a.description),
-          }))
-          .filter((a: any) => a.checklist_data !== null);
+            produtos_expostos: parsed.produtosExpostos || [],
+            qtd_nossos: parsed.qtdProdutosNossos,
+            qtd_concorrentes: parsed.qtdProdutosConcorrentes,
+            share_pct: share,
+            score_loja: parsed.scoreLoja,
+            fluxo_loja: parsed.fluxoLoja,
+            humor_lojista: parsed.humorLojista,
+            ticket_medio: parsed.ticketMedio,
+            oportunidade: parsed.oportunidadeIdentificada,
+            proximo_passo: parsed.proximoPasso,
+            concorrentes: parsed.concorrentesExpostos,
+            resultado: a.result,
+            notas: a.completed_notes,
+          };
+        });
 
-        return json({ query_type, cliente: params.cliente, count: checklists.length, checklists });
+        return json({ query_type, cliente: params.cliente, total: checklists.length, checklists });
       }
 
       case "checklist_detail": {
@@ -556,38 +558,66 @@ Deno.serve(async (req) => {
         }
         const { data, error } = await supabase
           .from("activities")
-          .select("id, title, due_date, completed_at, status, client_name, description, result, completed_notes, type")
+          .select("id, client_name, due_date, description, result, completed_notes")
           .eq("type", "checklist_loja")
           .ilike("client_name", `%${params.cliente}%`)
           .order("due_date", { ascending: false })
           .limit(10);
         if (error) return json({ error: error.message }, 500);
 
-        const parseChecklist = (desc: string | null) => {
-          if (!desc) return null;
-          try {
-            return JSON.parse(desc);
-          } catch {
-            return null;
-          }
-        };
-
-        const withChecklist = (data || [])
-          .map((a: any) => ({
+        const parsed = (data || []).map((a: any) => {
+          let d: any = {};
+          try { d = JSON.parse(a.description || "{}"); } catch { /* noop */ }
+          const total = (d.qtdProdutosNossos || 0) + (d.qtdProdutosConcorrentes || 0);
+          return {
             id: a.id,
-            title: a.title,
-            due_date: a.due_date,
-            completed_at: a.completed_at,
-            status: a.status,
-            client_name: a.client_name,
-            result: a.result,
-            completed_notes: a.completed_notes,
-            checklist_data: parseChecklist(a.description),
-          }))
-          .filter((a: any) => a.checklist_data !== null);
+            data_visita: d.dataVisita || a.due_date,
+            produtos_expostos: d.produtosExpostos || [],
+            qtd_nossos: d.qtdProdutosNossos,
+            qtd_concorrentes: d.qtdProdutosConcorrentes,
+            share_pct: total > 0 ? Math.round((d.qtdProdutosNossos / total) * 100) : null,
+            score_loja: d.scoreLoja,
+            fluxo_loja: d.fluxoLoja,
+            humor_lojista: d.humorLojista,
+            oportunidade: d.oportunidadeIdentificada,
+            proximo_passo: d.proximoPasso,
+            concorrentes: d.concorrentesExpostos,
+            resultado: a.result,
+          };
+        });
 
-        const [recent, previous] = withChecklist;
-        return json({ query_type, cliente: params.cliente, comparison: { recent: recent || null, previous: previous || null } });
+        if (parsed.length < 2) {
+          return json({ query_type, cliente: params.cliente, erro: "Menos de 2 checklists encontrados", total: parsed.length });
+        }
+
+        const [recente, anterior] = parsed;
+        const produtosNovos = (recente.produtos_expostos as string[]).filter(
+          (p: string) => !(anterior.produtos_expostos as string[]).includes(p),
+        );
+        const produtosRemovidos = (anterior.produtos_expostos as string[]).filter(
+          (p: string) => !(recente.produtos_expostos as string[]).includes(p),
+        );
+        const produtosMantidos = (recente.produtos_expostos as string[]).filter(
+          (p: string) => (anterior.produtos_expostos as string[]).includes(p),
+        );
+
+        return json({
+          query_type,
+          cliente: params.cliente,
+          recente,
+          anterior,
+          evolucao: {
+            share_anterior: anterior.share_pct,
+            share_recente: recente.share_pct,
+            variacao_share:
+              recente.share_pct != null && anterior.share_pct != null
+                ? recente.share_pct - anterior.share_pct
+                : null,
+            produtos_novos: produtosNovos,
+            produtos_removidos: produtosRemovidos,
+            produtos_mantidos: produtosMantidos,
+          },
+        });
       }
 
       default:
