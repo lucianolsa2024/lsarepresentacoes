@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle, Eye, Upload } from 'lucide-react';
+import { Plus, Trash2, Edit2, DollarSign, User, Calendar, Store, Building2, Clock, AlertTriangle, ChevronDown, ChevronRight, Trophy, XCircle, Eye, Upload, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { CorporateOpportunityForm } from './CorporateOpportunityForm';
@@ -117,6 +118,7 @@ export function SalesFunnelManager() {
   const [editingOpp, setEditingOpp] = useState<SalesOpportunity | null>(null);
   const [repFilter, setRepFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [lostModal, setLostModal] = useState<{ oppId: string } | null>(null);
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
@@ -187,7 +189,24 @@ export function SalesFunnelManager() {
   const activeStages = stages.filter(s => !['ganho', 'perdido'].includes(s.key));
 
   const filteredOpps = opportunities.filter(o => o.funnelType === 'corporativo')
-    .filter(o => repFilter === 'all' || o.ownerEmail === repFilter);
+    .filter(o => repFilter === 'all' || o.ownerEmail === repFilter)
+    .filter(o => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const client = o.clientId ? clients.find(c => c.id === o.clientId) : null;
+      const projName = projectNames[o.clientId || ''] || '';
+      return (
+        o.title?.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q) ||
+        o.contactName?.toLowerCase().includes(q) ||
+        o.contactEmail?.toLowerCase().includes(q) ||
+        o.contactPhone?.toLowerCase().includes(q) ||
+        o.notes?.toLowerCase().includes(q) ||
+        client?.company?.toLowerCase().includes(q) ||
+        client?.tradeName?.toLowerCase().includes(q) ||
+        projName.toLowerCase().includes(q)
+      );
+    });
 
   const periodFilteredOpps = (() => {
     if (periodFilter === 'all') return filteredOpps;
@@ -318,25 +337,45 @@ export function SalesFunnelManager() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {isAdmin && (
-            <Select value={repFilter} onValueChange={setRepFilter}>
-              <SelectTrigger className="w-[160px] sm:w-[200px] shrink-0 h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por cliente, título, contato..."
+              className="pl-9 pr-9 h-8 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {isAdmin && (
+              <Select value={repFilter} onValueChange={setRepFilter}>
+                <SelectTrigger className="w-[160px] sm:w-[200px] shrink-0 h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0 h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+                <SelectItem value="all">Todo período</SelectItem>
+                <SelectItem value="month">Mês atual</SelectItem>
+                <SelectItem value="quarter">Trimestre</SelectItem>
+                <SelectItem value="year">Ano</SelectItem>
               </SelectContent>
             </Select>
-          )}
-          <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0 h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo período</SelectItem>
-              <SelectItem value="month">Mês atual</SelectItem>
-              <SelectItem value="quarter">Trimestre</SelectItem>
-              <SelectItem value="year">Ano</SelectItem>
-            </SelectContent>
-          </Select>
+          </div>
         </div>
       </div>
 
