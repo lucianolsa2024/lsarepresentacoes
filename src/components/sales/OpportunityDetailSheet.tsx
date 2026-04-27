@@ -359,6 +359,12 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             </TabsContent>
 
             {/* History tab */}
+            {/* Cadência LinkedIn tab */}
+            <TabsContent value="cadencia" className="p-4 mt-0">
+              <LinkedInCadenceTab opportunityId={opp.id} />
+            </TabsContent>
+
+            {/* History tab */}
             <TabsContent value="history" className="p-4 space-y-2 mt-0">
               {historico.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma movimentação registrada</p>
