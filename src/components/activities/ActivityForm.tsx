@@ -35,7 +35,7 @@ interface ActivityFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activity?: Activity;
-  onSubmit: (data: CreateActivityInput) => Promise<void>;
+  onSubmit: (data: CreateActivityInput) => Promise<boolean | void>;
   defaultClientId?: string;
   defaultQuoteId?: string;
   defaultDate?: string;
@@ -226,8 +226,8 @@ export function ActivityForm({
       if (activity) {
         submitData.status = status;
       }
-      await onSubmit(submitData);
-      onOpenChange(false);
+      const saved = await onSubmit(submitData);
+      if (saved !== false) onOpenChange(false);
     } finally {
       setIsSubmitting(false);
     }
