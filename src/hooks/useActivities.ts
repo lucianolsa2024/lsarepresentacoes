@@ -211,7 +211,7 @@ export function useActivities() {
   const updateActivity = async (id: string, updates: UpdateActivityInput): Promise<boolean> => {
     try {
       const VALID_STATUSES = ['pendente', 'em_andamento', 'concluida', 'cancelada', 'realizada', 'agendada'];
-      const VALID_TYPES = ['followup', 'ligacao', 'email', 'visita', 'reuniao', 'tarefa', 'treinamento', 'assistencia', 'relacionamento', 'checklist_loja', 'outros'];
+      const VALID_TYPES = ['followup', 'ligacao', 'whatsapp', 'email', 'visita', 'reuniao', 'proposta_enviada', 'tarefa', 'treinamento', 'assistencia', 'relacionamento', 'checklist_loja', 'outro_crm', 'outros'];
       const VALID_PRIORITIES = ['baixa', 'media', 'alta', 'urgente'];
 
       const updateData: Record<string, unknown> = {};

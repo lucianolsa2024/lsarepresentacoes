@@ -139,11 +139,13 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
   const handleFormSubmit = async (data: CreateActivityInput) => {
     if (editingActivity) {
-      await updateActivity(editingActivity.id, data);
+      const ok = await updateActivity(editingActivity.id, data);
+      if (ok) setEditingActivity(undefined);
+      return ok;
     } else {
-      await addActivity(data);
+      const created = await addActivity(data);
+      return !!created;
     }
-    setEditingActivity(undefined);
   };
 
   const handleComplete = (id: string) => {
