@@ -412,7 +412,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             if (error) {
               toast.error('Erro ao criar atividade');
               console.error(error);
-              return;
+              return false;
             }
             toast.success('Atividade criada!');
             // Refresh activities list
@@ -422,6 +422,7 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
               .eq('sales_opportunity_id', opp.id)
               .order('due_date', { ascending: false });
             setActivities((acts as ActivityRow[]) || []);
+            return true;
           }}
           defaultClientId={opp.clientId || undefined}
           defaultCategory="crm"
