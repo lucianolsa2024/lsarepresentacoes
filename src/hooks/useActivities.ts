@@ -210,16 +210,41 @@ export function useActivities() {
 
   const updateActivity = async (id: string, updates: UpdateActivityInput): Promise<boolean> => {
     try {
+      const VALID_STATUSES = ['pendente', 'em_andamento', 'concluida', 'cancelada', 'realizada', 'agendada'];
+      const VALID_TYPES = ['followup', 'ligacao', 'email', 'visita', 'reuniao', 'tarefa', 'treinamento', 'assistencia', 'relacionamento', 'checklist_loja', 'outros'];
+      const VALID_PRIORITIES = ['baixa', 'media', 'alta', 'urgente'];
+
       const updateData: Record<string, unknown> = {};
       
       if (updates.activity_category !== undefined) updateData.activity_category = updates.activity_category;
-      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.type !== undefined) {
+        if (!VALID_TYPES.includes(updates.type as string)) {
+          console.error('[updateActivity] Invalid type rejected:', updates.type, 'updates:', updates);
+          toast.error(`Tipo inválido: ${updates.type}`);
+          return false;
+        }
+        updateData.type = updates.type;
+      }
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description || null;
       if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
       if (updates.due_time !== undefined) updateData.due_time = updates.due_time || null;
-      if (updates.priority !== undefined) updateData.priority = updates.priority;
-      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.priority !== undefined) {
+        if (!VALID_PRIORITIES.includes(updates.priority as string)) {
+          console.error('[updateActivity] Invalid priority rejected:', updates.priority, 'updates:', updates);
+          toast.error(`Prioridade inválida: ${updates.priority}`);
+          return false;
+        }
+        updateData.priority = updates.priority;
+      }
+      if (updates.status !== undefined) {
+        if (!VALID_STATUSES.includes(updates.status as string)) {
+          console.error('[updateActivity] Invalid status rejected:', updates.status, 'updates:', updates);
+          toast.error(`Status inválido: "${updates.status}". Use um dos valores: ${VALID_STATUSES.join(', ')}`);
+          return false;
+        }
+        updateData.status = updates.status;
+      }
       if (updates.client_id !== undefined) updateData.client_id = updates.client_id || null;
       if (updates.client_name !== undefined) updateData.client_name = updates.client_name || null;
       if (updates.quote_id !== undefined) updateData.quote_id = updates.quote_id || null;
