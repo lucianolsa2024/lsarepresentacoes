@@ -1786,6 +1786,59 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_activities: {
+        Row: {
+          canal: string | null
+          created_at: string | null
+          data_prevista: string
+          data_realizada: string | null
+          descricao: string | null
+          id: string
+          notas_execucao: string | null
+          opportunity_id: string
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          canal?: string | null
+          created_at?: string | null
+          data_prevista: string
+          data_realizada?: string | null
+          descricao?: string | null
+          id?: string
+          notas_execucao?: string | null
+          opportunity_id: string
+          status?: string
+          tipo: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          canal?: string | null
+          created_at?: string | null
+          data_prevista?: string
+          data_realizada?: string | null
+          descricao?: string | null
+          id?: string
+          notas_execucao?: string | null
+          opportunity_id?: string
+          status?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           client_id: string | null
@@ -3578,6 +3631,34 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_cadencia_linkedin: {
+        Row: {
+          acao_script: string | null
+          acao_titulo: string | null
+          data_prevista: string | null
+          data_realizada: string | null
+          id: string | null
+          lead_contato: string | null
+          lead_email: string | null
+          lead_stage: string | null
+          lead_telefone: string | null
+          lead_titulo: string | null
+          notas_execucao: string | null
+          opportunity_id: string | null
+          status: string | null
+          tipo: string | null
+          urgencia: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_clientes_risco: {
         Row: {
           client_name: string | null
@@ -3869,6 +3950,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      gerar_cadencia_linkedin: {
+        Args: { p_data_inicio?: string; p_opportunity_id: string }
+        Returns: undefined
       }
       has_role: {
         Args: {

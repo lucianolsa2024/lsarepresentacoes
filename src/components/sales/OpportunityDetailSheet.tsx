@@ -10,7 +10,8 @@ import { Client } from '@/hooks/useClients';
 import { useActivities } from '@/hooks/useActivities';
 import { ActivityForm } from '@/components/activities/ActivityForm';
 import { CreateActivityInput } from '@/types/activity';
-import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2, Plus, BarChart3 } from 'lucide-react';
+import { Building2, DollarSign, User, Calendar, Clock, FileText, ClipboardList, History, CheckCircle, AlertTriangle, ExternalLink, Download, Loader2, Plus, BarChart3, Linkedin } from 'lucide-react';
+import { LinkedInCadenceTab } from './LinkedInCadenceTab';
 import { generateQuotePDF } from '@/utils/pdfGenerator';
 import { Quote, QuoteItem, ClientData, PaymentConditions } from '@/types/quote';
 import { toast } from 'sonner';
@@ -282,6 +283,9 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             <TabsTrigger value="quotes" className="gap-1 text-xs">
               <FileText className="h-3.5 w-3.5" /> Orçamentos ({quotes.length})
             </TabsTrigger>
+            <TabsTrigger value="cadencia" className="gap-1 text-xs">
+              <Linkedin className="h-3.5 w-3.5" /> Cadência LinkedIn
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-1 text-xs">
               <History className="h-3.5 w-3.5" /> Histórico ({historico.length})
             </TabsTrigger>
@@ -352,6 +356,12 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
                   </div>
                 ))
               )}
+            </TabsContent>
+
+            {/* History tab */}
+            {/* Cadência LinkedIn tab */}
+            <TabsContent value="cadencia" className="p-4 mt-0">
+              <LinkedInCadenceTab opportunityId={opp.id} />
             </TabsContent>
 
             {/* History tab */}
