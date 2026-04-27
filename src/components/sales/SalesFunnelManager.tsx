@@ -189,7 +189,24 @@ export function SalesFunnelManager() {
   const activeStages = stages.filter(s => !['ganho', 'perdido'].includes(s.key));
 
   const filteredOpps = opportunities.filter(o => o.funnelType === 'corporativo')
-    .filter(o => repFilter === 'all' || o.ownerEmail === repFilter);
+    .filter(o => repFilter === 'all' || o.ownerEmail === repFilter)
+    .filter(o => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const client = o.clientId ? clients.find(c => c.id === o.clientId) : null;
+      const projName = projectNames[o.clientId || ''] || '';
+      return (
+        o.title?.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q) ||
+        o.contactName?.toLowerCase().includes(q) ||
+        o.contactEmail?.toLowerCase().includes(q) ||
+        o.contactPhone?.toLowerCase().includes(q) ||
+        o.notes?.toLowerCase().includes(q) ||
+        client?.company?.toLowerCase().includes(q) ||
+        client?.tradeName?.toLowerCase().includes(q) ||
+        projName.toLowerCase().includes(q)
+      );
+    });
 
   const periodFilteredOpps = (() => {
     if (periodFilter === 'all') return filteredOpps;
