@@ -118,6 +118,7 @@ export function SalesFunnelManager() {
   const [editingOpp, setEditingOpp] = useState<SalesOpportunity | null>(null);
   const [repFilter, setRepFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [lostModal, setLostModal] = useState<{ oppId: string } | null>(null);
   const [wonConfirm, setWonConfirm] = useState<{ oppId: string } | null>(null);
   const [showWon, setShowWon] = useState(false);
