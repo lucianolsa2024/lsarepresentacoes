@@ -337,25 +337,45 @@ export function SalesFunnelManager() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {isAdmin && (
-            <Select value={repFilter} onValueChange={setRepFilter}>
-              <SelectTrigger className="w-[160px] sm:w-[200px] shrink-0 h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por cliente, título, contato..."
+              className="pl-9 pr-9 h-8 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {isAdmin && (
+              <Select value={repFilter} onValueChange={setRepFilter}>
+                <SelectTrigger className="w-[160px] sm:w-[200px] shrink-0 h-8 text-xs"><SelectValue placeholder="Representante" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0 h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {representatives.map(r => <SelectItem key={r.email} value={r.email}>{r.name}</SelectItem>)}
+                <SelectItem value="all">Todo período</SelectItem>
+                <SelectItem value="month">Mês atual</SelectItem>
+                <SelectItem value="quarter">Trimestre</SelectItem>
+                <SelectItem value="year">Ano</SelectItem>
               </SelectContent>
             </Select>
-          )}
-          <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-[130px] sm:w-[150px] shrink-0 h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo período</SelectItem>
-              <SelectItem value="month">Mês atual</SelectItem>
-              <SelectItem value="quarter">Trimestre</SelectItem>
-              <SelectItem value="year">Ano</SelectItem>
-            </SelectContent>
-          </Select>
+          </div>
         </div>
       </div>
 
