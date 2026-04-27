@@ -228,8 +228,12 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       ...data,
       dataVisita: new Date().toISOString().split('T')[0],
     };
+    // Garante que client_name seja persistido na activity (vindo do cliente vinculado ou do JSON)
+    const resolvedClientName =
+      checklistActivity.client?.company || data.cliente || undefined;
     await updateActivity(checklistActivity.id, {
       description: JSON.stringify(dataWithDate),
+      ...(resolvedClientName ? { client_name: resolvedClientName } : {}),
     });
 
     // Auto-create assistance card if flagged

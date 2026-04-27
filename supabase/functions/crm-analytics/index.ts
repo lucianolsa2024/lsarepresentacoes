@@ -492,7 +492,8 @@ Deno.serve(async (req) => {
         if (!params.cliente) {
           return json({ error: "params.cliente é obrigatório" }, 400);
         }
-        const { data, error } = await supabase
+        // Primeira tentativa: buscar por client_name
+        let { data, error } = await supabase
           .from("activities")
           .select("id, client_name, client_id, due_date, description, result, completed_notes, status")
           .eq("type", "checklist_loja")
@@ -500,6 +501,19 @@ Deno.serve(async (req) => {
           .order("due_date", { ascending: false })
           .limit(params.limit || 10);
         if (error) return json({ error: error.message }, 500);
+
+        // Segunda tentativa: buscar dentro do JSON description
+        if (!data || data.length === 0) {
+          const fallback = await supabase
+            .from("activities")
+            .select("id, client_name, client_id, due_date, description, result, completed_notes, status")
+            .eq("type", "checklist_loja")
+            .ilike("description", `%${params.cliente}%`)
+            .order("due_date", { ascending: false })
+            .limit(params.limit || 10);
+          if (fallback.error) return json({ error: fallback.error.message }, 500);
+          data = fallback.data;
+        }
 
         const checklists = (data || []).map((a: any) => {
           let parsed: any = {};
@@ -556,7 +570,8 @@ Deno.serve(async (req) => {
         if (!params.cliente) {
           return json({ error: "params.cliente é obrigatório" }, 400);
         }
-        const { data, error } = await supabase
+        // Primeira tentativa: buscar por client_name
+        let { data, error } = await supabase
           .from("activities")
           .select("id, client_name, due_date, description, result, completed_notes")
           .eq("type", "checklist_loja")
@@ -564,6 +579,19 @@ Deno.serve(async (req) => {
           .order("due_date", { ascending: false })
           .limit(10);
         if (error) return json({ error: error.message }, 500);
+
+        // Segunda tentativa: buscar dentro do JSON description
+        if (!data || data.length === 0) {
+          const fallback = await supabase
+            .from("activities")
+            .select("id, client_name, due_date, description, result, completed_notes")
+            .eq("type", "checklist_loja")
+            .ilike("description", `%${params.cliente}%`)
+            .order("due_date", { ascending: false })
+            .limit(10);
+          if (fallback.error) return json({ error: fallback.error.message }, 500);
+          data = fallback.data;
+        }
 
         const parsed = (data || []).map((a: any) => {
           let d: any = {};

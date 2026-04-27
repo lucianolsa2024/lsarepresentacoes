@@ -221,6 +221,7 @@ export function useActivities() {
       if (updates.priority !== undefined) updateData.priority = updates.priority;
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.client_id !== undefined) updateData.client_id = updates.client_id || null;
+      if (updates.client_name !== undefined) updateData.client_name = updates.client_name || null;
       if (updates.quote_id !== undefined) updateData.quote_id = updates.quote_id || null;
       if (updates.completed_notes !== undefined) updateData.completed_notes = updates.completed_notes || null;
       if (updates.reminder_at !== undefined) updateData.reminder_at = updates.reminder_at || null;

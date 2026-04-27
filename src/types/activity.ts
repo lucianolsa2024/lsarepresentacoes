@@ -111,6 +111,7 @@ export interface UpdateActivityInput {
   priority?: ActivityPriority;
   status?: ActivityStatus;
   client_id?: string;
+  client_name?: string;
   quote_id?: string;
   completed_notes?: string;
   reminder_at?: string;
