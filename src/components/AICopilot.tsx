@@ -498,6 +498,7 @@ ${productList.join('\n') || 'Nenhum'}
       // 1. Extrair entidades via Claude (substitui regex)
       let analyticsData: any = null;
       let cliente: string | null = null;
+      let produto: string | null = null;
       let ano: number | null = null;
       let query_type: string | null = null;
       let params: any = {};
@@ -519,7 +520,7 @@ ${productList.join('\n') || 'Nenhum'}
             messages: [
               {
                 role: "user",
-                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|"client_checklists"|"checklist_comparison"|"checklist_detail"|"read_document"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual.\n\nRegras de intent:\n- "client_showroom": showroom/exposição/produtos expostos de um cliente NO SHOWROOM (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs no showroom").\n- "client_checklists": "checklist", "visita comercial", "visita de loja", "produtos expostos na loja", "share de loja", "score da loja", "fluxo da loja", "humor do lojista" + cliente (ex.: "checklists da Loja XYZ", "qual o share da loja XYZ", "score da última visita ao cliente Y", "produtos expostos na loja Z").\n- "checklist_comparison": "comparar visitas", "comparar checklists", "evoluiu", "última vs anterior", "mudou o share", "como mudou desde a última visita" (ex.: "como evoluiu o cliente XYZ entre as últimas visitas", "o share mudou na última visita").\n- "checklist_detail": "resumir checklist", "o que tem no checklist", "detalhes da visita".\n- "read_document": "ler pedido", "analisar pdf", "resumir documento".\n- intent null para conversa geral sem pedido analítico.\n\nCliente deve ser SEMPRE em MAIÚSCULAS.`,
+                content: `Histórico recente:\n${historyContext}\n\nMensagem atual: "${msg}"\n\nExtraia em JSON puro (sem markdown, sem explicação): { "cliente": string|null, "produto": string|null, "ano": number|null, "intent": "client_top_product"|"client_history"|"client_showroom"|"product_in_showroom"|"brand_comparison"|"top_clients"|"products_no_sale"|"monthly_comparison"|"client_checklists"|"checklist_comparison"|"checklist_detail"|"read_document"|null }. O cliente pode vir de mensagens anteriores se não estiver na mensagem atual.\n\nRegras de intent:\n- "client_showroom": showroom/exposição/produtos expostos de um cliente NO SHOWROOM (ex.: "produtos da Bella Home no showroom", "o que a XYZ ainda não expôs no showroom").\n- "product_in_showroom": "exposto", "showroom", "quais lojas têm", "quais clientes têm o produto", "onde está exposto" + nome de PRODUTO (ex.: "quais lojas têm o sofá BELGA exposto", "onde o produto BARI está exposto", "quais clientes têm o BUFFET MILANO no showroom"). Extraia o nome do produto no campo "produto".\n- "client_checklists": "checklist", "visita comercial", "visita de loja", "produtos expostos na loja", "share de loja", "score da loja", "fluxo da loja", "humor do lojista" + cliente (ex.: "checklists da Loja XYZ", "qual o share da loja XYZ", "score da última visita ao cliente Y", "produtos expostos na loja Z").\n- "checklist_comparison": "comparar visitas", "comparar checklists", "evoluiu", "última vs anterior", "mudou o share", "como mudou desde a última visita" (ex.: "como evoluiu o cliente XYZ entre as últimas visitas", "o share mudou na última visita").\n- "checklist_detail": "resumir checklist", "o que tem no checklist", "detalhes da visita".\n- "read_document": "ler pedido", "analisar pdf", "resumir documento".\n- intent null para conversa geral sem pedido analítico.\n\nCliente e produto devem ser SEMPRE em MAIÚSCULAS.`,
               },
             ],
           }),
@@ -531,6 +532,7 @@ ${productList.join('\n') || 'Nenhum'}
         if (jsonMatch) {
           const entities = JSON.parse(jsonMatch[0]);
           cliente = entities.cliente || null;
+          produto = entities.produto || null;
           ano = entities.ano || null;
           query_type = entities.intent || null;
           console.log("[AICopilot] entidades extraídas pelo Claude:", entities);
@@ -551,6 +553,12 @@ ${productList.join('\n') || 'Nenhum'}
           query_type = null;
         } else {
           params = { cliente };
+        }
+      } else if (query_type === "product_in_showroom") {
+        if (!produto) {
+          query_type = null;
+        } else {
+          params = { produto };
         }
       } else if (query_type === "brand_comparison") {
         params = { months: 6 };

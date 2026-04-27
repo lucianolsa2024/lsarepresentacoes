@@ -437,6 +437,59 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "product_in_showroom": {
+        if (!params.produto) {
+          return json({ error: "params.produto é obrigatório" }, 400);
+        }
+        const produto = String(params.produto).trim();
+
+        const { data, error } = await supabase
+          .from("showroom_tracking")
+          .select("cliente, produto, status_exposicao, dt_faturamento, cidade, representante, quantidade, valor")
+          .ilike("produto", `%${produto}%`)
+          .order("dt_faturamento", { ascending: false });
+
+        if (error) {
+          console.error("[product_in_showroom] erro:", error);
+          return json({ error: error.message }, 500);
+        }
+
+        const expostos = (data || []).filter((d: any) => d.status_exposicao === "exposto");
+        const pendentes = (data || []).filter((d: any) => d.status_exposicao === "pendente" || d.status_exposicao === null);
+        const nao_expostos = (data || []).filter((d: any) => d.status_exposicao === "nao_exposto");
+
+        return json({
+          query_type,
+          produto,
+          resumo: {
+            total_lojas: data?.length || 0,
+            expostos: expostos.length,
+            pendentes: pendentes.length,
+            nao_expostos: nao_expostos.length,
+          },
+          lojas_expostas: expostos.map((d: any) => ({
+            cliente: d.cliente,
+            cidade: d.cidade,
+            representante: d.representante,
+            dt_faturamento: d.dt_faturamento,
+            quantidade: d.quantidade,
+          })),
+          lojas_pendentes: pendentes.map((d: any) => ({
+            cliente: d.cliente,
+            cidade: d.cidade,
+            representante: d.representante,
+            dt_faturamento: d.dt_faturamento,
+            dias_pendente: d.dt_faturamento
+              ? Math.floor((new Date().getTime() - new Date(d.dt_faturamento).getTime()) / 86400000)
+              : null,
+          })),
+          lojas_nao_expostas: nao_expostos.map((d: any) => ({
+            cliente: d.cliente,
+            cidade: d.cidade,
+          })),
+        });
+      }
+
       case "client_showroom": {
         if (!params.cliente) {
           return json({ error: "params.cliente é obrigatório" }, 400);
