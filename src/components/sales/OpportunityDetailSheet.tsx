@@ -283,6 +283,9 @@ export function OpportunityDetailSheet({ opportunity, clients, representatives, 
             <TabsTrigger value="quotes" className="gap-1 text-xs">
               <FileText className="h-3.5 w-3.5" /> Orçamentos ({quotes.length})
             </TabsTrigger>
+            <TabsTrigger value="cadencia" className="gap-1 text-xs">
+              <Linkedin className="h-3.5 w-3.5" /> Cadência LinkedIn
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-1 text-xs">
               <History className="h-3.5 w-3.5" /> Histórico ({historico.length})
             </TabsTrigger>
