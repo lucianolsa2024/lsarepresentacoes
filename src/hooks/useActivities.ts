@@ -257,19 +257,24 @@ export function useActivities() {
       if (updates.next_contact_date !== undefined) updateData.next_contact_date = updates.next_contact_date || null;
       if (updates.order_id !== undefined) updateData.order_id = updates.order_id || null;
 
+      console.log('[updateActivity] payload:', { id, updateData });
       const { error } = await supabase
         .from('activities')
         .update(updateData)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[updateActivity] DB error:', error, 'payload:', updateData);
+        throw error;
+      }
       
       await fetchActivities();
       toast.success('Atividade atualizada!');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.message || error?.details || 'Erro desconhecido';
       console.error('Error updating activity:', error);
-      toast.error('Erro ao atualizar atividade');
+      toast.error(`Erro ao atualizar atividade: ${msg}`);
       return false;
     }
   };
