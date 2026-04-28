@@ -89,100 +89,137 @@ async function extractTableFromPdf(file: File): Promise<ParsedRow[]> {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
-    const items: TextItem[] = (content.items as any[]).map(item => ({
-      str: item.str || '',
-      x: item.transform ? item.transform[4] : 0,
-      y: item.transform ? item.transform[5] : 0,
-    }));
+    const items: TextItem[] = (content.items as any[])
+      .map(item => ({
+        str: (item.str || '').replace(/\s+/g, ' '),
+        x: item.transform ? item.transform[4] : 0,
+        y: item.transform ? item.transform[5] : 0,
+      }))
+      .filter(it => it.str.trim() !== '');
 
     if (items.length === 0) continue;
 
-    // Group items by Y position (same row = Y within 3px)
-    const rowMap = new Map<number, TextItem[]>();
+    // Step 1: bucket items by exact Y (tolerance 1px) to get sub-rows
+    const subRowMap = new Map<number, TextItem[]>();
     for (const item of items) {
       let foundY: number | null = null;
-      for (const key of rowMap.keys()) {
-        if (Math.abs(key - item.y) <= 3) { foundY = key; break; }
+      for (const key of subRowMap.keys()) {
+        if (Math.abs(key - item.y) <= 1) { foundY = key; break; }
       }
       const yKey = foundY ?? item.y;
-      if (!rowMap.has(yKey)) rowMap.set(yKey, []);
-      rowMap.get(yKey)!.push(item);
+      if (!subRowMap.has(yKey)) subRowMap.set(yKey, []);
+      subRowMap.get(yKey)!.push(item);
     }
 
-    // Sort rows top-to-bottom (higher Y = higher on page in PDF coords)
-    const sortedYs = [...rowMap.keys()].sort((a, b) => b - a);
+    // Step 2: sort sub-rows top-to-bottom and merge sub-rows that belong to same visual row.
+    // Heuristic: if gap between consecutive Y values is small (< ROW_BREAK), they belong together.
+    const sortedSubYs = [...subRowMap.keys()].sort((a, b) => b - a);
+    const ROW_BREAK = 8; // gaps > 8px = new visual row; gaps ~4-5 = wraps inside same row
 
-    // Find the header row to determine column X positions
+    const visualRows: { ys: number[]; items: TextItem[] }[] = [];
+    let currentGroup: { ys: number[]; items: TextItem[] } | null = null;
+
+    for (let i = 0; i < sortedSubYs.length; i++) {
+      const y = sortedSubYs[i];
+      const sub = subRowMap.get(y)!;
+      if (!currentGroup) {
+        currentGroup = { ys: [y], items: [...sub] };
+      } else {
+        const lastY = currentGroup.ys[currentGroup.ys.length - 1];
+        if (lastY - y < ROW_BREAK) {
+          currentGroup.ys.push(y);
+          currentGroup.items.push(...sub);
+        } else {
+          visualRows.push(currentGroup);
+          currentGroup = { ys: [y], items: [...sub] };
+        }
+      }
+    }
+    if (currentGroup) visualRows.push(currentGroup);
+
+    // Step 3: find header row
     let headerColPositions: { key: string; x: number }[] = [];
-    let headerYIndex = -1;
+    let headerIndex = -1;
 
-    for (let i = 0; i < sortedYs.length; i++) {
-      const rowItems = rowMap.get(sortedYs[i])!;
-      const rowText = rowItems.map(it => it.str.trim()).join(' ').toUpperCase();
-      // Check if this row contains most header keywords
+    for (let i = 0; i < visualRows.length; i++) {
+      const row = visualRows[i];
+      const rowText = row.items.map(it => it.str.trim()).join(' ').toUpperCase();
       const matchCount = HEADER_KEYS.filter(h => rowText.includes(h)).length;
       if (matchCount >= 8) {
-        // Found header row — extract X positions for each header
+        // Map each header key to the leftmost X of items matching it (avoid duplicates)
         for (const hk of HEADER_KEYS) {
-          const match = rowItems.find(it => it.str.trim().toUpperCase() === hk || it.str.trim().toUpperCase().startsWith(hk));
-          if (match) {
-            headerColPositions.push({ key: hk, x: match.x });
+          const matches = row.items.filter(it => {
+            const s = it.str.trim().toUpperCase();
+            return s === hk || s.startsWith(hk);
+          });
+          if (matches.length > 0) {
+            // For PEDIDO/TIPO header, pick the leftmost (the actual column position)
+            // TIPO column header is "TIPO PEDIDO" — TIPO is leftmost
+            const sorted = matches.sort((a, b) => a.x - b.x);
+            headerColPositions.push({ key: hk, x: sorted[0].x });
           }
         }
+        // Dedup by key keeping first occurrence
+        const seen = new Set<string>();
+        headerColPositions = headerColPositions.filter(h => {
+          if (seen.has(h.key)) return false;
+          seen.add(h.key);
+          return true;
+        });
         headerColPositions.sort((a, b) => a.x - b.x);
-        headerYIndex = i;
+        headerIndex = i;
         break;
       }
     }
 
-    if (headerColPositions.length < 8) {
-      // Fallback: try to parse line-by-line with regex
-      continue;
-    }
+    if (headerColPositions.length < 8) continue;
 
-    // Parse data rows after header
-    for (let i = headerYIndex + 1; i < sortedYs.length; i++) {
-      const rowItems = rowMap.get(sortedYs[i])!.sort((a, b) => a.x - b.x);
+    // Step 4: assign each item to nearest column for each visual row after header
+    for (let i = headerIndex + 1; i < visualRows.length; i++) {
+      const row = visualRows[i];
+      const colValues: Record<string, string[]> = {};
+      for (const hc of headerColPositions) colValues[hc.key] = [];
 
-      // Assign each text item to the nearest column
-      const colValues: Record<string, string> = {};
-      for (const hc of headerColPositions) colValues[hc.key] = '';
+      // Sort items by Y desc, then X asc (preserves reading order across wrapped sub-rows)
+      const sortedItems = [...row.items].sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 1) return b.y - a.y;
+        return a.x - b.x;
+      });
 
-      for (const item of rowItems) {
-        if (!item.str.trim()) continue;
-        // Find closest column
+      for (const item of sortedItems) {
+        const text = item.str.trim();
+        if (!text) continue;
         let bestCol = headerColPositions[0];
         let bestDist = Math.abs(item.x - bestCol.x);
         for (const hc of headerColPositions) {
           const dist = Math.abs(item.x - hc.x);
           if (dist < bestDist) { bestDist = dist; bestCol = hc; }
         }
-        colValues[bestCol.key] = colValues[bestCol.key]
-          ? colValues[bestCol.key] + ' ' + item.str.trim()
-          : item.str.trim();
+        colValues[bestCol.key].push(text);
       }
 
-      // Skip empty rows or rows without a pedido number
-      const pedido = colValues['PEDIDO']?.trim();
-      if (!pedido || !/\d/.test(pedido)) continue;
+      const get = (k: string) => (colValues[k] || []).join(' ').replace(/\s+/g, ' ').trim();
 
-      const qtdeRaw = parseInt(colValues['QTDE']?.trim() || '1', 10);
+      const pedido = get('PEDIDO');
+      if (!pedido || !/^\d+$/.test(pedido.replace(/\s/g, ''))) continue;
+
+      const qtdeRaw = parseInt(get('QTDE') || '1', 10);
 
       allRows.push({
-        data: colValues['DATA']?.trim() || '',
-        representante: colValues['REPRESENTANTE']?.trim() || '',
-        cliente: colValues['CLIENTE']?.trim() || '',
-        fornecedor: colValues['FORNECEDOR']?.trim() || '',
-        oc: colValues['OC']?.trim() || '',
-        pedido,
-        produto: colValues['PRODUTO']?.trim() || '',
-        tecido: colValues['TECIDO']?.trim() || '',
-        dimensoes: (colValues['DIMENSÕES'] || colValues['DIMENSOES'] || '').trim(),
-        entrega: colValues['ENTREGA']?.trim() || '',
+        data: get('DATA'),
+        representante: get('REPRESENTANTE'),
+        cliente: get('CLIENTE'),
+        fornecedor: get('FORNECEDOR'),
+        oc: get('OC'),
+        pedido: pedido.replace(/\s/g, ''),
+        produto: get('PRODUTO'),
+        tecido: get('TECIDO'),
+        dimensoes: get('DIMENSÕES') || get('DIMENSOES'),
+        entrega: get('ENTREGA'),
         qtde: isNaN(qtdeRaw) || qtdeRaw <= 0 ? 1 : qtdeRaw,
-        valor: parseBrMoney(colValues['VALOR'] || ''),
-        tipo: colValues['TIPO']?.trim() || 'ENCOMENDA',
-        pagamento: colValues['PAGAMENTO']?.trim() || '',
+        valor: parseBrMoney(get('VALOR')),
+        tipo: get('TIPO') || 'ENCOMENDA',
+        pagamento: get('PAGAMENTO'),
       });
     }
   }
