@@ -933,6 +933,7 @@ const Index = () => {
         onTabChange={setActiveTab}
         isRep={isRep}
         isAdmin={isAdmin}
+        isAssistencia={isAssistencia}
       />
     <AICopilot
       activeTab={activeTab}
