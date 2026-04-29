@@ -92,6 +92,8 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | 'all'>('all');
   const [repFilter, setRepFilter] = useState<string>('all');
 
+  const isAssistenciaUser = currentEmail === 'assistencia@lsarepresentacoes.com.br';
+
   const filteredActivities = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const isDeliveryActivity = (a: Activity) =>
@@ -100,6 +102,11 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
 
     return activities.filter(activity => {
       if (hiddenIds.has(activity.id)) return false;
+
+      // Assistência user: only sees assistance-type activities
+      if (isAssistenciaUser && activity.type !== 'assistencia') {
+        return false;
+      }
 
       // Delivery activities: only visible to Maíra
       if (isDeliveryActivity(activity) && !isMaira) {
@@ -121,7 +128,7 @@ export function ActivityManager({ onCreateQuote, onViewQuote }: ActivityManagerP
       if (repFilter !== 'all' && activity.assigned_to_email !== repFilter) return false;
       return true;
     });
-  }, [activities, search, categoryFilter, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail]);
+  }, [activities, search, categoryFilter, typeFilter, priorityFilter, statusFilter, repFilter, hiddenIds, isAdmin, currentEmail, isAssistenciaUser]);
 
   const handleClearFilters = () => {
     setSearch('');
