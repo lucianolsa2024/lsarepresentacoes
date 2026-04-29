@@ -103,7 +103,8 @@ const Index = () => {
     toast.success('Logout realizado com sucesso!');
   };
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const isAssistencia = isAssistenciaUser(user?.email);
+  const [activeTab, setActiveTab] = useState(isAssistencia ? 'activities' : 'dashboard');
   const [comercialTab, setComercialTab] = useState('quote');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
