@@ -321,10 +321,14 @@ const Index = () => {
 
   const subtotal = calculateSubtotal();
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
-  const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const showFinanceiroTab = !isAssistencia && canAccessFinanceiroLSA(user?.email, isAdmin);
   // Reps see "Relatórios" (subset of admin panel); admins see "Admin" (full panel)
-  const showReportsTab = isRep === true || isAdmin;
+  const showReportsTab = !isAssistencia && (isRep === true || isAdmin);
   const tabsCountClass = (() => {
+    if (isAssistencia) {
+      // assistência só vê: activities + service-orders = 2
+      return 'grid-cols-2';
+    }
     // base tabs always visible: dashboard, activities, funnels, service-orders, operations, products = 6
     let total = 6;
     if (isRep !== false) total += 1; // comercial
