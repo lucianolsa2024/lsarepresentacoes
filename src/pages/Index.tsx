@@ -391,6 +391,7 @@ const Index = () => {
                 <ClipboardList className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Atividades</span>
               </TabsTrigger>
+              {!isAssistencia && (
               <TabsTrigger
                 value="funnels"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -398,7 +399,8 @@ const Index = () => {
                 <TrendingUp className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Funis</span>
               </TabsTrigger>
-              {isAdmin && (
+              )}
+              {!isAssistencia && isAdmin && (
               <TabsTrigger
                 value="automations"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -414,6 +416,7 @@ const Index = () => {
                 <Wrench className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Ordens</span>
               </TabsTrigger>
+              {!isAssistencia && (
               <TabsTrigger
                 value="operations"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -421,6 +424,8 @@ const Index = () => {
                 <Settings className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Operação</span>
               </TabsTrigger>
+              )}
+              {!isAssistencia && (
               <TabsTrigger
                 value="products"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -428,6 +433,7 @@ const Index = () => {
                 <Package className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Produtos</span>
               </TabsTrigger>
+              )}
               {showReportsTab && (
               <TabsTrigger
                 value="admin"
