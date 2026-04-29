@@ -366,6 +366,7 @@ const Index = () => {
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={`hidden md:grid w-full ${tabsCountClass} h-auto p-0 bg-muted rounded-none`}>
+              {!isAssistencia && (
               <TabsTrigger
                 value="dashboard"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -373,7 +374,8 @@ const Index = () => {
                 <LayoutDashboard className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Dashboard</span>
               </TabsTrigger>
-              {isRep !== false && (
+              )}
+              {!isAssistencia && isRep !== false && (
               <TabsTrigger
                 value="comercial"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
