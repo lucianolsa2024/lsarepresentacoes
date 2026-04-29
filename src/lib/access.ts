@@ -4,6 +4,7 @@
  */
 
 export const FINANCEIRO_LSA_ALLOWED_EMAIL = 'lucianoabreu@lsarepresentacoes.com.br';
+export const ASSISTENCIA_USER_EMAIL = 'assistencia@lsarepresentacoes.com.br';
 
 const normalize = (value?: string | null) => (value ?? '').trim().toLowerCase();
 
@@ -14,4 +15,12 @@ const normalize = (value?: string | null) => (value ?? '').trim().toLowerCase();
 export function canAccessFinanceiroLSA(email?: string | null, isAdmin?: boolean | null): boolean {
   if (!isAdmin) return false;
   return normalize(email) === FINANCEIRO_LSA_ALLOWED_EMAIL;
+}
+
+/**
+ * Usuário dedicado ao time de Assistência Técnica.
+ * Acesso restrito a: Atividades (assistências) e Ordens de Serviço.
+ */
+export function isAssistenciaUser(email?: string | null): boolean {
+  return normalize(email) === ASSISTENCIA_USER_EMAIL;
 }
