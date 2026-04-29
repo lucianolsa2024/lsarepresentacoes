@@ -26,15 +26,21 @@ interface MobileBottomNavProps {
   onTabChange: (tab: string) => void;
   isRep: boolean | null;
   isAdmin: boolean | null;
+  isAssistencia?: boolean;
 }
 
-export function MobileBottomNav({ activeTab, onTabChange, isRep, isAdmin }: MobileBottomNavProps) {
+export function MobileBottomNav({ activeTab, onTabChange, isRep, isAdmin, isAssistencia }: MobileBottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   const { user } = useAuth();
-  const showFinanceiro = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const showFinanceiro = !isAssistencia && canAccessFinanceiroLSA(user?.email, isAdmin);
 
-  const allItems: NavItem[] = [
+  const allItems: NavItem[] = isAssistencia
+    ? [
+        { value: 'activities', label: 'Atividades', icon: <ClipboardList className="h-5 w-5" /> },
+        { value: 'service-orders', label: 'Ordens', icon: <Wrench className="h-5 w-5" /> },
+      ]
+    : [
     { value: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     ...(isRep !== false ? [{ value: 'comercial', label: 'Comercial', icon: <Briefcase className="h-5 w-5" /> }] : []),
     { value: 'activities', label: 'Atividades', icon: <ClipboardList className="h-5 w-5" /> },

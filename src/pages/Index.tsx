@@ -49,7 +49,7 @@ import { FichaCliente } from '@/components/portfolio/FichaCliente';
 import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
-import { canAccessFinanceiroLSA } from '@/lib/access';
+import { canAccessFinanceiroLSA, isAssistenciaUser } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AICopilot } from '@/components/AICopilot';
@@ -103,7 +103,8 @@ const Index = () => {
     toast.success('Logout realizado com sucesso!');
   };
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const isAssistencia = isAssistenciaUser(user?.email);
+  const [activeTab, setActiveTab] = useState(isAssistencia ? 'activities' : 'dashboard');
   const [comercialTab, setComercialTab] = useState('quote');
   const [client, setClient] = useState<ClientData>(INITIAL_CLIENT);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -320,10 +321,14 @@ const Index = () => {
 
   const subtotal = calculateSubtotal();
   const clientForDetail = clientDetailId ? clients.find(c => c.id === clientDetailId) : null;
-  const showFinanceiroTab = canAccessFinanceiroLSA(user?.email, isAdmin);
+  const showFinanceiroTab = !isAssistencia && canAccessFinanceiroLSA(user?.email, isAdmin);
   // Reps see "Relatórios" (subset of admin panel); admins see "Admin" (full panel)
-  const showReportsTab = isRep === true || isAdmin;
+  const showReportsTab = !isAssistencia && (isRep === true || isAdmin);
   const tabsCountClass = (() => {
+    if (isAssistencia) {
+      // assistência só vê: activities + service-orders = 2
+      return 'grid-cols-2';
+    }
     // base tabs always visible: dashboard, activities, funnels, service-orders, operations, products = 6
     let total = 6;
     if (isRep !== false) total += 1; // comercial
@@ -361,6 +366,7 @@ const Index = () => {
         <div className="bg-card rounded-lg shadow-lg overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={`hidden md:grid w-full ${tabsCountClass} h-auto p-0 bg-muted rounded-none`}>
+              {!isAssistencia && (
               <TabsTrigger
                 value="dashboard"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -368,7 +374,8 @@ const Index = () => {
                 <LayoutDashboard className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Dashboard</span>
               </TabsTrigger>
-              {isRep !== false && (
+              )}
+              {!isAssistencia && isRep !== false && (
               <TabsTrigger
                 value="comercial"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -384,6 +391,7 @@ const Index = () => {
                 <ClipboardList className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Atividades</span>
               </TabsTrigger>
+              {!isAssistencia && (
               <TabsTrigger
                 value="funnels"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -391,7 +399,8 @@ const Index = () => {
                 <TrendingUp className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Funis</span>
               </TabsTrigger>
-              {isAdmin && (
+              )}
+              {!isAssistencia && isAdmin && (
               <TabsTrigger
                 value="automations"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -407,6 +416,7 @@ const Index = () => {
                 <Wrench className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Ordens</span>
               </TabsTrigger>
+              {!isAssistencia && (
               <TabsTrigger
                 value="operations"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -414,6 +424,8 @@ const Index = () => {
                 <Settings className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Operação</span>
               </TabsTrigger>
+              )}
+              {!isAssistencia && (
               <TabsTrigger
                 value="products"
                 className="py-2 sm:py-3 px-1 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[11px] xl:text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5"
@@ -421,6 +433,7 @@ const Index = () => {
                 <Package className="h-4 w-4 shrink-0" />
                 <span className="hidden lg:inline">Produtos</span>
               </TabsTrigger>
+              )}
               {showReportsTab && (
               <TabsTrigger
                 value="admin"
@@ -920,6 +933,7 @@ const Index = () => {
         onTabChange={setActiveTab}
         isRep={isRep}
         isAdmin={isAdmin}
+        isAssistencia={isAssistencia}
       />
     <AICopilot
       activeTab={activeTab}
