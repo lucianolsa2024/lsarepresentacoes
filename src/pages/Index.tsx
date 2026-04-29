@@ -49,7 +49,7 @@ import { FichaCliente } from '@/components/portfolio/FichaCliente';
 import { RoteiroVisitas } from '@/components/portfolio/RoteiroVisitas';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { FinanceiroLSA } from '@/components/finance/FinanceiroLSA';
-import { canAccessFinanceiroLSA } from '@/lib/access';
+import { canAccessFinanceiroLSA, isAssistenciaUser } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AICopilot } from '@/components/AICopilot';
