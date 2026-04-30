@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import NpsForm from "./pages/NpsForm";
 import NotFound from "./pages/NotFound";
 import PriceConsultationPage from "./pages/PriceConsultationPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
+import PortalAdminPage from "./pages/PortalAdminPage";
 
 const queryClient = new QueryClient();
 
