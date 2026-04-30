@@ -34,47 +34,63 @@ export default function ClientPortalPage() {
   });
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
     let cancelled = false;
 
     (async () => {
       try {
-        const { data: client, error: clientErr } = await supabase
-          .from("clients")
-          .select("id, company, trade_name, email")
-          .eq("email", user.email!)
+        // PASSO 1: busca client_id vinculado ao usuário em user_roles
+        const { data: roleData, error: roleErr } = await supabase
+          .from("user_roles")
+          .select("client_id")
+          .eq("user_id", user.id)
+          .eq("role", "client")
           .maybeSingle();
 
-        if (clientErr) throw clientErr;
-        if (!client) {
+        if (roleErr) throw roleErr;
+
+        if (!roleData?.client_id) {
           if (!cancelled) {
             setState((s) => ({
               ...s,
               loading: false,
-              error: "Cliente não encontrado para este e-mail. Contate o representante LSA.",
+              error: "Cliente não encontrado. Contate o representante LSA.",
             }));
           }
           return;
         }
 
-        const [{ data: access }, { data: portalProducts }] = await Promise.all([
+        const clientId = roleData.client_id;
+
+        // PASSO 2: busca dados do cliente + acesso + produtos em paralelo
+        const [
+          { data: client, error: clientErr },
+          { data: access },
+          { data: portalProducts },
+        ] = await Promise.all([
+          supabase
+            .from("clients")
+            .select("id, company, trade_name")
+            .eq("id", clientId)
+            .maybeSingle(),
           supabase
             .from("client_portal_access")
             .select("portal_enabled, commercial_conditions")
-            .eq("client_id", client.id)
+            .eq("client_id", clientId)
             .maybeSingle(),
           supabase
             .from("client_portal_products")
             .select("product_id")
-            .eq("client_id", client.id),
+            .eq("client_id", clientId),
         ]);
 
+        if (clientErr) throw clientErr;
         if (cancelled) return;
 
         setState({
           loading: false,
           error: null,
-          clientName: client.trade_name || client.company,
+          clientName: client?.trade_name || client?.company || null,
           portalEnabled: access?.portal_enabled ?? false,
           commercialConditions: access?.commercial_conditions ?? null,
           allowedProductIds: (portalProducts ?? []).map((p) => p.product_id),
@@ -90,10 +106,8 @@ export default function ClientPortalPage() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.email]);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const allowedSet = useMemo(
     () => new Set(state.allowedProductIds),
@@ -180,7 +194,7 @@ export default function ClientPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Reuso da consulta de preços oficial, somente com produtos liberados */}
+        {/* Consulta de preços com modo portal ativado */}
         {filteredProducts.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center text-muted-foreground">
@@ -188,7 +202,7 @@ export default function ClientPortalPage() {
             </CardContent>
           </Card>
         ) : (
-          <PriceConsultation products={filteredProducts} />
+          <PriceConsultation products={filteredProducts} portalMode />
         )}
       </div>
     </div>
