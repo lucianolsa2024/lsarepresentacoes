@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export type PortalUserRole = 'admin' | 'user' | 'client';
+
 export interface PortalUser {
   id: string;
   email: string;
@@ -9,6 +11,9 @@ export interface PortalUser {
   last_sign_in_at: string | null;
   banned_until: string | null;
   email_confirmed_at: string | null;
+  role: PortalUserRole;
+  client_id: string | null;
+  client_name: string | null;
 }
 
 async function callEdgeFunction(action: string, payload: object = {}) {
@@ -51,9 +56,9 @@ export function usePortalUsers() {
     }
   }
 
-  async function createUser(email: string, password: string) {
+  async function createUser(email: string, password: string, role: PortalUserRole = 'client', clientId?: string | null) {
     try {
-      await callEdgeFunction("create", { email, password });
+      await callEdgeFunction("create", { email, password, role, clientId: clientId ?? null });
       toast({ title: "Usuário criado", description: `${email} criado com sucesso.` });
       await fetchUsers();
       return true;
@@ -79,6 +84,18 @@ export function usePortalUsers() {
     try {
       await callEdgeFunction("update_password", { userId, password });
       toast({ title: "Senha atualizada" });
+      return true;
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      return false;
+    }
+  }
+
+  async function updateRole(userId: string, role: PortalUserRole, clientId?: string | null) {
+    try {
+      await callEdgeFunction("update_role", { userId, role, clientId: clientId ?? null });
+      toast({ title: "Tipo de usuário atualizado" });
+      await fetchUsers();
       return true;
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -112,6 +129,6 @@ export function usePortalUsers() {
 
   return {
     users, loading, fetchUsers,
-    createUser, updateEmail, updatePassword, toggleBan, deleteUser,
+    createUser, updateEmail, updatePassword, updateRole, toggleBan, deleteUser,
   };
 }
