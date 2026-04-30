@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import NpsForm from "./pages/NpsForm";
 import NotFound from "./pages/NotFound";
 import PriceConsultationPage from "./pages/PriceConsultationPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
+import PortalAdminPage from "./pages/PortalAdminPage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +26,22 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/nps/:token" element={<NpsForm />} />
             <Route path="/comercial/consulta-precos" element={<PriceConsultationPage />} />
+            <Route
+              path="/portal"
+              element={
+                <ProtectedRoute>
+                  <ClientPortalPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/portal"
+              element={
+                <ProtectedRoute>
+                  <PortalAdminPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={
