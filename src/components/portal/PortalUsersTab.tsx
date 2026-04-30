@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { usePortalUsers, type PortalUser } from "@/hooks/usePortalUsers";
+import { useEffect, useMemo, useState } from "react";
+import { usePortalUsers, type PortalUser, type PortalUserRole } from "@/hooks/usePortalUsers";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +11,19 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Plus, Mail, KeyRound, Ban, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Search, Plus, Ban, CheckCircle2, Eye, EyeOff, Pencil } from "lucide-react";
+
+interface ClientOption {
+  id: string;
+  company: string;
+  trade_name: string | null;
+}
 
 function formatBR(dateStr: string | null): string {
   if (!dateStr) return "Nunca";
@@ -28,14 +38,20 @@ function isBanned(user: PortalUser): boolean {
   return until > Date.now();
 }
 
+function roleBadge(role: PortalUserRole) {
+  if (role === 'admin') return <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs">Admin</Badge>;
+  if (role === 'user') return <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs">Interno</Badge>;
+  return <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs">Cliente Externo</Badge>;
+}
+
 export default function PortalUsersTab() {
-  const { users, loading, createUser, updateEmail, updatePassword, toggleBan } = usePortalUsers();
+  const { users, loading, createUser, updateEmail, updatePassword, updateRole, toggleBan } = usePortalUsers();
   const [search, setSearch] = useState("");
+  const [clients, setClients] = useState<ClientOption[]>([]);
 
   // Modais
   const [createOpen, setCreateOpen] = useState(false);
-  const [emailUser, setEmailUser] = useState<PortalUser | null>(null);
-  const [passUser, setPassUser] = useState<PortalUser | null>(null);
+  const [editUser, setEditUser] = useState<PortalUser | null>(null);
   const [banUser, setBanUser] = useState<PortalUser | null>(null);
 
   // Form criar
@@ -43,49 +59,74 @@ export default function PortalUsersTab() {
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [newRole, setNewRole] = useState<PortalUserRole>("client");
+  const [newClientId, setNewClientId] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
-  // Form editar email
+  // Form editar
   const [editEmail, setEditEmail] = useState("");
-
-  // Form editar senha
   const [editPass, setEditPass] = useState("");
-  const [editPass2, setEditPass2] = useState("");
   const [showEditPass, setShowEditPass] = useState(false);
+  const [editRole, setEditRole] = useState<PortalUserRole>("client");
+  const [editClientId, setEditClientId] = useState<string>("");
+
+  useEffect(() => {
+    supabase.from("clients")
+      .select("id, company, trade_name")
+      .order("company")
+      .then(({ data }) => setClients((data ?? []) as ClientOption[]));
+  }, []);
 
   const filtered = useMemo(
     () => users.filter((u) => (u.email ?? "").toLowerCase().includes(search.toLowerCase())),
     [users, search]
   );
 
+  function openEdit(u: PortalUser) {
+    setEditUser(u);
+    setEditEmail(u.email ?? "");
+    setEditPass("");
+    setShowEditPass(false);
+    setEditRole(u.role);
+    setEditClientId(u.client_id ?? "");
+  }
+
   async function handleCreate() {
     if (!newEmail || !newPass) return;
     if (newPass !== newPass2) return;
+    if (newRole === 'client' && !newClientId) return;
     setBusy(true);
-    const ok = await createUser(newEmail.trim(), newPass);
+    const ok = await createUser(
+      newEmail.trim(),
+      newPass,
+      newRole,
+      newRole === 'client' ? newClientId : null
+    );
     setBusy(false);
     if (ok) {
       setCreateOpen(false);
       setNewEmail(""); setNewPass(""); setNewPass2(""); setShowPass(false);
+      setNewRole("client"); setNewClientId("");
     }
   }
 
-  async function handleEditEmail() {
-    if (!emailUser || !editEmail) return;
+  async function handleSaveEdit() {
+    if (!editUser) return;
     setBusy(true);
-    const ok = await updateEmail(emailUser.id, editEmail.trim());
-    setBusy(false);
-    if (ok) setEmailUser(null);
-  }
-
-  async function handleEditPass() {
-    if (!passUser || !editPass || editPass !== editPass2) return;
-    setBusy(true);
-    const ok = await updatePassword(passUser.id, editPass);
-    setBusy(false);
-    if (ok) {
-      setPassUser(null);
-      setEditPass(""); setEditPass2(""); setShowEditPass(false);
+    try {
+      if (editEmail && editEmail !== editUser.email) {
+        await updateEmail(editUser.id, editEmail.trim());
+      }
+      if (editPass) {
+        await updatePassword(editUser.id, editPass);
+      }
+      const newCid = editRole === 'client' ? (editClientId || null) : null;
+      if (editRole !== editUser.role || newCid !== editUser.client_id) {
+        await updateRole(editUser.id, editRole, newCid);
+      }
+    } finally {
+      setBusy(false);
+      setEditUser(null);
     }
   }
 
@@ -113,7 +154,7 @@ export default function PortalUsersTab() {
         <div>
           <h2 className="text-xl font-bold">Usuários do Portal</h2>
           <p className="text-sm text-muted-foreground">
-            Gerencie acessos, e-mails e senhas dos usuários.
+            Gerencie acessos, e-mails, senhas e tipos de usuário.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
@@ -133,9 +174,10 @@ export default function PortalUsersTab() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_auto_auto] gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
+          <div className="hidden md:grid grid-cols-[2fr_1fr_1.5fr_auto_auto_auto] gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
             <span>E-mail</span>
-            <span>Criado em</span>
+            <span>Tipo</span>
+            <span>Cliente vinculado</span>
             <span>Último acesso</span>
             <span>Status</span>
             <span>Ações</span>
@@ -152,7 +194,7 @@ export default function PortalUsersTab() {
             return (
               <div
                 key={u.id}
-                className={`grid md:grid-cols-[2fr_1fr_1fr_auto_auto] gap-4 px-5 py-4 items-center ${
+                className={`grid md:grid-cols-[2fr_1fr_1.5fr_auto_auto_auto] gap-4 px-5 py-4 items-center ${
                   i !== filtered.length - 1 ? "border-b" : ""
                 }`}
               >
@@ -162,8 +204,9 @@ export default function PortalUsersTab() {
                     {formatBR(u.created_at)} · {formatBR(u.last_sign_in_at)}
                   </p>
                 </div>
-                <span className="hidden md:inline text-sm text-muted-foreground">
-                  {formatBR(u.created_at)}
+                <div>{roleBadge(u.role)}</div>
+                <span className="text-sm text-muted-foreground truncate">
+                  {u.client_name ?? "—"}
                 </span>
                 <span className="hidden md:inline text-sm text-muted-foreground">
                   {formatBR(u.last_sign_in_at)}
@@ -175,13 +218,8 @@ export default function PortalUsersTab() {
                   {banned ? "Suspenso" : "Ativo"}
                 </Badge>
                 <div className="flex flex-wrap gap-1.5 justify-self-start md:justify-self-end">
-                  <Button size="sm" variant="outline" className="h-8 gap-1 text-xs"
-                    onClick={() => { setEmailUser(u); setEditEmail(u.email ?? ""); }}>
-                    <Mail className="w-3.5 h-3.5" /> E-mail
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-8 gap-1 text-xs"
-                    onClick={() => { setPassUser(u); setEditPass(""); setEditPass2(""); }}>
-                    <KeyRound className="w-3.5 h-3.5" /> Senha
+                  <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => openEdit(u)}>
+                    <Pencil className="w-3.5 h-3.5" /> Editar
                   </Button>
                   <Button
                     size="sm"
@@ -236,51 +274,61 @@ export default function PortalUsersTab() {
                 <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
               )}
             </div>
+            <div>
+              <Label>Tipo de usuário</Label>
+              <Select value={newRole} onValueChange={(v) => setNewRole(v as PortalUserRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Externo (acessa apenas o portal)</SelectItem>
+                  <SelectItem value="user">Interno (acessa o sistema)</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {newRole === 'client' && (
+              <div>
+                <Label>Vincular ao cliente</Label>
+                <Select value={newClientId} onValueChange={setNewClientId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.trade_name || c.company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreate}
-              disabled={busy || !newEmail || !newPass || newPass !== newPass2}>
+              disabled={busy || !newEmail || !newPass || newPass !== newPass2 || (newRole === 'client' && !newClientId)}>
               {busy ? "Criando..." : "Criar usuário"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Editar e-mail */}
-      <Dialog open={!!emailUser} onOpenChange={(o) => !o && setEmailUser(null)}>
+      {/* Modal: Editar usuário */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Alterar E-mail</DialogTitle>
-            <DialogDescription>{emailUser?.email}</DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="edit-email">Novo e-mail</Label>
-            <Input id="edit-email" type="email" value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmailUser(null)}>Cancelar</Button>
-            <Button onClick={handleEditEmail} disabled={busy || !editEmail}>
-              {busy ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal: Editar senha */}
-      <Dialog open={!!passUser} onOpenChange={(o) => !o && setPassUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Senha</DialogTitle>
-            <DialogDescription>{passUser?.email}</DialogDescription>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>{editUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="edit-pass">Nova senha</Label>
+              <Label htmlFor="edit-email">E-mail</Label>
+              <Input id="edit-email" type="email" value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="edit-pass">Nova senha (deixe vazio para manter)</Label>
               <div className="relative">
                 <Input id="edit-pass" type={showEditPass ? "text" : "password"} value={editPass}
-                  onChange={(e) => setEditPass(e.target.value)} />
+                  onChange={(e) => setEditPass(e.target.value)} placeholder="••••••••" />
                 <button type="button" onClick={() => setShowEditPass((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {showEditPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -288,19 +336,36 @@ export default function PortalUsersTab() {
               </div>
             </div>
             <div>
-              <Label htmlFor="edit-pass2">Confirmar nova senha</Label>
-              <Input id="edit-pass2" type={showEditPass ? "text" : "password"} value={editPass2}
-                onChange={(e) => setEditPass2(e.target.value)} />
-              {editPass2 && editPass !== editPass2 && (
-                <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
-              )}
+              <Label>Tipo de usuário</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as PortalUserRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Externo (acessa apenas o portal)</SelectItem>
+                  <SelectItem value="user">Interno (acessa o sistema)</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {editRole === 'client' && (
+              <div>
+                <Label>Vincular ao cliente</Label>
+                <Select value={editClientId} onValueChange={setEditClientId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.trade_name || c.company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPassUser(null)}>Cancelar</Button>
-            <Button onClick={handleEditPass}
-              disabled={busy || !editPass || editPass !== editPass2}>
-              {busy ? "Salvando..." : "Salvar"}
+            <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={busy}>
+              {busy ? "Salvando..." : "Salvar alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
