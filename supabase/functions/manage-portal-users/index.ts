@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!roleData) throw new Error("Acesso negado: apenas admins");
 
     const body = await req.json();
-    const { action, userId, email, password, banned } = body;
+    const { action, userId, email, password, banned, role, clientId } = body;
 
     let result: any;
 
@@ -50,14 +50,27 @@ Deno.serve(async (req) => {
           perPage: 200,
         });
         if (listError) throw listError;
-        result = listData.users.map((u: any) => ({
-          id: u.id,
-          email: u.email,
-          created_at: u.created_at,
-          last_sign_in_at: u.last_sign_in_at,
-          banned_until: u.banned_until,
-          email_confirmed_at: u.email_confirmed_at,
-        }));
+
+        const { data: rolesData } = await supabaseAdmin
+          .from("user_roles")
+          .select("user_id, role, client_id, clients(company, trade_name)");
+
+        const rolesMap = new Map((rolesData ?? []).map((r: any) => [r.user_id, r]));
+
+        result = listData.users.map((u: any) => {
+          const info: any = rolesMap.get(u.id);
+          return {
+            id: u.id,
+            email: u.email,
+            created_at: u.created_at,
+            last_sign_in_at: u.last_sign_in_at,
+            banned_until: u.banned_until,
+            email_confirmed_at: u.email_confirmed_at,
+            role: info?.role ?? "user",
+            client_id: info?.client_id ?? null,
+            client_name: info?.clients?.trade_name || info?.clients?.company || null,
+          };
+        });
         break;
       }
 
@@ -69,6 +82,16 @@ Deno.serve(async (req) => {
             email_confirm: true,
           });
         if (createError) throw createError;
+
+        const { error: insertRoleError } = await supabaseAdmin
+          .from("user_roles")
+          .insert({
+            user_id: createData.user.id,
+            role: role ?? "client",
+            client_id: clientId ?? null,
+          });
+        if (insertRoleError) throw insertRoleError;
+
         result = createData.user;
         break;
       }
@@ -86,6 +109,26 @@ Deno.serve(async (req) => {
           await supabaseAdmin.auth.admin.updateUserById(userId, { password });
         if (passError) throw passError;
         result = passData.user;
+        break;
+      }
+
+      case "update_role": {
+        // Remove existing rows and insert new (handles unique constraint on user_id+role)
+        const { error: delError } = await supabaseAdmin
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId);
+        if (delError) throw delError;
+
+        const { error: insError } = await supabaseAdmin
+          .from("user_roles")
+          .insert({
+            user_id: userId,
+            role: role ?? "client",
+            client_id: clientId ?? null,
+          });
+        if (insError) throw insError;
+        result = { updated: true };
         break;
       }
 

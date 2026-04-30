@@ -1,8 +1,9 @@
 // src/pages/PortalAdminPage.tsx
 // Painel do admin: gerencia quais produtos cada cliente vê e condições comerciais
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePortalAdmin } from "@/hooks/usePortalAdmin";
+import { usePortalUsers, type PortalUser } from "@/hooks/usePortalUsers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PortalUsersTab from "@/components/portal/PortalUsersTab";
 import {
   Users,
@@ -24,6 +32,11 @@ import {
   CheckSquare,
   Square,
   UserCog,
+  Lock,
+  UserPlus,
+  Eye,
+  EyeOff,
+  Ban,
 } from "lucide-react";
 import type { ClientWithPortal } from "@/hooks/usePortalAdmin";
 
@@ -52,6 +65,8 @@ export default function PortalAdminPage() {
 
 function ClientsProductsTab() {
   const { clients, allProducts, loading, saveClientPortal } = usePortalAdmin();
+  const { users, createUser, updateEmail, updatePassword, toggleBan } = usePortalUsers();
+
   const [editingClient, setEditingClient] = useState<ClientWithPortal | null>(null);
   const [searchClient, setSearchClient] = useState("");
 
@@ -62,6 +77,28 @@ function ClientsProductsTab() {
   const [searchProd, setSearchProd] = useState("");
   const [filterCat, setFilterCat] = useState("Todos");
   const [saving, setSaving] = useState(false);
+
+  // ─── Modais de acesso ───────────────────────────────────
+  const [createAccessClient, setCreateAccessClient] = useState<ClientWithPortal | null>(null);
+  const [editAccessClient, setEditAccessClient] = useState<ClientWithPortal | null>(null);
+  const [banAccessUser, setBanAccessUser] = useState<PortalUser | null>(null);
+
+  const [accEmail, setAccEmail] = useState("");
+  const [accPass, setAccPass] = useState("");
+  const [accPass2, setAccPass2] = useState("");
+  const [accShowPass, setAccShowPass] = useState(false);
+  const [accBusy, setAccBusy] = useState(false);
+
+  // Mapa de cliente → usuário externo vinculado
+  const userByClient = useMemo(() => {
+    const m = new Map<string, PortalUser>();
+    users.forEach((u) => {
+      if (u.role === 'client' && u.client_id) {
+        m.set(u.client_id, u);
+      }
+    });
+    return m;
+  }, [users]);
 
   function openEditor(c: ClientWithPortal) {
     setEditingClient(c);
@@ -98,6 +135,61 @@ function ClientsProductsTab() {
     });
     setSaving(false);
     if (ok) setEditingClient(null);
+  }
+
+  function openCreateAccess(c: ClientWithPortal) {
+    setCreateAccessClient(c);
+    setAccEmail(c.email ?? "");
+    setAccPass("");
+    setAccPass2("");
+    setAccShowPass(false);
+  }
+
+  function openEditAccess(c: ClientWithPortal) {
+    setEditAccessClient(c);
+    const u = userByClient.get(c.id);
+    setAccEmail(u?.email ?? "");
+    setAccPass("");
+    setAccPass2("");
+    setAccShowPass(false);
+  }
+
+  async function handleCreateAccess() {
+    if (!createAccessClient || !accEmail || !accPass) return;
+    if (accPass !== accPass2) return;
+    setAccBusy(true);
+    const ok = await createUser(accEmail.trim(), accPass, 'client', createAccessClient.id);
+    setAccBusy(false);
+    if (ok) setCreateAccessClient(null);
+  }
+
+  async function handleSaveAccessEdit() {
+    if (!editAccessClient) return;
+    const u = userByClient.get(editAccessClient.id);
+    if (!u) return;
+    setAccBusy(true);
+    try {
+      if (accEmail && accEmail !== u.email) {
+        await updateEmail(u.id, accEmail.trim());
+      }
+      if (accPass) {
+        if (accPass !== accPass2) return;
+        await updatePassword(u.id, accPass);
+      }
+    } finally {
+      setAccBusy(false);
+      setEditAccessClient(null);
+    }
+  }
+
+  async function handleConfirmBan() {
+    if (!banAccessUser) return;
+    const banned = !!banAccessUser.banned_until && new Date(banAccessUser.banned_until).getTime() > Date.now();
+    setAccBusy(true);
+    await toggleBan(banAccessUser.id, banned);
+    setAccBusy(false);
+    setBanAccessUser(null);
+    setEditAccessClient(null);
   }
 
   // ─── Loading ─────────────────────────────────────────────
@@ -277,14 +369,14 @@ function ClientsProductsTab() {
 
   // ─── Lista de clientes ────────────────────────────────────
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-5">
+    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Users className="w-6 h-6" /> Portal — Gestão de Clientes
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Defina quais produtos e condições cada cliente visualiza no portal.
+            Defina quais produtos, condições e acessos cada cliente possui no portal.
           </p>
         </div>
         <Badge variant="outline" className="text-sm">
@@ -306,48 +398,208 @@ function ClientsProductsTab() {
       {/* Tabela de clientes */}
       <Card>
         <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
-            <span>Cliente</span>
-            <span>E-mail</span>
-            <span>Produtos</span>
-            <span>Status</span>
-            <span></span>
-          </div>
-
           {filteredClients.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               Nenhum cliente com e-mail cadastrado
             </div>
           )}
 
-          {filteredClients.map((c, i) => (
-            <div
-              key={c.id}
-              className={`grid md:grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-5 py-4 items-center cursor-pointer hover:bg-muted/30 transition-colors ${
-                i !== filteredClients.length - 1 ? "border-b" : ""
-              }`}
-              onClick={() => openEditor(c)}
-            >
-              <div>
-                <p className="font-semibold text-sm">{c.trade_name || c.company}</p>
-                <p className="text-xs text-muted-foreground">{c.company}</p>
-              </div>
-              <p className="text-sm text-muted-foreground truncate">{c.email ?? "—"}</p>
-              <div className="flex items-center gap-1 text-sm">
-                <Package className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">{c.allowed_product_ids.length}</span>
-              </div>
-              <Badge
-                variant={c.portal_enabled ? "default" : "secondary"}
-                className="text-xs justify-self-center"
+          {filteredClients.map((c, i) => {
+            const linkedUser = userByClient.get(c.id);
+            return (
+              <div
+                key={c.id}
+                className={`px-5 py-4 ${i !== filteredClients.length - 1 ? "border-b" : ""}`}
               >
-                {c.portal_enabled ? "Ativo" : "Inativo"}
-              </Badge>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
-          ))}
+                <div
+                  className="grid md:grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center cursor-pointer hover:bg-muted/30 transition-colors -mx-5 px-5 py-1 rounded"
+                  onClick={() => openEditor(c)}
+                >
+                  <div>
+                    <p className="font-semibold text-sm">{c.trade_name || c.company}</p>
+                    <p className="text-xs text-muted-foreground">{c.company}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{c.email ?? "—"}</p>
+                  <div className="flex items-center gap-1 text-sm">
+                    <Package className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{c.allowed_product_ids.length}</span>
+                  </div>
+                  <Badge
+                    variant={c.portal_enabled ? "default" : "secondary"}
+                    className="text-xs justify-self-center"
+                  >
+                    {c.portal_enabled ? "Ativo" : "Inativo"}
+                  </Badge>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+
+                {/* Linha de acesso */}
+                <div className="mt-2 flex items-center gap-2 text-xs">
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  {linkedUser ? (
+                    <>
+                      <span className="text-muted-foreground">acesso:</span>
+                      <span className="font-medium">{linkedUser.email}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs"
+                        onClick={(e) => { e.stopPropagation(); openEditAccess(c); }}
+                      >
+                        Editar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-muted-foreground">sem usuário vinculado</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={(e) => { e.stopPropagation(); openCreateAccess(c); }}
+                      >
+                        <UserPlus className="w-3 h-3" /> Criar acesso
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
+
+      {/* Modal: Criar acesso */}
+      <Dialog open={!!createAccessClient} onOpenChange={(o) => !o && setCreateAccessClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar acesso ao portal</DialogTitle>
+            <DialogDescription>
+              {createAccessClient?.trade_name || createAccessClient?.company}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="acc-email">E-mail</Label>
+              <Input id="acc-email" type="email" value={accEmail}
+                onChange={(e) => setAccEmail(e.target.value)} placeholder="cliente@empresa.com" />
+            </div>
+            <div>
+              <Label htmlFor="acc-pass">Senha</Label>
+              <div className="relative">
+                <Input id="acc-pass" type={accShowPass ? "text" : "password"} value={accPass}
+                  onChange={(e) => setAccPass(e.target.value)} />
+                <button type="button" onClick={() => setAccShowPass((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {accShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="acc-pass2">Confirmar senha</Label>
+              <Input id="acc-pass2" type={accShowPass ? "text" : "password"} value={accPass2}
+                onChange={(e) => setAccPass2(e.target.value)} />
+              {accPass2 && accPass !== accPass2 && (
+                <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateAccessClient(null)}>Cancelar</Button>
+            <Button onClick={handleCreateAccess}
+              disabled={accBusy || !accEmail || !accPass || accPass !== accPass2}>
+              {accBusy ? "Criando..." : "Criar acesso"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Editar acesso */}
+      <Dialog open={!!editAccessClient} onOpenChange={(o) => !o && setEditAccessClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar acesso ao portal</DialogTitle>
+            <DialogDescription>
+              {editAccessClient?.trade_name || editAccessClient?.company}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="acc-edit-email">E-mail de acesso</Label>
+              <Input id="acc-edit-email" type="email" value={accEmail}
+                onChange={(e) => setAccEmail(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="acc-edit-pass">Nova senha (deixe vazio para manter)</Label>
+              <div className="relative">
+                <Input id="acc-edit-pass" type={accShowPass ? "text" : "password"} value={accPass}
+                  onChange={(e) => setAccPass(e.target.value)} placeholder="••••••••" />
+                <button type="button" onClick={() => setAccShowPass((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {accShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {accPass && (
+              <div>
+                <Label htmlFor="acc-edit-pass2">Confirmar senha</Label>
+                <Input id="acc-edit-pass2" type={accShowPass ? "text" : "password"} value={accPass2}
+                  onChange={(e) => setAccPass2(e.target.value)} />
+                {accPass2 && accPass !== accPass2 && (
+                  <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
+                )}
+              </div>
+            )}
+            <div className="border-t pt-3">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2 w-full"
+                onClick={() => {
+                  const u = editAccessClient ? userByClient.get(editAccessClient.id) : null;
+                  if (u) setBanAccessUser(u);
+                }}
+              >
+                <Ban className="w-4 h-4" />
+                {(() => {
+                  const u = editAccessClient ? userByClient.get(editAccessClient.id) : null;
+                  const banned = !!u?.banned_until && new Date(u.banned_until).getTime() > Date.now();
+                  return banned ? "Reativar acesso" : "Suspender acesso";
+                })()}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditAccessClient(null)}>Cancelar</Button>
+            <Button onClick={handleSaveAccessEdit}
+              disabled={accBusy || (!!accPass && accPass !== accPass2)}>
+              {accBusy ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirma suspender/reativar */}
+      <AlertDialog open={!!banAccessUser} onOpenChange={(o) => !o && setBanAccessUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {banAccessUser && banAccessUser.banned_until && new Date(banAccessUser.banned_until).getTime() > Date.now()
+                ? "Reativar acesso"
+                : "Suspender acesso"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {banAccessUser?.email}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBan} disabled={accBusy}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
