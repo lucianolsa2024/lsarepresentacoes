@@ -3,12 +3,16 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
-interface ProtectedRouteProps {
+interface AuthRouteProps {
   children: ReactNode;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading, role } = useAuth();
+/**
+ * Guard que aceita qualquer usuário autenticado (interno ou externo).
+ * Use em rotas que devem ser acessadas tanto por admin/user quanto por client.
+ */
+const AuthRoute = ({ children }: AuthRouteProps) => {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -22,12 +26,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Usuário externo (client) → redireciona para o portal
-  if (role === 'client') {
-    return <Navigate to="/portal" replace />;
-  }
-
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default AuthRoute;

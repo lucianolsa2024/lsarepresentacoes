@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AuthRoute from "@/components/AuthRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NpsForm from "./pages/NpsForm";
@@ -29,9 +30,9 @@ const App = () => (
             <Route
               path="/portal"
               element={
-                <ProtectedRoute>
+                <AuthRoute>
                   <ClientPortalPage />
-                </ProtectedRoute>
+                </AuthRoute>
               }
             />
             <Route
