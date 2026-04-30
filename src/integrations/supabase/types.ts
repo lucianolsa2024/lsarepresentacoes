@@ -533,6 +533,98 @@ export type Database = {
           },
         ]
       }
+      client_portal_access: {
+        Row: {
+          client_id: string
+          commercial_conditions: string | null
+          created_at: string | null
+          id: string
+          portal_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          commercial_conditions?: string | null
+          created_at?: string | null
+          id?: string
+          portal_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          commercial_conditions?: string | null
+          created_at?: string | null
+          id?: string
+          portal_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_products: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          product_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          product_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_products_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_products_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_portal_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_representatives: {
         Row: {
           client_id: string
@@ -2097,6 +2189,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "product_modulations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_portal_products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       products: {
@@ -3375,6 +3474,19 @@ export type Database = {
           revenue_12m: number | null
           ticket_avg_12m: number | null
           volume_12m: number | null
+        }
+        Relationships: []
+      }
+      v_portal_products: {
+        Row: {
+          category: string | null
+          code: string | null
+          description: string | null
+          factory: string | null
+          id: string | null
+          image_url: string | null
+          name: string | null
+          price_from: number | null
         }
         Relationships: []
       }
