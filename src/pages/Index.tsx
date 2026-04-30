@@ -53,7 +53,7 @@ import { canAccessFinanceiroLSA, isAssistenciaUser } from '@/lib/access';
 import { ActivityWidget } from '@/components/activities/ActivityWidget';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AICopilot } from '@/components/AICopilot';
-import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Upload, ShieldCheck, Wrench, Landmark, Zap, Calculator } from 'lucide-react';
+import { FileText, History, Package, Download, RotateCcw, MessageCircle, LogOut, LayoutDashboard, Loader2, Users, Save, Map, ClipboardList, Briefcase, TrendingUp, Settings, Settings2, Upload, ShieldCheck, Wrench, Landmark, Zap, Calculator, Store } from 'lucide-react';
 import { PriceConsultation } from '@/components/PriceConsultation';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
