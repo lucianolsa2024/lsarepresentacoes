@@ -11,8 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Plus, X, ChevronRight, Pencil, ArrowLeftRight, Package } from 'lucide-react';
 import { ProductImage } from '@/components/ProductImage';
 
+const IPI_RATE = 0.0325; // 3,25%
+
 interface PriceConsultationProps {
   products: Product[];
+  portalMode?: boolean; // quando true: oculta nível/prazo e mostra IPI
 }
 
 const DISCOUNT_RATES: Record<DiscountTier, number> = {
@@ -56,7 +59,7 @@ interface PieceDraft {
 
 const EMPTY_DRAFT: PieceDraft = { modulationId: '', sizeId: '', tierKey: '' };
 
-export function PriceConsultation({ products }: PriceConsultationProps) {
+export function PriceConsultation({ products, portalMode = false }: PriceConsultationProps) {
   const [sets, setSets] = useState<ProductSet[]>([]);
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({ discountTier: '', prazo: '30d', markup: 0 });
   const [mode, setMode] = useState<'selectProduct' | 'addPiece' | null>(null);
@@ -208,12 +211,18 @@ export function PriceConsultation({ products }: PriceConsultationProps) {
   };
 
   const canAdd = sets.length < 3;
-  const subtotalAll = sets.reduce((acc, s) => acc + setTotal(s), 0);
+ const subtotalAll = sets.reduce((acc, s) => acc + setTotal(s), 0);
   const discountRate = globalConfig.discountTier ? DISCOUNT_RATES[globalConfig.discountTier] : 0;
   const discountValue = subtotalAll * discountRate;
   const afterDiscount = subtotalAll - discountValue;
   const markupValue = afterDiscount * (globalConfig.markup / 100);
   const liquidPrice = afterDiscount + markupValue;
+
+  // Cálculos exclusivos do portal (portalMode)
+  const ipiValue = subtotalAll * IPI_RATE;
+  const afterIPI = subtotalAll + ipiValue;
+  const markupValuePortal = afterIPI * (globalConfig.markup / 100);
+  const liquidPricePortal = afterIPI + markupValuePortal;
 
   const setsWithPieces = sets.filter(s => s.pieces.length > 0);
 
@@ -466,82 +475,111 @@ export function PriceConsultation({ products }: PriceConsultationProps) {
         </button>
       )}
 
-      {/* Configurações + breakdown */}
+    {/* Configurações + breakdown */}
       {setsWithPieces.length > 0 && mode === null && (
         <div className="border rounded-2xl bg-card shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border-b bg-muted/30">
-            <div>
-              <Label className="text-sm mb-1.5 block">Nível</Label>
-              <Select value={globalConfig.discountTier || 'none'} onValueChange={(v) => setGlobalConfig(g => ({ ...g, discountTier: v === 'none' ? '' : v as DiscountTier }))}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Sem desconto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem desconto</SelectItem>
-                  {DISCOUNT_TIER_OPTIONS.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label.toUpperCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div>
-              <Label className="text-sm mb-1.5 block">Prazo Médio</Label>
-              <Select value={globalConfig.prazo} onValueChange={(v) => setGlobalConfig(g => ({ ...g, prazo: v }))}>
-                <SelectTrigger className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRAZO_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* Controles — ocultos no portal */}
+          {!portalMode && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border-b bg-muted/30">
+                <div>
+                  <Label className="text-sm mb-1.5 block">Nível</Label>
+                  <Select value={globalConfig.discountTier || 'none'} onValueChange={(v) => setGlobalConfig(g => ({ ...g, discountTier: v === 'none' ? '' : v as DiscountTier }))}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Sem desconto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem desconto</SelectItem>
+                      {DISCOUNT_TIER_OPTIONS.map(o => (
+                        <SelectItem key={o.value} value={o.value}>{o.label.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="p-4">
-            <Label className="text-sm mb-1.5 block">Markup da Loja (%)</Label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={globalConfig.markup}
-              onChange={(e) => setGlobalConfig(g => ({ ...g, markup: parseFloat(e.target.value) || 0 }))}
-              className="h-12 font-semibold text-base" />
-          </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">Prazo Médio</Label>
+                  <Select value={globalConfig.prazo} onValueChange={(v) => setGlobalConfig(g => ({ ...g, prazo: v }))}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRAZO_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          {/* Breakdown */}
-          <div className="p-4 space-y-3 bg-muted/20">
-            <div className="flex items-center justify-between py-2">
-              <span className="text-muted-foreground">Preço Tabela</span>
-              <span className="font-semibold">{fmt(subtotalAll)}</span>
-            </div>
+              <div className="p-4">
+                <Label className="text-sm mb-1.5 block">Markup da Loja (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={globalConfig.markup}
+                  onChange={(e) => setGlobalConfig(g => ({ ...g, markup: parseFloat(e.target.value) || 0 }))}
+                  className="h-12 font-semibold text-base" />
+              </div>
+            </>
+          )}
 
-            {discountValue > 0 && (
+          {/* Breakdown — modo interno */}
+          {!portalMode && (
+            <div className="p-4 space-y-3 bg-muted/20">
               <div className="flex items-center justify-between py-2">
+                <span className="text-muted-foreground">Preço Tabela</span>
+                <span className="font-semibold">{fmt(subtotalAll)}</span>
+              </div>
+              {discountValue > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Desconto</span>
+                    <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">
+                      -{(discountRate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <span className="font-semibold text-destructive">-{fmt(discountValue)}</span>
+                </div>
+              )}
+              {markupValue > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Markup Loja</span>
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">+{globalConfig.markup}%</span>
+                  </div>
+                  <span className="font-semibold text-primary">+{fmt(markupValue)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="font-semibold">Preço Líquido</span>
+                <span className="text-xl font-bold text-primary">{fmt(liquidPrice)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Breakdown — modo portal (com IPI, sem desconto/prazo) */}
+          {portalMode && (
+            <div className="p-4 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between py-2">
+                <span className="text-muted-foreground">Preço Tabela</span>
+                <span className="font-semibold">{fmt(subtotalAll)}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-amber-50 border border-amber-200">
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Desconto</span>
-                  <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">
-                    -{(discountRate * 100).toFixed(1)}%
+                  <span className="font-medium text-amber-800">IPI</span>
+                  <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded font-semibold">
+                    +{(IPI_RATE * 100).toFixed(2)}%
                   </span>
                 </div>
-                <span className="font-semibold text-destructive">-{fmt(discountValue)}</span>
+                <span className="font-semibold text-amber-800">+{fmt(ipiValue)}</span>
               </div>
-            )}
-            {markupValue > 0 && (
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Markup Loja</span>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">+{globalConfig.markup}%</span>
-                </div>
-                <span className="font-semibold text-primary">+{fmt(markupValue)}</span>
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="font-semibold">Total c/ IPI</span>
+                <span className="text-xl font-bold text-primary">{fmt(liquidPricePortal)}</span>
               </div>
-            )}
-
-            <div className="flex items-center justify-between pt-3 border-t">
-              <span className="font-semibold">Preço Líquido</span>
-              <span className="text-xl font-bold text-primary">{fmt(liquidPrice)}</span>
             </div>
-          </div>
+          )}
 
           {/* Comparação com % de diferença */}
           {setsWithPieces.length >= 2 && (
