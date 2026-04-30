@@ -27,6 +27,22 @@ const App = () => (
             <Route path="/nps/:token" element={<NpsForm />} />
             <Route path="/comercial/consulta-precos" element={<PriceConsultationPage />} />
             <Route
+              path="/portal"
+              element={
+                <ProtectedRoute>
+                  <ClientPortalPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/portal"
+              element={
+                <ProtectedRoute>
+                  <PortalAdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/"
               element={
                 <ProtectedRoute>
