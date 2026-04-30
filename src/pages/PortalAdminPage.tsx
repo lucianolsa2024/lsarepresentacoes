@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PortalUsersTab from "@/components/portal/PortalUsersTab";
 import {
   Users,
   ChevronRight,
@@ -21,10 +23,34 @@ import {
   Package,
   CheckSquare,
   Square,
+  UserCog,
 } from "lucide-react";
 import type { ClientWithPortal } from "@/hooks/usePortalAdmin";
 
 export default function PortalAdminPage() {
+  return (
+    <div className="max-w-5xl mx-auto p-4 md:p-6">
+      <Tabs defaultValue="clientes" className="space-y-5">
+        <TabsList>
+          <TabsTrigger value="clientes" className="gap-2">
+            <Package className="w-4 h-4" /> Clientes & Produtos
+          </TabsTrigger>
+          <TabsTrigger value="usuarios" className="gap-2">
+            <UserCog className="w-4 h-4" /> Usuários
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="clientes">
+          <ClientsProductsTab />
+        </TabsContent>
+        <TabsContent value="usuarios">
+          <PortalUsersTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ClientsProductsTab() {
   const { clients, allProducts, loading, saveClientPortal } = usePortalAdmin();
   const [editingClient, setEditingClient] = useState<ClientWithPortal | null>(null);
   const [searchClient, setSearchClient] = useState("");
