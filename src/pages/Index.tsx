@@ -354,6 +354,20 @@ const Index = () => {
               <span className="text-xs text-muted-foreground hidden md:block">
                 {user?.email}
               </span>
+              <Button variant="outline" size="sm" asChild className="h-8 px-2 sm:px-3">
+                <Link to="/portal">
+                  <Store className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Portal do Cliente</span>
+                </Link>
+              </Button>
+              {isAdmin && (
+                <Button variant="outline" size="sm" asChild className="h-8 px-2 sm:px-3">
+                  <Link to="/admin/portal">
+                    <Settings2 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Gestão do Portal</span>
+                  </Link>
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleSignOut} className="h-8 px-2 sm:px-3">
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Sair</span>
