@@ -6,7 +6,8 @@ export interface Fabric {
   notes?: string;
 }
 
-// Fabric collection 2026 - organized by tier
+// Fabric collection 2026 - atualizado em 30/04/2026
+// Fonte: COLEÇÃO DE TECIDOS 2026 - SOHOME
 export const FABRICS: Fabric[] = [
   // FORNECIDO - Tecido fornecido pelo cliente
   { code: 'FORNECIDO', tier: 'FORNECIDO' },
@@ -34,23 +35,13 @@ export const FABRICS: Fabric[] = [
   { code: 'B2326', tier: 'FX B' },
 
   // FX C
-  { code: 'C3078', tier: 'FX C' },
-  { code: 'C3079', tier: 'FX C' },
-  { code: 'C3090', tier: 'FX C' },
-  { code: 'C3091', tier: 'FX C' },
-  { code: 'C3092', tier: 'FX C' },
-  { code: 'C3093', tier: 'FX C' },
   { code: 'C3149', tier: 'FX C' },
   { code: 'C3150', tier: 'FX C' },
   { code: 'C3154', tier: 'FX C' },
-  { code: 'C3157', tier: 'FX C' },
-  { code: 'C3179', tier: 'FX C' },
   { code: 'C3180', tier: 'FX C', notes: 'REF. ANTIGA E5159' },
   { code: 'C3181', tier: 'FX C', notes: 'REF. ANTIGA E5157' },
   { code: 'C3182', tier: 'FX C', notes: 'REF. ANTIGA E5158' },
   { code: 'C3183', tier: 'FX C' },
-  { code: 'C3189', tier: 'FX C' },
-  { code: 'C3190', tier: 'FX C' },
   { code: 'C3191', tier: 'FX C' },
   { code: 'C3192', tier: 'FX C' },
   { code: 'C3193', tier: 'FX C' },
@@ -79,13 +70,6 @@ export const FABRICS: Fabric[] = [
   { code: 'D4120', tier: 'FX D' },
   { code: 'D4121', tier: 'FX D' },
   { code: 'D4122', tier: 'FX D' },
-  { code: 'D4139', tier: 'FX D' },
-  { code: 'D4140', tier: 'FX D' },
-  { code: 'D4142', tier: 'FX D' },
-  { code: 'D4144', tier: 'FX D' },
-  { code: 'D4193', tier: 'FX D' },
-  { code: 'D4214', tier: 'FX D' },
-  { code: 'D4215', tier: 'FX D' },
   { code: 'D4222', tier: 'FX D' },
   { code: 'D4223', tier: 'FX D' },
   { code: 'D4224', tier: 'FX D' },
@@ -93,11 +77,6 @@ export const FABRICS: Fabric[] = [
   { code: 'D4236', tier: 'FX D' },
   { code: 'D4237', tier: 'FX D' },
   { code: 'D4238', tier: 'FX D' },
-  { code: 'D4247', tier: 'FX D' },
-  { code: 'D4248', tier: 'FX D' },
-  { code: 'D4249', tier: 'FX D' },
-  { code: 'D4256', tier: 'FX D' },
-  { code: 'D4257', tier: 'FX D' },
   { code: 'D4262', tier: 'FX D', notes: 'REF. ANTIGA E5170' },
   { code: 'D4263', tier: 'FX D', notes: 'REF. ANTIGA E5172' },
   { code: 'D4264', tier: 'FX D', notes: 'REF. ANTIGA E5169' },
@@ -106,13 +85,11 @@ export const FABRICS: Fabric[] = [
   { code: 'D4267', tier: 'FX D' },
   { code: 'D4268', tier: 'FX D' },
   { code: 'D4269', tier: 'FX D' },
-  { code: 'D4270', tier: 'FX D' },
-  { code: 'D4271', tier: 'FX D' },
-  { code: 'D4272', tier: 'FX D' },
+  { code: 'D4270', tier: 'FX D', notes: 'REF. ANTIGA E5159' },
+  { code: 'D4271', tier: 'FX D', notes: 'REF. ANTIGA E5157' },
+  { code: 'D4272', tier: 'FX D', notes: 'REF. ANTIGA E5158' },
 
   // FX E
-  { code: 'E5116', tier: 'FX E' },
-  { code: 'E5117', tier: 'FX E' },
   { code: 'E5133', tier: 'FX E' },
   { code: 'E5134', tier: 'FX E' },
   { code: 'E5135', tier: 'FX E' },
@@ -125,8 +102,6 @@ export const FABRICS: Fabric[] = [
   { code: 'E5161', tier: 'FX E' },
   { code: 'E5162', tier: 'FX E' },
   { code: 'E5163', tier: 'FX E' },
-  { code: 'E5164', tier: 'FX E' },
-  { code: 'E5165', tier: 'FX E' },
   { code: 'E5166', tier: 'FX E' },
   { code: 'E5167', tier: 'FX E' },
   { code: 'E5168', tier: 'FX E' },
@@ -135,34 +110,29 @@ export const FABRICS: Fabric[] = [
   { code: 'E5175', tier: 'FX E' },
   { code: 'E5176', tier: 'FX E' },
   { code: 'E5177', tier: 'FX E' },
-  { code: 'E7178', tier: 'FX E' },
-  { code: 'E7179', tier: 'FX E' },
-  { code: 'E7180', tier: 'FX E' },
-  { code: 'E7181', tier: 'FX E' },
-  { code: 'E7182', tier: 'FX E' },
-  { code: 'E7183', tier: 'FX E' },
-  { code: 'E7184', tier: 'FX E' },
-  { code: 'E7185', tier: 'FX E' },
-  { code: 'E7186', tier: 'FX E' },
+  { code: 'E5178', tier: 'FX E' },
+  { code: 'E5179', tier: 'FX E' },
+  { code: 'E5180', tier: 'FX E' },
+  { code: 'E5181', tier: 'FX E' },
+  { code: 'E5182', tier: 'FX E' },
+  { code: 'E5183', tier: 'FX E' },
+  { code: 'E5184', tier: 'FX E' },
+  { code: 'E5185', tier: 'FX E' },
+  { code: 'E5186', tier: 'FX E' },
 
   // FX F
   { code: 'F6211', tier: 'FX F' },
   { code: 'F6212', tier: 'FX F' },
   { code: 'F6213', tier: 'FX F' },
-  { code: 'F6224', tier: 'FX F' },
   { code: 'F6230', tier: 'FX F' },
   { code: 'F6231', tier: 'FX F' },
   { code: 'F6232', tier: 'FX F' },
   { code: 'F6245', tier: 'FX F' },
   { code: 'F6246', tier: 'FX F' },
-  { code: 'F6247', tier: 'FX F' },
   { code: 'F6248', tier: 'FX F' },
   { code: 'F6252', tier: 'FX F' },
   { code: 'F6253', tier: 'FX F' },
-  { code: 'F6254', tier: 'FX F' },
   { code: 'F6255', tier: 'FX F' },
-  { code: 'F6256', tier: 'FX F' },
-  { code: 'F6257', tier: 'FX F' },
   { code: 'F6259', tier: 'FX F' },
   { code: 'F6261', tier: 'FX F' },
   { code: 'F6263', tier: 'FX F' },
@@ -186,10 +156,6 @@ export const FABRICS: Fabric[] = [
   { code: 'G7141', tier: 'FX G' },
   { code: 'G7142', tier: 'FX G' },
   { code: 'G7143', tier: 'FX G' },
-  { code: 'G7144', tier: 'FX G' },
-  { code: 'G7145', tier: 'FX G' },
-  { code: 'G7146', tier: 'FX G' },
-  { code: 'G7147', tier: 'FX G' },
   { code: 'G7148', tier: 'FX G' },
   { code: 'G7149', tier: 'FX G' },
   { code: 'G7150', tier: 'FX G' },
@@ -218,9 +184,6 @@ export const FABRICS: Fabric[] = [
   { code: 'I9110', tier: 'FX I' },
 
   // FX J
-  { code: 'J10001', tier: 'FX J' },
-  { code: 'J10003', tier: 'FX J' },
-  { code: 'J10004', tier: 'FX J' },
   { code: 'J10008', tier: 'FX J' },
   { code: 'J10009', tier: 'FX J' },
   { code: 'J10010', tier: 'FX J' },
@@ -258,13 +221,13 @@ export function getFabricsByTier(tier: FabricTier): Fabric[] {
 // Helper function to search fabrics
 export function searchFabrics(query: string, tier?: FabricTier): Fabric[] {
   const normalizedQuery = query.toLowerCase().trim();
-  
+
   return FABRICS.filter(f => {
     const matchesTier = !tier || f.tier === tier;
-    const matchesQuery = !normalizedQuery || 
+    const matchesQuery = !normalizedQuery ||
       f.code.toLowerCase().includes(normalizedQuery) ||
       (f.notes && f.notes.toLowerCase().includes(normalizedQuery));
-    
+
     return matchesTier && matchesQuery;
   });
 }
