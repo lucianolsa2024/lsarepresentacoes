@@ -1,9 +1,9 @@
 // src/hooks/useClientPortal.ts
-// Hook para buscar dados do portal do cliente no Supabase
+// Hook corrigido — busca cliente via user_roles.client_id (não mais por email)
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth"; // hook existente no projeto
+import { useAuth } from "@/hooks/useAuth";
 
 export interface PortalProduct {
   id: string;
@@ -37,33 +37,51 @@ export function useClientPortal() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
     fetchPortalData();
-  }, [user?.email]);
+  }, [user?.id]);
 
   async function fetchPortalData() {
     setLoading(true);
     setError(null);
+
     try {
-      // 1. Busca dados do cliente pelo email
-      const { data: clientData, error: clientError } = await supabase
-        .from("clients")
-        .select("id, company, trade_name, email")
-        .eq("email", user!.email!)
+      // PASSO 1: busca client_id vinculado a este usuário em user_roles
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("client_id")
+        .eq("user_id", user!.id)
+        .eq("role", "client")
         .single();
 
-      if (clientError || !clientData) {
-        setError("Cliente não encontrado. Contate o administrador.");
+      if (roleError || !roleData?.client_id) {
+        setError("Cliente não encontrado. Contate o representante LSA.");
         setLoading(false);
         return;
       }
+
+      const clientId = roleData.client_id;
+
+      // PASSO 2: busca dados do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from("clients")
+        .select("id, company, trade_name, email")
+        .eq("id", clientId)
+        .single();
+
+      if (clientError || !clientData) {
+        setError("Dados do cliente não encontrados. Contate o representante LSA.");
+        setLoading(false);
+        return;
+      }
+
       setClient(clientData);
 
-      // 2. Busca acesso e condições comerciais
+      // PASSO 3: busca acesso e condições comerciais
       const { data: accessData } = await supabase
         .from("client_portal_access")
         .select("portal_enabled, commercial_conditions")
-        .eq("client_id", clientData.id)
+        .eq("client_id", clientId)
         .single();
 
       setAccess(accessData ?? { portal_enabled: false, commercial_conditions: null });
@@ -73,13 +91,13 @@ export function useClientPortal() {
         return;
       }
 
-      // 3. Busca produtos liberados para esse cliente via view
-      const { data: productIds, error: prodIdsError } = await supabase
+      // PASSO 4: busca IDs dos produtos liberados
+      const { data: productIds } = await supabase
         .from("client_portal_products")
         .select("product_id")
-        .eq("client_id", clientData.id);
+        .eq("client_id", clientId);
 
-      if (prodIdsError || !productIds?.length) {
+      if (!productIds?.length) {
         setProducts([]);
         setLoading(false);
         return;
@@ -87,7 +105,7 @@ export function useClientPortal() {
 
       const ids = productIds.map((r) => r.product_id);
 
-      // 4. Busca detalhes dos produtos com preço da view
+      // PASSO 5: busca produtos com preço via view
       const { data: productsData, error: productsError } = await supabase
         .from("v_portal_products")
         .select("*")
@@ -97,6 +115,7 @@ export function useClientPortal() {
 
       if (productsError) throw productsError;
       setProducts(productsData ?? []);
+
     } catch (err: any) {
       setError(err.message ?? "Erro ao carregar dados do portal.");
     } finally {
