@@ -1126,10 +1126,13 @@ export type Database = {
           active: boolean
           agency: string | null
           bank_name: string | null
+          color: string | null
           company_id: string | null
           created_at: string
           id: string
           initial_balance: number
+          initial_balance_date: string | null
+          initial_balance_notes: string | null
           name: string
           updated_at: string
         }
@@ -1139,10 +1142,13 @@ export type Database = {
           active?: boolean
           agency?: string | null
           bank_name?: string | null
+          color?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
           initial_balance?: number
+          initial_balance_date?: string | null
+          initial_balance_notes?: string | null
           name: string
           updated_at?: string
         }
@@ -1152,10 +1158,13 @@ export type Database = {
           active?: boolean
           agency?: string | null
           bank_name?: string | null
+          color?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
           initial_balance?: number
+          initial_balance_date?: string | null
+          initial_balance_notes?: string | null
           name?: string
           updated_at?: string
         }
@@ -1227,6 +1236,83 @@ export type Database = {
             columns: ["bank_account_id"]
             isOneToOne: false
             referencedRelation: "finance_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_bank_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "vw_finance_account_balance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_cash_entries: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          category: string | null
+          company_id: string | null
+          cost_center: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          direction: string
+          entry_date: string
+          id: string
+          notes: string | null
+          receipt_url: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          category?: string | null
+          company_id?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          direction: string
+          entry_date?: string
+          id?: string
+          notes?: string | null
+          receipt_url?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          category?: string | null
+          company_id?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          direction?: string
+          entry_date?: string
+          id?: string
+          notes?: string | null
+          receipt_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_cash_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_cash_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "vw_finance_account_balance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_cash_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "finance_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1377,6 +1463,7 @@ export type Database = {
       finance_entries: {
         Row: {
           amount: number
+          bank_account_id: string | null
           category_id: string | null
           company_id: string | null
           cost_center: string | null
@@ -1394,11 +1481,13 @@ export type Database = {
           payment_method: string | null
           recurrence_id: string | null
           recurrence_rule: string | null
+          source: string | null
           status: string
           updated_at: string
         }
         Insert: {
           amount: number
+          bank_account_id?: string | null
           category_id?: string | null
           company_id?: string | null
           cost_center?: string | null
@@ -1416,11 +1505,13 @@ export type Database = {
           payment_method?: string | null
           recurrence_id?: string | null
           recurrence_rule?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          bank_account_id?: string | null
           category_id?: string | null
           company_id?: string | null
           cost_center?: string | null
@@ -1438,10 +1529,25 @@ export type Database = {
           payment_method?: string | null
           recurrence_id?: string | null
           recurrence_rule?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "finance_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "vw_finance_account_balance"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "finance_entries_category_id_fkey"
             columns: ["category_id"]
@@ -3799,6 +3905,41 @@ export type Database = {
           sellin_historico: number | null
           sellout_historico: number | null
           ultimo_sellout: string | null
+        }
+        Relationships: []
+      }
+      vw_finance_account_balance: {
+        Row: {
+          account_type: string | null
+          bank_name: string | null
+          caixa_in: number | null
+          caixa_out: number | null
+          color: string | null
+          company_id: string | null
+          data_saldo_inicial: string | null
+          id: string | null
+          name: string | null
+          saldo_atual: number | null
+          saldo_inicial: number | null
+          total_entradas: number | null
+          total_saidas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "finance_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_finance_cashflow_30d: {
+        Row: {
+          data_vencimento: string | null
+          previsto_entrada: number | null
+          previsto_saida: number | null
+          saldo_diario_liquido: number | null
         }
         Relationships: []
       }
