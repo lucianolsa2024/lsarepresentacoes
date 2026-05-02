@@ -197,6 +197,28 @@ export function FinanceDashboard({ onNavigate }: Props) {
         </Button>
       </div>
 
+      {/* Overdue alert */}
+      {!loading && overdueCount > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="flex items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                <TrendingDown className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-destructive">
+                  {overdueCount} {overdueCount === 1 ? 'lançamento vencido' : 'lançamentos vencidos'}
+                </p>
+                <p className="text-xs text-muted-foreground">Verifique os pendentes com vencimento anterior a hoje.</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => onNavigate?.('pagar')}>
+              Ver contas a pagar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Metric cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Saldo Total" value={loading ? '—' : fmtBRL(totalBalance)} icon={Wallet} tone="primary" />
@@ -204,6 +226,35 @@ export function FinanceDashboard({ onNavigate }: Props) {
         <MetricCard title="A Receber (Mês)" value={loading ? '—' : fmtBRL(monthReceivable)} icon={TrendingUp} tone="success" />
         <MetricCard title="Resultado do Mês" value={loading ? '—' : fmtBRL(monthResult)} icon={DollarSign} tone={monthResult >= 0 ? 'success' : 'danger'} />
       </div>
+
+      {/* Saldo por conta */}
+      {!loading && accountsList.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Saldo por Conta</CardTitle>
+            <p className="text-xs text-muted-foreground">Saldo inicial cadastrado em cada conta bancária ativa.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              {accountsList.map((a) => (
+                <div key={a.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-6 w-1.5 shrink-0 rounded-full"
+                      style={{ background: a.color ?? 'hsl(var(--primary))' }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{a.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{a.bank_name || '—'}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-lg font-bold text-foreground">{fmtBRL(Number(a.initial_balance ?? 0))}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!loading && !hasAnyData && (
         <Card>
