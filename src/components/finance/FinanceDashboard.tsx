@@ -80,8 +80,8 @@ export function FinanceDashboard({ onNavigate }: Props) {
         const sixStart = new Date(today.getFullYear(), today.getMonth() - 5, 1);
         const sixStartIso = sixStart.toISOString().split('T')[0];
 
-        const [accountsRes, payRes, recRes, monthlyRes, catRes, upRes] = await Promise.all([
-          supabase.from('finance_bank_accounts').select('initial_balance').eq('active', true),
+        const [accountsRes, payRes, recRes, monthlyRes, catRes, upRes, overdueRes] = await Promise.all([
+          supabase.from('finance_bank_accounts').select('id, name, bank_name, initial_balance, color').eq('active', true).order('name'),
           supabase
             .from('finance_entries')
             .select('amount')
