@@ -115,6 +115,11 @@ export function FinanceDashboard({ onNavigate }: Props) {
             .gte('due_date', todayIso)
             .order('due_date', { ascending: true })
             .limit(5),
+          supabase
+            .from('finance_entries')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pendente')
+            .lt('due_date', todayIso),
         ]);
 
         const balance = (accountsRes.data ?? []).reduce((s, r: any) => s + Number(r.initial_balance ?? 0), 0);
