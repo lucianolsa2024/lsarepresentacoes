@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Settings, Building2, Tags, Layers, Bell, Plug, Database, ShieldCheck } from 'lucide-react';
+import { Settings, Building2, Tags, Layers, Bell, Plug, Database, ShieldCheck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompaniesSettings } from './settings/CompaniesSettings';
 import { CategoriesSettings } from './settings/CategoriesSettings';
@@ -9,9 +9,11 @@ import { PreferencesSettings } from './settings/PreferencesSettings';
 import { IntegrationsSettings } from './settings/IntegrationsSettings';
 import { BackupSettings } from './settings/BackupSettings';
 import { AuditLog } from './settings/AuditLog';
+import { BankAccountsSettings } from './settings/BankAccountsSettings';
 
 type Tab =
   | 'empresas'
+  | 'contas'
   | 'categorias'
   | 'centros'
   | 'integracoes'
@@ -21,6 +23,7 @@ type Tab =
 
 const TABS: Array<{ id: Tab; label: string; icon: typeof Settings }> = [
   { id: 'empresas', label: 'Empresas', icon: Building2 },
+  { id: 'contas', label: 'Contas Bancárias', icon: Wallet },
   { id: 'categorias', label: 'Categorias', icon: Tags },
   { id: 'centros', label: 'Centros de Custo', icon: Layers },
   { id: 'integracoes', label: 'Integrações', icon: Plug },
