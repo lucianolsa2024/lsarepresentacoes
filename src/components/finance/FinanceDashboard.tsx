@@ -125,6 +125,8 @@ export function FinanceDashboard({ onNavigate }: Props) {
         const balance = (accountsRes.data ?? []).reduce((s, r: any) => s + Number(r.initial_balance ?? 0), 0);
         const payable = (payRes.data ?? []).reduce((s, r: any) => s + Number(r.amount ?? 0), 0);
         const receivable = (recRes.data ?? []).reduce((s, r: any) => s + Number(r.amount ?? 0), 0);
+        setAccountsList((accountsRes.data as any) ?? []);
+        setOverdueCount(overdueRes.count ?? 0);
 
         // Monthly grouping
         const buckets = new Map<string, MonthlyPoint>();
