@@ -11,6 +11,7 @@ import {
   Landmark,
   Settings,
   Sparkles,
+  Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -26,12 +27,14 @@ import { DreReport } from './DreReport';
 import { CashflowProjection } from './CashflowProjection';
 import { FinanceSettings } from './FinanceSettings';
 import { ExecutiveDashboard } from './ExecutiveDashboard';
+import { CashEntriesManager } from './CashEntriesManager';
 
 type Section =
   | 'dashboard'
   | 'executivo'
   | 'pagar'
   | 'receber'
+  | 'caixa'
   | 'conciliacao'
   | 'dre'
   | 'fluxo'
@@ -43,6 +46,7 @@ const NAV: Array<{ id: Section; label: string; icon: typeof LayoutDashboard; des
   { id: 'executivo', label: 'Executivo (IA)', icon: Sparkles, description: 'KPIs, insights de IA e relatório executivo.' },
   { id: 'pagar', label: 'Contas a Pagar', icon: ArrowDownCircle, description: 'Gestão de despesas, vencimentos e baixas.' },
   { id: 'receber', label: 'Contas a Receber', icon: ArrowUpCircle, description: 'Acompanhamento de recebíveis e cobranças.' },
+  { id: 'caixa', label: 'Caixa', icon: Wallet, description: 'Lançamentos rápidos de entrada e saída de dinheiro.' },
   { id: 'conciliacao', label: 'Conciliação', icon: GitCompareArrows, description: 'Conciliação bancária e cartões.' },
   { id: 'dre', label: 'DRE', icon: FileBarChart, description: 'Demonstrativo de Resultado do Exercício.' },
   { id: 'fluxo', label: 'Fluxo de Caixa', icon: TrendingUp, description: 'Projeção e realizado de caixa por período.' },
@@ -165,6 +169,7 @@ export function FinanceiroLSA() {
           {section === 'executivo' && <ExecutiveDashboard />}
           {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
+          {section === 'caixa' && <CashEntriesManager />}
           {section === 'conciliacao' && <BankReconciliation />}
           {section === 'dre' && <DreReport />}
           {section === 'fluxo' && <CashflowProjection />}

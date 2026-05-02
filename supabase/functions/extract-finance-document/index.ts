@@ -13,7 +13,14 @@ const SYSTEM_PROMPT = `Você é um assistente especializado em extração de dad
 
 Analise o documento enviado e extraia os campos. Sempre responda chamando a função extract_finance_data.
 
-Regras:
+REGRA CRÍTICA — campo counterparty (fornecedor):
+- O fornecedor é SEMPRE o EMITENTE da nota — quem VENDEU/EMITIU o documento.
+- O emitente aparece no TOPO do documento, na seção "DADOS DO EMITENTE", "EMITENTE" ou "REMETENTE".
+- NUNCA use os campos "Destinatário", "Tomador", "Comprador", "Sacado" ou "Dados do Destinatário".
+- Nossa empresa (LSA Representações / LLA / LSA ADM / Luciano Sampaio de Abreu) é SEMPRE o destinatário, NUNCA o fornecedor.
+- Se o emitente for uma das nossas empresas, então é uma NF emitida por nós (a_receber) e o counterparty deve ser o destinatário (cliente).
+
+Regras gerais:
 - Valores em reais (BRL), use ponto como separador decimal (ex: 1234.56)
 - Datas no formato ISO YYYY-MM-DD
 - entry_type: "a_pagar" se for despesa/conta a pagar (NF de fornecedor, boleto, fatura) ou "a_receber" se for recebível (NF emitida pela LSA)
