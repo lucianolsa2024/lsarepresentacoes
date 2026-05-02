@@ -169,6 +169,7 @@ export function FinanceiroLSA() {
           {section === 'executivo' && <ExecutiveDashboard />}
           {section === 'pagar' && <EntriesManager entryType="a_pagar" />}
           {section === 'receber' && <EntriesManager entryType="a_receber" />}
+          {section === 'caixa' && <CashEntriesManager />}
           {section === 'conciliacao' && <BankReconciliation />}
           {section === 'dre' && <DreReport />}
           {section === 'fluxo' && <CashflowProjection />}
