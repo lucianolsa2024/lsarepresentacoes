@@ -66,6 +66,7 @@ export function FinanceSettings() {
       </Card>
 
       {tab === 'empresas' && <CompaniesSettings />}
+      {tab === 'contas' && <BankAccountsSettings />}
       {tab === 'categorias' && <CategoriesSettings />}
       {tab === 'centros' && <CostCentersSettings />}
       {tab === 'integracoes' && <IntegrationsSettings />}
