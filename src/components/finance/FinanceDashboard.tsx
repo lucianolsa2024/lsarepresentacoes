@@ -62,6 +62,8 @@ export function FinanceDashboard({ onNavigate }: Props) {
   const [totalBalance, setTotalBalance] = useState(0);
   const [monthPayable, setMonthPayable] = useState(0);
   const [monthReceivable, setMonthReceivable] = useState(0);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [accountsList, setAccountsList] = useState<Array<{ id: string; name: string; bank_name: string | null; initial_balance: number; color: string | null }>>([]);
   const [monthlyComparison, setMonthlyComparison] = useState<MonthlyPoint[]>([]);
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryPoint[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingDue[]>([]);
