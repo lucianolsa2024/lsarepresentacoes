@@ -17,6 +17,7 @@ import { useFinanceEntries, type EntryType, type EntryStatus, type FinanceEntry 
 import { EntryStatusBadge } from './EntryStatusBadge';
 import { EntryFormDialog } from './EntryFormDialog';
 import { EntryDetailDialog } from './EntryDetailDialog';
+import { EntryEditDialog } from './EntryEditDialog';
 
 const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (iso: string) => {
