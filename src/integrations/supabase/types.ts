@@ -972,6 +972,54 @@ export type Database = {
         }
         Relationships: []
       }
+      confirmacoes: {
+        Row: {
+          atualizado_em: string
+          client_id: string
+          criado_em: string
+          id: string
+          nome_arquivo: string
+          numero_pedido: string
+          status: string
+          url_pdf: string
+        }
+        Insert: {
+          atualizado_em?: string
+          client_id: string
+          criado_em?: string
+          id?: string
+          nome_arquivo: string
+          numero_pedido: string
+          status?: string
+          url_pdf: string
+        }
+        Update: {
+          atualizado_em?: string
+          client_id?: string
+          criado_em?: string
+          id?: string
+          nome_arquivo?: string
+          numero_pedido?: string
+          status?: string
+          url_pdf?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confirmacoes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "confirmacoes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_for_nps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discount_policies: {
         Row: {
           avg_days: number
@@ -4250,6 +4298,15 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      upsert_confirmacao: {
+        Args: {
+          p_email: string
+          p_nome_arquivo: string
+          p_numero_pedido: string
+          p_url_pdf: string
+        }
+        Returns: Json
       }
     }
     Enums: {

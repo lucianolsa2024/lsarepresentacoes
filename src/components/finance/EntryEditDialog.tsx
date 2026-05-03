@@ -81,7 +81,7 @@ export function EntryEditDialog({ open, onOpenChange, entry, companies, categori
       setDescription(entry.description ?? '');
       setCounterparty(entry.counterparty ?? '');
       setAmount(String(entry.amount ?? '').replace('.', ','));
-      setDueDate(entry.due_date ?? '');
+      setDueDate(entry.due_date ? String(entry.due_date).slice(0, 10) : '');
       setCategoryId(entry.category_id ?? '');
       setBankAccountId((entry as any).bank_account_id ?? '');
       setCompanyId(entry.company_id ?? '');
@@ -114,7 +114,7 @@ export function EntryEditDialog({ open, onOpenChange, entry, companies, categori
       description: description.trim(),
       counterparty: counterparty.trim() || null,
       amount: amt,
-      due_date: dueDate,
+      due_date: String(dueDate).slice(0, 10),
       category_id: categoryId || null,
       bank_account_id: bankAccountId || null,
       company_id: companyId || null,
