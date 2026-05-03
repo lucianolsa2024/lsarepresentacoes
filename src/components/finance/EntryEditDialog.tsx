@@ -81,7 +81,7 @@ export function EntryEditDialog({ open, onOpenChange, entry, companies, categori
       setDescription(entry.description ?? '');
       setCounterparty(entry.counterparty ?? '');
       setAmount(String(entry.amount ?? '').replace('.', ','));
-      setDueDate(entry.due_date ?? '');
+      setDueDate(entry.due_date ? String(entry.due_date).slice(0, 10) : '');
       setCategoryId(entry.category_id ?? '');
       setBankAccountId((entry as any).bank_account_id ?? '');
       setCompanyId(entry.company_id ?? '');
