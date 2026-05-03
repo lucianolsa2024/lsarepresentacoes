@@ -17,6 +17,7 @@ import { useFinanceEntries, type EntryType, type EntryStatus, type FinanceEntry 
 import { EntryStatusBadge } from './EntryStatusBadge';
 import { EntryFormDialog } from './EntryFormDialog';
 import { EntryDetailDialog } from './EntryDetailDialog';
+import { EntryEditDialog } from './EntryEditDialog';
 
 const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (iso: string) => {
@@ -40,7 +41,7 @@ export function EntriesManager({ entryType }: Props) {
   const isPagar = entryType === 'a_pagar';
   const {
     entries, companies, categories, loading,
-    createEntry, deleteEntry, markAsPaid, duplicateEntry,
+    createEntry, deleteEntry, markAsPaid, duplicateEntry, reload,
   } = useFinanceEntries();
 
   const [search, setSearch] = useState('');
@@ -52,6 +53,7 @@ export function EntriesManager({ entryType }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<FinanceEntry | null>(null);
   const [detailEntry, setDetailEntry] = useState<FinanceEntry | null>(null);
+  const [editEntry, setEditEntry] = useState<FinanceEntry | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -246,8 +248,8 @@ export function EntriesManager({ entryType }: Props) {
                           <DropdownMenuItem onClick={() => duplicateEntry(e)}>
                             <Copy className="h-4 w-4 mr-2" /> Duplicar
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            <Pencil className="h-4 w-4 mr-2" /> Editar (em breve)
+                          <DropdownMenuItem onClick={() => setEditEntry(e)}>
+                            <Pencil className="h-4 w-4 mr-2" /> Editar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -282,6 +284,15 @@ export function EntriesManager({ entryType }: Props) {
         entry={detailEntry}
         companies={companies}
         categories={categories}
+      />
+
+      <EntryEditDialog
+        open={!!editEntry}
+        onOpenChange={(o) => !o && setEditEntry(null)}
+        entry={editEntry}
+        companies={companies}
+        categories={categories}
+        onSaved={reload}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
