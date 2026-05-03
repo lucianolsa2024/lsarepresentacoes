@@ -114,7 +114,7 @@ export function EntryEditDialog({ open, onOpenChange, entry, companies, categori
       description: description.trim(),
       counterparty: counterparty.trim() || null,
       amount: amt,
-      due_date: dueDate,
+      due_date: String(dueDate).slice(0, 10),
       category_id: categoryId || null,
       bank_account_id: bankAccountId || null,
       company_id: companyId || null,
