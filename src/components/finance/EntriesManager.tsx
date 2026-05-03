@@ -248,8 +248,8 @@ export function EntriesManager({ entryType }: Props) {
                           <DropdownMenuItem onClick={() => duplicateEntry(e)}>
                             <Copy className="h-4 w-4 mr-2" /> Duplicar
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            <Pencil className="h-4 w-4 mr-2" /> Editar (em breve)
+                          <DropdownMenuItem onClick={() => setEditEntry(e)}>
+                            <Pencil className="h-4 w-4 mr-2" /> Editar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
