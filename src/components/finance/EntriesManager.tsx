@@ -41,7 +41,7 @@ export function EntriesManager({ entryType }: Props) {
   const isPagar = entryType === 'a_pagar';
   const {
     entries, companies, categories, loading,
-    createEntry, deleteEntry, markAsPaid, duplicateEntry,
+    createEntry, deleteEntry, markAsPaid, duplicateEntry, reload,
   } = useFinanceEntries();
 
   const [search, setSearch] = useState('');
