@@ -1,9 +1,9 @@
 // src/hooks/useClientFiles.ts
-// Hook para listar arquivos de confirmação do cliente no OneDrive
-// via edge function get-client-files (Microsoft Graph API).
+// Busca arquivos do OneDrive + registra logs de visualização e download
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface ClientFile {
   id: string;
@@ -13,47 +13,74 @@ export interface ClientFile {
   downloadUrl: string | null;
 }
 
-interface UseClientFilesResult {
-  files: ClientFile[];
-  loading: boolean;
-  error: string | null;
-  folder: string | null;
-  refetch: () => Promise<void>;
+async function callEdgeFunction(token: string, body: object) {
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-client-files`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    }
+  );
+  return res.json();
 }
 
-export function useClientFiles(clientId?: string): UseClientFilesResult {
+export function useClientFiles() {
+  const { user } = useAuth();
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [folder, setFolder] = useState<string | null>(null);
 
-  const fetchFiles = useCallback(async () => {
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchFiles();
+  }, [user?.id]);
+
+  async function fetchFiles() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke(
-        "get-client-files",
-        {
-          body: clientId ? { client_id: clientId } : {},
-        }
-      );
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sessão inválida");
 
-      if (fnErr) throw fnErr;
-      if (data?.error) throw new Error(data.error);
-
-      setFiles(data?.data ?? []);
-      setFolder(data?.folder ?? null);
+      const json = await callEdgeFunction(session.access_token, {});
+      if (json.error) throw new Error(json.error);
+      setFiles(json.data ?? []);
     } catch (err: any) {
-      setError(err.message ?? "Erro ao carregar arquivos.");
-      setFiles([]);
+      if (err.message?.includes("404")) {
+        setFiles([]);
+      } else {
+        setError(err.message ?? "Erro ao carregar arquivos.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }
 
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+  async function logView(fileName: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await callEdgeFunction(session.access_token, {
+        action: "view",
+        file_name: fileName,
+      });
+    } catch { /* silencioso */ }
+  }
 
-  return { files, loading, error, folder, refetch: fetchFiles };
+  async function logDownload(fileName: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await callEdgeFunction(session.access_token, {
+        action: "download",
+        file_name: fileName,
+      });
+    } catch { /* silencioso */ }
+  }
+
+  return { files, loading, error, refetch: fetchFiles, logView, logDownload };
 }
