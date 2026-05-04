@@ -9,7 +9,110 @@ import { useProducts } from "@/hooks/useProducts";
 import { PriceConsultation } from "@/components/PriceConsultation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AlertCircle, Loader2, Lock, FileText, Package, Download, ExternalLink } from "lucide-react";
+import { useClientFiles } from "@/hooks/useClientFiles";
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ConfirmacoesTab() {
+  const { files, loading, error } = useClientFiles();
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-16 flex items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Carregando confirmações...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-destructive">
+          <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+          {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (files.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-muted-foreground">
+          Nenhuma confirmação disponível.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-0 divide-y">
+        {files.map((file) => (
+          <div
+            key={file.id}
+            className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="bg-primary/10 text-primary p-2 rounded-lg shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-foreground truncate">{file.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatFileSize(file.size)} •{" "}
+                  {new Date(file.lastModified).toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {file.downloadUrl && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(file.downloadUrl!, "_blank")}
+                    className="gap-1"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="hidden sm:inline">Abrir</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const a = document.createElement("a");
+                      a.href = file.downloadUrl!;
+                      a.download = file.name;
+                      a.click();
+                    }}
+                    className="gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Baixar</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 interface PortalState {
   loading: boolean;
@@ -194,16 +297,33 @@ export default function ClientPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Consulta de preços com modo portal ativado */}
-        {filteredProducts.length === 0 ? (
-          <Card>
-            <CardContent className="py-16 text-center text-muted-foreground">
-              Nenhum produto liberado para visualização.
-            </CardContent>
-          </Card>
-        ) : (
-          <PriceConsultation products={filteredProducts} portalMode />
-        )}
+        {/* Tabs: Produtos / Confirmações */}
+        <Tabs defaultValue="produtos" className="w-full">
+          <TabsList>
+            <TabsTrigger value="produtos" className="gap-2">
+              <Package className="w-4 h-4" /> Produtos
+            </TabsTrigger>
+            <TabsTrigger value="confirmacoes" className="gap-2">
+              <FileText className="w-4 h-4" /> Confirmações
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="produtos">
+            {filteredProducts.length === 0 ? (
+              <Card>
+                <CardContent className="py-16 text-center text-muted-foreground">
+                  Nenhum produto liberado para visualização.
+                </CardContent>
+              </Card>
+            ) : (
+              <PriceConsultation products={filteredProducts} portalMode />
+            )}
+          </TabsContent>
+
+          <TabsContent value="confirmacoes">
+            <ConfirmacoesTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
