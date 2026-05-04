@@ -3,6 +3,7 @@
 // pelos produtos liberados (client_portal_products) e exibe condições comerciais.
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
@@ -11,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, Lock, FileText, Package, Download, ExternalLink } from "lucide-react";
+import { AlertCircle, Loader2, Lock, FileText, Package, Download, ExternalLink, LogOut } from "lucide-react";
 import { useClientFiles } from "@/hooks/useClientFiles";
 
 function formatFileSize(bytes: number): string {
@@ -124,8 +125,14 @@ interface PortalState {
 }
 
 export default function ClientPortalPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { products, loading: productsLoading } = useProducts();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   const [state, setState] = useState<PortalState>({
     loading: true,
@@ -265,13 +272,26 @@ export default function ClientPortalPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5 sm:p-6">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
-              <div>
-                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-1">
-                  Portal de Consulta de Preços
-                </p>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                  {state.clientName}
-                </h1>
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                      Portal de Consulta de Preços
+                    </p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                      {state.clientName}
+                    </h1>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="gap-1 shrink-0"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sair</span>
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="outline" className="gap-1">
                     <Lock className="w-3 h-3" /> Somente leitura 🔒
