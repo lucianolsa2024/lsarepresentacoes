@@ -1,9 +1,9 @@
 // src/hooks/useClientFiles.ts
-// Busca os arquivos de confirmação do cliente no OneDrive via Edge Function
+// Hook para listar arquivos de confirmação do cliente no OneDrive
+// via edge function get-client-files (Microsoft Graph API).
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 
 export interface ClientFile {
   id: string;
@@ -13,52 +13,47 @@ export interface ClientFile {
   downloadUrl: string | null;
 }
 
-export function useClientFiles() {
-  const { user } = useAuth();
+interface UseClientFilesResult {
+  files: ClientFile[];
+  loading: boolean;
+  error: string | null;
+  folder: string | null;
+  refetch: () => Promise<void>;
+}
+
+export function useClientFiles(clientId?: string): UseClientFilesResult {
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [folder, setFolder] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    fetchFiles();
-  }, [user?.id]);
-
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Sessão inválida");
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-client-files`,
+      const { data, error: fnErr } = await supabase.functions.invoke(
+        "get-client-files",
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({}),
+          body: clientId ? { client_id: clientId } : {},
         }
       );
 
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
-      setFiles(json.data ?? []);
+      if (fnErr) throw fnErr;
+      if (data?.error) throw new Error(data.error);
 
+      setFiles(data?.data ?? []);
+      setFolder(data?.folder ?? null);
     } catch (err: any) {
-      // Pasta não encontrada = cliente não tem arquivos ainda
-      if (err.message?.includes("404") || err.message?.includes("não encontrad")) {
-        setFiles([]);
-      } else {
-        setError(err.message ?? "Erro ao carregar arquivos.");
-      }
+      setError(err.message ?? "Erro ao carregar arquivos.");
+      setFiles([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [clientId]);
 
-  return { files, loading, error, refetch: fetchFiles };
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  return { files, loading, error, folder, refetch: fetchFiles };
 }
