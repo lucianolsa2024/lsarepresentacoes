@@ -3,6 +3,7 @@
 // pelos produtos liberados (client_portal_products) e exibe condições comerciais.
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducts } from "@/hooks/useProducts";
@@ -11,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, Lock, FileText, Package, Download, ExternalLink } from "lucide-react";
+import { AlertCircle, Loader2, Lock, FileText, Package, Download, ExternalLink, LogOut } from "lucide-react";
 import { useClientFiles } from "@/hooks/useClientFiles";
 
 function formatFileSize(bytes: number): string {
