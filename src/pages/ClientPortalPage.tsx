@@ -125,8 +125,14 @@ interface PortalState {
 }
 
 export default function ClientPortalPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { products, loading: productsLoading } = useProducts();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   const [state, setState] = useState<PortalState>({
     loading: true,
