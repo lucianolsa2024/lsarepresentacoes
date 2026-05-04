@@ -83,28 +83,23 @@ function ConfirmacoesTab() {
             <div className="flex items-center gap-2 shrink-0">
               {file.downloadUrl && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(file.downloadUrl!, "_blank")}
-                    className="gap-1"
+                  <a
+                    href={file.downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 h-9 px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                     <span className="hidden sm:inline">Abrir</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const a = document.createElement("a");
-                      a.href = file.downloadUrl!;
-                      a.download = file.name;
-                      a.click();
-                    }}
-                    className="gap-1"
+                  </a>
+                  <a
+                    href={file.downloadUrl}
+                    download={file.name}
+                    className="inline-flex items-center gap-1 h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">Baixar</span>
-                  </Button>
+                  </a>
                 </>
               )}
             </div>
